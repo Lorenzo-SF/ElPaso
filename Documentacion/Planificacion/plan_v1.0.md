@@ -8,9 +8,9 @@ Sistema completamente funcional para uso local: request HTTP → routing → con
 ## Modelos asignados
 | Alias doc | Modelo local | opencode arg              |
 |-----------|-------------|---------------------------|
-| devstral  | thinker     | llama-cpp-local/thinker   |
+| thinker   | thinker     | llama-cpp-local/thinker   |
 | coder     | coder       | llama-cpp-local/coder     |
-| Thinker   | r1          | llama-cpp-local/logic     |
+| r1        | r1          | llama-cpp-local/r1        |
 
 ---
 

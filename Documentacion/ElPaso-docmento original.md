@@ -13,7 +13,7 @@
 
 | Alias      | Fichero GGUF                                 | Especialidad                      | Contexto | Cuant. |
 | ---------- | -------------------------------------------- | --------------------------------- | -------- | ------ |
-| `devstral` | Devstral-Small-2507-UD-Q3_K_XL.gguf          | DevOps, arquitectura, OTP         | 64k      | Q3     |
+| `thinker` | Devstral-Small-2507-UD-Q3_K_XL.gguf          | DevOps, arquitectura, OTP         | 64k      | Q3     |
 | `coder`    | Qwen3-Coder-30B-A3B-Instruct-UD-Q2_K_XL.gguf | Generación masiva de código       | 128k     | Q2     |
 | `thinker`  | Qwen3-30B-A3B-Thinking-2507-UD-Q3_K_XL.gguf  | Razonamiento lógico y análisis    | 64k      | Q3     |
 | `gemma`    | gemma-4-26B-A4B-it-UD-Q3_K_M.gguf            | General, HTML, documentación      | 128k     | Q3     |
@@ -24,15 +24,15 @@ para aprovechar la RAM cuando el contexto es largo (>32k tokens).
 
 ### Cuándo usar cada modelo en este proyecto
 
-**devstral** → decisiones de diseño, arquitectura OTP, config system, módulos que
+**thinker** → decisiones de diseño, arquitectura OTP, config system, módulos que
 coordinan varios subsistemas (Application.start, ModelManager, Router, Wizard).
 Es tu modelo principal para ElPaso porque entiende sistemas complejos y DevOps.
 
 **coder** → generación masiva y repetitiva: adapters de engine, schemas Ecto,
 migraciones, módulos HTTP, tests boilerplate, cualquier fichero con patrón claro.
-Más rápido que devstral para código que no requiere razonar sobre la arquitectura.
+Más rápido que thinker para código que no requiere razonar sobre la arquitectura.
 
-**Thinker** → análisis estadístico, algoritmos de scoring, lógica de heurísticas
+**r1** → análisis estadístico, algoritmos de scoring, lógica de heurísticas
 del router, cualquier cosa que requiera razonamiento matemático o análisis de datos.
 
 **gemma** → dashboard HTML (V1.3), documentación, cualquier tarea con salida creativa
@@ -305,15 +305,15 @@ usuario. Los cuatro bloques implementados y operativos.
 
 | Fase                                                  | Modelo     | Comando               | Por qué                                                       |
 | ----------------------------------------------------- | ---------- | --------------------- | ------------------------------------------------------------- |
-| Arquitectura OTP, config system, ModelManager, Router | `devstral` | `./llama.sh devstral` | Diseña sistemas complejos, entiende supervisores y GenServers |
+| Arquitectura OTP, config system, ModelManager, Router | `thinker` | `./llama.sh thinker` | Diseña sistemas complejos, entiende supervisores y GenServers |
 | Engine adapters, schemas Ecto, HTTP layer, tests      | `coder`    | `./llama.sh coder`    | Generación masiva de código estructurado repetitivo           |
-| Wizard interactivo (Config.Wizard)                    | `devstral` | `./llama.sh devstral` | Razona sobre UX del CLI y decisiones de configuración         |
-| Heurísticas del router (scoring, penalizaciones)      | `Thinker`  | `./llama.sh Thinker`  | Análisis lógico de las fórmulas de scoring                    |
+| Wizard interactivo (Config.Wizard)                    | `thinker` | `./llama.sh thinker` | Razona sobre UX del CLI y decisiones de configuración         |
+| Heurísticas del router (scoring, penalizaciones)      | `r1`       | `./llama.sh r1`       | Análisis lógico de las fórmulas de scoring                    |
 
-**Flujo recomendado**: empieza con `devstral` para los bloques de arquitectura (Config,
+**Flujo recomendado**: empieza con `thinker` para los bloques de arquitectura (Config,
 ModelManager, estructura de Application). Cuando el esqueleto está en pie, cambia a
 `coder` para generar los adapters de engine, schemas Ecto y módulos HTTP. Vuelve a
-`devstral` para el wizard y a `Thinker` para refinar las fórmulas del router.
+`thinker` para el wizard y a `r1` para refinar las fórmulas del router.
 
 V1.0 es la versión más larga (~8.000 tokens de especificación). Si el contexto se
 ajusta, divide el prompt: primero carga los bloques Config + ModelManager, luego
@@ -3281,11 +3281,11 @@ Entregables que V1.0 ya tiene listos para este prompt:
 | ------------------------------------------------- | ---------- | --------------------- | -------------------------------------------------------- |
 | EmbeddingClient, SemanticRetriever, pgvector      | `coder`    | `./llama.sh coder`    | Código técnico de vectores y SQL con pgvector            |
 | Tokenizer backends (tiktoken port Python)         | `coder`    | `./llama.sh coder`    | Integración de Puerto Python                             |
-| Session overrides, `SessionOverrides` struct      | `devstral` | `./llama.sh devstral` | Cambios en el pipeline HTTP y el router                  |
-| Config.Migrator (migración 1.0 → 1.1)             | `devstral` | `./llama.sh devstral` | Razona sobre compatibilidad y transformaciones de config |
-| `mix elpaso context show` (CLI output con Zaguan) | `devstral` | `./llama.sh devstral` | Diseño de la presentación CLI                            |
+| Session overrides, `SessionOverrides` struct      | `thinker` | `./llama.sh thinker` | Cambios en el pipeline HTTP y el router                  |
+| Config.Migrator (migración 1.0 → 1.1)             | `thinker` | `./llama.sh thinker` | Razona sobre compatibilidad y transformaciones de config |
+| `mix elpaso context show` (CLI output con Zaguan) | `thinker` | `./llama.sh thinker` | Diseño de la presentación CLI                            |
 
-**Nota**: el paso de embeddings del wizard (añadido aquí) lo hace `devstral`.
+**Nota**: el paso de embeddings del wizard (añadido aquí) lo hace `thinker`.
 El índice IVFFlat de pgvector no se crea automáticamente; hay que ejecutarlo
 manualmente tras superar las 100 filas con embedding.
 
@@ -3847,12 +3847,12 @@ Entregables que V1.1 ya tiene listos para este prompt:
 | Fase                                              | Modelo     | Comando               | Por qué                                       |
 | ------------------------------------------------- | ---------- | --------------------- | --------------------------------------------- |
 | RouterStats (queries SQL, agregaciones)           | `coder`    | `./llama.sh coder`    | Queries complejas sobre routing_decisions     |
-| RouterTuner (algoritmo de sugerencias, confianza) | `Thinker`  | `./llama.sh Thinker`  | Razonamiento estadístico sobre las fórmulas   |
+| RouterTuner (algoritmo de sugerencias, confianza) | `r1`       | `./llama.sh r1`       | Razonamiento estadístico sobre las fórmulas   |
 | `mix elpaso bench` (runner de prompts)            | `coder`    | `./llama.sh coder`    | Lógica de ejecución y métricas                |
-| Config.Diff (clasificación de impacto por path)   | `devstral` | `./llama.sh devstral` | Razona sobre qué cambios requieren qué acción |
+| Config.Diff (clasificación de impacto por path)   | `thinker` | `./llama.sh thinker` | Razona sobre qué cambios requieren qué acción |
 | Exportación de sesión (markdown + JSON)           | `coder`    | `./llama.sh coder`    | Renderizado de formatos de salida             |
 
-**Nota**: RouterTuner con `Thinker` porque la fórmula de confianza y la regresión
+**Nota**: RouterTuner con `r1` porque la fórmula de confianza y la regresión
 hacia la afinidad sugerida requieren razonamiento matemático, no solo código.
 
 **Objetivo**: el usuario puede entender qué está haciendo el sistema, detectar problemas
@@ -4317,13 +4317,13 @@ Entregables que V1.2 ya tiene listos para este prompt:
 | --------------------------------------------------- | ---------- | --------------------- | -------------------------------------------------------------- |
 | Dashboard HTML+JS (Telemetry.Store, HTTP.Dashboard) | `gemma`    | `./llama.sh gemma`    | Generación de HTML/JS, diseño visual de la interfaz            |
 | Prometheus metrics (PrometheusExporter)             | `coder`    | `./llama.sh coder`    | Código declarativo de métricas con telemetry_metrics           |
-| Auth system (Auth, AuthPlug, RateLimiter)           | `devstral` | `./llama.sh devstral` | Seguridad, aislamiento de sesiones, decisiones arquitectónicas |
+| Auth system (Auth, AuthPlug, RateLimiter)           | `thinker` | `./llama.sh thinker` | Seguridad, aislamiento de sesiones, decisiones arquitectónicas |
 | WebSocket handler (cowboy_websocket)                | `coder`    | `./llama.sh coder`    | Implementación protocolo WebSocket                             |
 | Migración `user_id` en sessions                     | `coder`    | `./llama.sh coder`    | Migración Ecto simple                                          |
 
 **Nota importante para el dashboard**: usa `gemma` con contexto largo (128k).
 El HTML del dashboard es un string embebido en el módulo Elixir. Genera primero
-el HTML/JS standalone, luego `devstral` lo integra en `ElPaso.HTTP.Dashboard`.
+el HTML/JS standalone, luego `thinker` lo integra en `ElPaso.HTTP.Dashboard`.
 
 **Objetivo**: ElPaso puede usarse en red local compartida y los datos son observables
 desde herramientas estándar como Grafana o Prometheus.
@@ -4678,14 +4678,14 @@ Entregables que V1.3 ya tiene listos para este prompt:
 
 | Fase                                            | Modelo     | Comando               | Por qué                                     |
 | ----------------------------------------------- | ---------- | --------------------- | ------------------------------------------- |
-| AnthropicProxy (conversión de formatos)         | `devstral` | `./llama.sh devstral` | Arquitectura del proxy y mapeo de modelos   |
+| AnthropicProxy (conversión de formatos)         | `thinker` | `./llama.sh thinker` | Arquitectura del proxy y mapeo de modelos   |
 | SSE streaming en formato Anthropic              | `coder`    | `./llama.sh coder`    | Implementación de los event types SSE       |
-| Plugin.Loader (Code.compile_file, Registry)     | `devstral` | `./llama.sh devstral` | Diseño del sistema de extensibilidad        |
+| Plugin.Loader (Code.compile_file, Registry)     | `thinker` | `./llama.sh thinker` | Diseño del sistema de extensibilidad        |
 | ModelDownloader (streaming HTTP, checksum)      | `coder`    | `./llama.sh coder`    | I/O asíncrono, Finch.stream                 |
 | Soporte visión (FeatureVector, Context.Builder) | `coder`    | `./llama.sh coder`    | Cambios incrementales en módulos existentes |
 
 **Nota**: el `model_mapping` (qué modelo Anthropic mapea a qué model_id de ElPaso)
-lo decide `devstral`. La implementación de los SSE events de streaming de Claude
+lo decide `thinker`. La implementación de los SSE events de streaming de Claude
 Code la hace `coder` siguiendo el formato documentado.
 
 **Objetivo**: ElPaso se convierte en un hub que conecta clientes del ecosistema
@@ -5108,10 +5108,10 @@ Entregables que V2.0 ya tiene listos para este prompt:
 
 | Fase                                                    | Modelo     | Comando               | Por qué                                  |
 | ------------------------------------------------------- | ---------- | --------------------- | ---------------------------------------- |
-| NodeRegistry, arquitectura coordinator/worker           | `devstral` | `./llama.sh devstral` | Diseño distribuido con Erlang clustering |
-| Router.Cluster (RPC, Task.async_stream sobre nodos)     | `devstral` | `./llama.sh devstral` | Razona sobre fallos de red y degradación |
+| NodeRegistry, arquitectura coordinator/worker           | `thinker` | `./llama.sh thinker` | Diseño distribuido con Erlang clustering |
+| Router.Cluster (RPC, Task.async_stream sobre nodos)     | `thinker` | `./llama.sh thinker` | Razona sobre fallos de red y degradación |
 | Context.Manager modo cluster (TTL, PostgreSQL fallback) | `coder`    | `./llama.sh coder`    | Cambios concretos en módulo existente    |
-| libcluster config (Gossip vs static)                    | `devstral` | `./llama.sh devstral` | Conoce las estrategias de libcluster     |
+| libcluster config (Gossip vs static)                    | `thinker` | `./llama.sh thinker` | Conoce las estrategias de libcluster     |
 
 **Nota**: esta versión requiere dos máquinas o dos instancias en la misma máquina
 para testear. Los tests de integración de cluster son los más difíciles de automatizar;
@@ -5316,8 +5316,8 @@ Entregables que V1.2 ya tiene listos para este prompt:
 
 | Fase                                                    | Modelo    | Comando              | Por qué                                                           |
 | ------------------------------------------------------- | --------- | -------------------- | ----------------------------------------------------------------- |
-| RouterAnalyzer (regresión lineal, tendencias semanales) | `Thinker` | `./llama.sh Thinker` | Análisis estadístico, pendiente de regresión, ventanas temporales |
-| Detección de retry (heurística temporal)                | `Thinker` | `./llama.sh Thinker` | Razona sobre los falsos positivos y el umbral del 30%             |
+| RouterAnalyzer (regresión lineal, tendencias semanales) | `r1` | `./llama.sh r1` | Análisis estadístico, pendiente de regresión, ventanas temporales |
+| Detección de retry (heurística temporal)                | `r1` | `./llama.sh r1` | Razona sobre los falsos positivos y el umbral del 30%             |
 | AutoTuner GenServer (periódico, backoff)                | `coder`   | `./llama.sh coder`   | GenServer con handle_info periódico, patrón conocido              |
 | Alertas de degradación en /status y dashboard           | `coder`   | `./llama.sh coder`   | Cambios en módulos HTTP existentes                                |
 | Migración tabla auto_tune_runs                          | `coder`   | `./llama.sh coder`   | Migración Ecto simple                                             |
@@ -5513,8 +5513,8 @@ Entregables que V2.1 ya tiene listos para este prompt:
 
 | Fase                                                | Modelo     | Comando               | Por qué                                             |
 | --------------------------------------------------- | ---------- | --------------------- | --------------------------------------------------- |
-| CostManager (presupuestos, penalizaciones de score) | `devstral` | `./llama.sh devstral` | Lógica de negocio y decisiones de routing con coste |
-| JWT (JOSE library, sign/verify)                     | `devstral` | `./llama.sh devstral` | Seguridad y configuración correcta de JOSE          |
+| CostManager (presupuestos, penalizaciones de score) | `thinker` | `./llama.sh thinker` | Lógica de negocio y decisiones de routing con coste |
+| JWT (JOSE library, sign/verify)                     | `thinker` | `./llama.sh thinker` | Seguridad y configuración correcta de JOSE          |
 | S3Adapter (ex_aws streaming)                        | `coder`    | `./llama.sh coder`    | I/O asíncrono con ex_aws, patrón streaming          |
 | API Admin (controladores Plug)                      | `coder`    | `./llama.sh coder`    | Controladores CRUD estándar                         |
 | Schemas Ecto model_pricing y api_usage              | `coder`    | `./llama.sh coder`    | Schemas con tipos Decimal, índices                  |
