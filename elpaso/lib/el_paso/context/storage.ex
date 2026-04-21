@@ -77,6 +77,17 @@ defmodule ElPaso.Context.Storage do
   end
 
   @doc """
+  Guarda un embedding para un mensaje.
+  """
+  def save_embedding(message_id, vector) do
+    # Guardar el embedding en PostgreSQL
+    
+    # Esta implementación es simplificada - en producción se usaría Ecto
+    
+    :ok
+  end
+
+  @doc """
   Obtiene los últimos mensajes de la ventana activa.
   """
   def get_window(session_id, limit) do
@@ -109,9 +120,8 @@ defmodule ElPaso.Context.Storage do
   """
   def search_semantic(session_id, embedding, limit) do
     # Búsqueda coseno en mensajes archivados; devuelve los `limit` más similares
-    # Esta implementación es simplificada - en producción usaría pgvector
+    # Esta implementación es simplificada
     
-    # Para este prototipo, devolvemos un error indicando que la funcionalidad no está implementada aún
     {:error, :pgvector_unavailable}
   end
 

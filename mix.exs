@@ -29,7 +29,7 @@ defmodule ElPaso.MixProject do
       {:pgvector, "~> 0.2"},
       {:nimble_options, "~> 1.1"},
       {:telemetry, "~> 1.2"},
-      {:zaguan, "~> 1.0"}
+      {:zaguan, path: "../zaguan"}
     ]
   end
 end

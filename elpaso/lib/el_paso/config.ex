@@ -41,6 +41,10 @@ defmodule ElPaso.Config do
               translation: 0.4,
               unknown: 0.5
             }
+          },
+          context_spec: %{
+            tokenizer: "estimate",
+            supports_vision: false
           }
         },
         heavy: %{
@@ -62,8 +66,42 @@ defmodule ElPaso.Config do
               translation: 0.4,
               unknown: 0.5
             }
+          },
+          context_spec: %{
+            tokenizer: "estimate",
+            supports_vision: false
+          }
+        },
+        nomic_embed: %{
+          id: "nomic-embed",
+          name: "Nomic Embed Text v1.5",
+          engine: "llama_server",
+          source: %{
+            type: "local_file",
+            path: "~/modelos/nomic-embed-text-v1.5.Q8_0.gguf"
+          },
+          engine_args: %{
+            "--port": 8082,
+            "--ctx-size": 8192,
+            "--n-gpu-layers": 0,
+            "--embedding": true
+          },
+          role: "embeddings",
+          context_spec: %{
+            tokenizer: "estimate",
+            supports_vision: false
           }
         }
+      },
+      embeddings: %{
+        enabled: false,
+        model_id: nil,
+        dimensions: 768,
+        embedding_timeout_ms: 5000,
+        batch_size: 50,
+        semantic_retrieval_k: 5,
+        min_similarity_threshold: 0.75,
+        ivfflat_build_threshold: 100
       }
     }
   end

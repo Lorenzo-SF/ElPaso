@@ -13,6 +13,7 @@ defmodule ElPaso.Context.Builder do
   alias ElPaso.Context.PrefixManager
   alias ElPaso.Context.Storage
   alias ElPaso.Context.Schemas.Message
+  alias ElPaso.Context.Tokenizer
 
   # Estructura para el prompt construido
   defmodule BuiltPrompt do
@@ -61,7 +62,7 @@ defmodule ElPaso.Context.Builder do
       # Ensamblar el prompt siguiendo el orden definido
       messages = build_messages(prefix_block, context_layers, current_message, context_spec)
 
-      # Calcular estimación total de tokens
+      # Calcular estimación total de tokens usando Tokenizer
       token_estimate = calculate_total_tokens(messages, prefix_block, context_layers)
 
       # Crear BuiltPrompt
@@ -142,7 +143,8 @@ defmodule ElPaso.Context.Builder do
   end
 
   defp calculate_total_tokens(messages, prefix_block, context_layers) do
-    # Calcular tokens totales estimados
+    # Calcular tokens totales estimados usando el tokenizer
+    
     total = prefix_block.token_estimate
     
     summary_content = Map.get(context_layers, :summary, nil)
@@ -160,11 +162,18 @@ defmodule ElPaso.Context.Builder do
       acc + estimate_tokens_for_string(msg.content) 
     end)
 
+    # Añadir tokens del mensaje actual
+    total = total + estimate_tokens_for_string(Map.get(context_layers, :current_message, ""))
+
     total
   end
 
   defp estimate_tokens_for_string(content) do
-    # Estimación simple basada en caracteres (3 caracteres ≈ 1 token)
-    div(String.length(content), 3)
+    # Usar el tokenizador real en vez de estimación simple
+    
+    case Tokenizer.count(content, "default") do
+      {:ok, count} -> count
+      {:fallback, count} -> count
+    end
   end
 end

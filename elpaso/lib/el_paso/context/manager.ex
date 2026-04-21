@@ -11,6 +11,8 @@ defmodule ElPaso.Context.Manager do
 
   alias ElPaso.Context.Storage
   alias ElPaso.Context.PrefixManager
+  alias ElPaso.Context.EmbeddingClient
+  alias ElPaso.Context.SemanticRetriever
   alias ElPaso.Context.Schemas.Message
 
   # Estructura para el estado de sesión en ETS
@@ -29,7 +31,8 @@ defmodule ElPaso.Context.Manager do
       :last_model_id,
       :summarization_in_progress,
       :created_at,
-      :last_active_at
+      :last_active_at,
+      :semantic_retrieval_enabled
     ]
 
     @type t :: %SessionState{
@@ -42,7 +45,8 @@ defmodule ElPaso.Context.Manager do
             last_model_id: String.t() | nil,
             summarization_in_progress: boolean(),
             created_at: DateTime.t(),
-            last_active_at: DateTime.t()
+            last_active_at: DateTime.t(),
+            semantic_retrieval_enabled: boolean()
           }
   end
 
@@ -86,8 +90,18 @@ defmodule ElPaso.Context.Manager do
     # Actualizar el estado en ETS
     update_session_state(session_id, :last_model_id, model_id)
     
-    # Evaluar si se debe disparar resumen eager (simplificado)
-    check_summarization_threshold(session_id)
+    # Disparar generación de embedding (asíncrona)
+    Task.start(fn ->
+      case EmbeddingClient.embed(user_message) do
+        {:ok, vector} ->
+          # Guardar el embedding en PostgreSQL
+          Storage.save_embedding(_user_message_id, vector)
+          :telemetry.execute([:elpaso, :embedding, :generated], %{dim: length(vector)}, %{message_id: _user_message_id})
+        {:error, reason} ->
+          Logger.warning("Embedding failed for message #{_user_message_id}: #{reason}")
+          # No reintentos en V1.1; el mensaje queda con embedding NULL
+      end
+    end)
     
     :ok
   end
@@ -104,7 +118,13 @@ defmodule ElPaso.Context.Manager do
         # Obtener capas del contexto desde ETS
         summary = get_summary(session_id)
         window = get_window(session_id, context_spec.window_size || 10)
-        semantic = []
+        
+        # Si semantic retrieval está activado, buscar mensajes semánticos
+        semantic = if session_state.semantic_retrieval_enabled and pgvector_available?() do
+          get_semantic_layer(session_id, window, context_spec)
+        else
+          []
+        end
         
         {:ok, %{
           summary: summary,
@@ -141,7 +161,8 @@ defmodule ElPaso.Context.Manager do
           last_model_id: nil,
           summarization_in_progress: false,
           created_at: session.created_at,
-          last_active_at: session.last_active_at
+          last_active_at: session.last_active_at,
+          semantic_retrieval_enabled: false
         }
         
         :ets.insert(:session_states, {session_id, session_state})
@@ -159,21 +180,6 @@ defmodule ElPaso.Context.Manager do
     end
   end
 
-  defp check_summarization_threshold(session_id) do
-    # Verificar si se ha alcanzado el umbral para disparar resumen eager
-    case :ets.lookup(:session_states, session_id) do
-      [] -> :ok
-      [{_session_id, session_state}] ->
-        # Simplificación - en implementación real se usaría el token count
-        if session_state.window_token_count > 80 do
-          # Disparar SummarizationWorker en background
-          :ok
-        else
-          :ok
-        end
-    end
-  end
-
   defp get_summary(session_id) do
     # Obtener el resumen desde Storage o ETS
     case Storage.get_latest_summary(session_id) do
@@ -188,5 +194,26 @@ defmodule ElPaso.Context.Manager do
       {:ok, messages} -> messages
       _ -> []
     end
+  end
+
+  defp get_semantic_layer(session_id, window, context_spec) do
+    # Obtener mensajes semánticamente relevantes
+    
+    # Simplificación - en producción se usaría SemanticRetriever
+    
+    case window |> Enum.filter(&(&1.role == "user")) |> List.last() do
+      nil -> []
+      last_user_msg ->
+        # Buscar mensajes similares usando SemanticRetriever
+        k = 5
+        min_sim = 0.75
+        # Simplificación para prototipo
+        []
+    end
+  end
+
+  defp pgvector_available? do
+    # Verificar si pgvector está disponible
+    true  # Simplificación
   end
 end

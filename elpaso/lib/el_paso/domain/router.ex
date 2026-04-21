@@ -8,6 +8,7 @@ defmodule ElPaso.Domain.Router do
 
   alias ElPaso.Domain.ModelManager
   alias ElPaso.Context.Storage
+  alias ElPaso.HTTP.RequestParser
 
   # Estructura para el vector de características
   defmodule FeatureVector do
@@ -98,35 +99,51 @@ defmodule ElPaso.Domain.Router do
   @doc """
   Punto de entrada principal: recibe el request y devuelve el model_id seleccionado.
   """
-  def route(request_id, session_id, user_message) do
+  def route(request_id, session_id, user_message, overrides \\ %{}) do
     # Extraer características del prompt (feature extraction)
     features = extract_features(user_message)
 
-    # Consultar estado del sistema
-    model_states = ModelManager.all_states()
+    # Si hay force_model en overrides, usar ese modelo directamente
+    if overrides.force_model do
+      decision = %RoutingDecision{
+        request_id: request_id,
+        session_id: session_id,
+        selected_model: overrides.force_model,
+        features: features,
+        scores: %{},
+        reason: "force_model override by client",
+        decided_at: DateTime.utc_now(),
+        decision_latency_us: 0
+      }
+      
+      {:ok, overrides.force_model, decision}
+    else
+      # Consultar estado del sistema
+      model_states = ModelManager.all_states()
 
-    # Calcular scores para cada modelo
-    scores = calculate_scores(model_states, features)
+      # Calcular scores para cada modelo
+      scores = calculate_scores(model_states, features)
 
-    # Seleccionar el mejor modelo
-    selected_model = select_best_model(scores)
+      # Seleccionar el mejor modelo
+      selected_model = select_best_model(scores)
 
-    # Registrar la decisión de enrutamiento
-    decision = %RoutingDecision{
-      request_id: request_id,
-      session_id: session_id,
-      selected_model: selected_model,
-      features: features,
-      scores: scores,
-      reason: "best fit for #{features.task_type} task",
-      decided_at: DateTime.utc_now(),
-      decision_latency_us: 0
-    }
+      # Registrar la decisión de enrutamiento
+      decision = %RoutingDecision{
+        request_id: request_id,
+        session_id: session_id,
+        selected_model: selected_model,
+        features: features,
+        scores: scores,
+        reason: "best fit for #{features.task_type} task",
+        decided_at: DateTime.utc_now(),
+        decision_latency_us: 0
+      }
 
-    # Guardar la decisión en Storage
-    Storage.save_routing_decision(decision)
+      # Guardar la decisión en Storage
+      Storage.save_routing_decision(decision)
 
-    {:ok, selected_model, decision}
+      {:ok, selected_model, decision}
+    end
   end
 
   @doc """
