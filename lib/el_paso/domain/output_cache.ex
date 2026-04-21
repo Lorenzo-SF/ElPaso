@@ -1,7 +1,7 @@
 defmodule ElPaso.Domain.OutputCache do
   @moduledoc """
   Cache LRU+TTL en ETS para respuestas de inferencia.
-  
+
   Este módulo implementa un cache con política LRU (Least Recently Used) y TTL (Time To Live).
   """
 
@@ -9,7 +9,8 @@ defmodule ElPaso.Domain.OutputCache do
 
   # Configuración del cache
   @cache_name :elpaso_output_cache
-  @default_ttl 3600000  # 1 hora en milisegundos
+  # 1 hora en milisegundos
+  @default_ttl 3_600_000
   @default_max_size 1000
 
   def start_link(args) do
@@ -19,10 +20,10 @@ defmodule ElPaso.Domain.OutputCache do
   def init(opts) do
     size = Keyword.get(opts, :max_size, @default_max_size)
     ttl = Keyword.get(opts, :ttl, @default_ttl)
-    
+
     # Inicializar ETS
     cache_table = :ets.new(@cache_name, [:named_table, :protected, :set])
-    
+
     {:ok, %{table: cache_table, max_size: size, ttl: ttl}}
   end
 
@@ -45,9 +46,11 @@ defmodule ElPaso.Domain.OutputCache do
     case :ets.lookup(state.table, key) do
       [] ->
         {:reply, nil, state}
+
       [{_key, value, _timestamp}] ->
         # Verificar si ha expirado
         now = System.system_time(:millisecond)
+
         if now - get_timestamp(key, state) < state.ttl do
           {:reply, value, state}
         else
@@ -60,16 +63,16 @@ defmodule ElPaso.Domain.OutputCache do
   @impl GenServer
   def handle_cast({:put, key, value}, state) do
     now = System.system_time(:millisecond)
-    
+
     # Verificar si hay espacio suficiente
     if :ets.info(state.table, :size) >= state.max_size do
       # Eliminar el elemento menos reciente
       oldest_key = get_oldest_key(state)
       :ets.delete(state.table, oldest_key)
     end
-    
+
     :ets.insert(state.table, {key, value, now})
-    
+
     {:noreply, state}
   end
 

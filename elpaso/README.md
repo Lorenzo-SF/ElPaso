@@ -1,65 +1,44 @@
-# ElPaso v1.1
+# ElPaso v1.2
 
-## Madurez operacional y contexto semántico
+## Diagnóstico y ajuste fino
 
-Esta versión introduce mejoras operacionales y funcionalidades avanzadas para hacer el sistema más robusto para uso diario continuo.
+Esta versión introduce herramientas de diagnóstico avanzadas y capacidad de ajuste fino para mejorar el comportamiento del sistema.
 
-### Características implementadas en V1.1:
+### Características implementadas en V1.2:
 
-- **Capa 3 del Contexto Portable**: Soporte para búsqueda semántica usando embeddings
-- **Tokenizadores reales**: Implementación de backends de tokenización (tiktoken)
-- **Overrides por request**: Soporte para configurar sesiones dinámicas mediante `elpaso` en las solicitudes
-- **Comandos CLI**: `mix elpaso context show`, `mix elpaso embeddings rebuild`, `mix elpaso embeddings stats`
-- **Migrador de configuración**: Soporte para migrar desde V1.0 a V1.1
+- **Comandos de diagnóstico**: `mix elpaso router stats` para análisis estadístico
+- **Ajuste automático**: `mix elpaso router tune` para sugerencias de ajuste
+- **Benchmarking**: `mix elpaso bench` para pruebas de rendimiento
+- **Diferencias de configuración**: `mix elpaso config reload` con diff visual
+- **Exportación de sesiones**: Soporte para exportar conversaciones en múltiples formatos
 
 ### Estructura del proyecto:
 
 ```
 lib/
 ├── el_paso/
-│   ├── context/
-│   │   ├── embedding_client.ex      # Cliente para generar embeddings
-│   │   ├── semantic_retriever.ex     # Búsqueda semántica
-│   │   ├── tokenizer.ex               # Tokenizadores reales
-│   │   └── manager.ex                   # Gestor de contexto con semántica
+│   ├── domain/
+│   │   ├── router_stats.ex                # Estadísticas de routing
+│   │   └── router_tuner.ex                # Ajuste automático de afinidades
 │   ├── cli/
 │   │   ├── commands/
-│   │   │   ├── context.ex             # Comando para mostrar contexto
-│   │   │   └── embeddings.ex      # Comandos para gestión de embeddings
-│   ├── domain/
-│   │   └── router.ex                  # Router con soporte para overrides
-│   ├── http/
-│   │   └── server.ex              # Servidor HTTP con soporte para overrides
+│   │   │   ├── router_stats.ex        # Comando para estadísticas de routing
+│   │   │   ├── router_tune.ex          # Comando para ajuste de routing
+│   │   │   ├── bench.ex               # Comando para benchmarking
+│   │   │   └── context.ex             # Comando para exportar sesiones
 │   ├── config/
-│   │   ├── migrator.ex                  # Migrador de configuración
-│   └── application.ex                 # Punto de entrada de la aplicación
+│   │   └── diff.ex                  # Diferencias en configuración
+│   └── application.ex               # Punto de entrada de la aplicación
 └── mix.exs                           # Archivo de configuración Mix
 ```
 
-### Configuración de embeddings:
+### Comandos disponibles:
 
-La configuración ahora incluye una sección `embeddings` para controlar el uso de embeddings semánticos:
-
-```json
-{
-  "embeddings": {
-    "enabled": true,
-    "model_id": "nomic-embed",
-    "dimensions": 768,
-    "embedding_timeout_ms": 5000,
-    "batch_size": 50,
-    "semantic_retrieval_k": 5,
-    "min_similarity_threshold": 0.75,
-    "ivfflat_build_threshold": 100
-  }
-}
-```
-
-### Comandos CLI disponibles:
-
-- `mix elpaso context show` - Muestra información del contexto de una sesión
-- `mix elpaso embeddings rebuild` - Reconstruye embeddings faltantes
-- `mix elpaso embeddings stats` - Muestra estadísticas de cobertura de embeddings
+- `mix elpaso router stats` - Muestra estadísticas de routing
+- `mix elpaso router tune` - Analiza y sugiere ajustes de afinidades
+- `mix elpaso bench` - Ejecuta benchmarks de rendimiento
+- `mix elpaso config reload` - Recarga configuración con diff visual
+- `mix elpaso context export` - Exporta conversaciones
 
 ## Dependencias requeridas:
 

@@ -26,12 +26,13 @@ defmodule ElPaso.Context.SummarizationWorker do
   def handle_cast({:summarize, session_id}, state) do
     # Lógica para generar el resumen
     summary = generate_summary(session_id)
-    
+
     # Guardar el resumen en la base de datos
-    {:ok, _} = ElPaso.Context.Repo.insert(%ConversationSummary{
-      session_id: session_id,
-      summary: summary
-    })
+    {:ok, _} =
+      ElPaso.Context.Repo.insert(%ConversationSummary{
+        session_id: session_id,
+        content: summary
+      })
 
     {:noreply, state}
   end

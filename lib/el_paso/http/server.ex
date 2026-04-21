@@ -1,7 +1,7 @@
 defmodule ElPaso.HTTP do
   @moduledoc """
   Módulo HTTP del sistema.
-  
+
   Este módulo implementa el servidor HTTP para las APIs REST del proyecto.
   """
 
@@ -20,8 +20,8 @@ defmodule ElPaso.HTTP do
     Plug.Router.start(__MODULE__, [])
   end
 
-  plug :match
-  plug :dispatch
+  plug(:match)
+  plug(:dispatch)
 
   # Endpoint para la inferencia
   get "/infer" do

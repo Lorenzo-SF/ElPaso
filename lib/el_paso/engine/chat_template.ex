@@ -1,7 +1,7 @@
 defmodule ElPaso.Engine.ChatTemplate do
   @moduledoc """
   Formatea mensajes según el template del modelo.
-  
+
   Este módulo asegura que los mensajes se formateen correctamente para ser consumidos
   por los motores de inferencia compatibles con la API de OpenAI.
   """

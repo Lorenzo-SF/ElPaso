@@ -6,10 +6,10 @@ defmodule ElPaso.Context.Schemas.RoutingDecision do
   use Ecto.Schema
 
   schema "routing_decisions" do
-    field :session_id, :string
-    field :model_id, :string
-    field :decision, :string
-    field :created_at, :utc_datetime
+    field(:session_id, :string)
+    field(:model_id, :string)
+    field(:decision, :string)
+    field(:created_at, :utc_datetime)
 
     timestamps()
   end

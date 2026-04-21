@@ -1,7 +1,7 @@
 defmodule ElPaso.Engine.Dispatcher do
   @moduledoc """
   Punto de entrada único para inferencia.
-  
+
   Este módulo coordina las llamadas a los distintos motores de inferencia,
   determinando qué modelo usar según el contexto.
   """
@@ -14,7 +14,7 @@ defmodule ElPaso.Engine.Dispatcher do
   def dispatch(%{session_id: session_id} = request) do
     # Determinar qué modelo usar para la solicitud
     model_id = determine_model(request)
-    
+
     # Enviar la solicitud al modelo
     ModelManager.infer(model_id, request)
   end

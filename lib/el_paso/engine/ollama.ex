@@ -1,7 +1,7 @@
 defmodule ElPaso.Engine.Ollama do
   @moduledoc """
   Wrapper sobre OpenAI adapter con base_url diferente para Ollama.
-  
+
   Este módulo permite usar Ollama como motor de inferencia compatible 
   con la API de OpenAI, pero con una URL base diferente.
   """
@@ -15,7 +15,8 @@ defmodule ElPaso.Engine.Ollama do
     %{
       adapter: OpenAIAdapter,
       base_url: base_url,
-      api_key: "ollama"  # Ollama no requiere API key
+      # Ollama no requiere API key
+      api_key: "ollama"
     }
   end
 

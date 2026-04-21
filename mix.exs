@@ -7,7 +7,8 @@ defmodule ElPaso.MixProject do
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      escript: escript()
     ]
   end
 
@@ -30,6 +31,13 @@ defmodule ElPaso.MixProject do
       {:nimble_options, "~> 1.1"},
       {:telemetry, "~> 1.2"},
       {:zaguan, path: "../zaguan"}
+    ]
+  end
+
+  defp escript do
+    [
+      main_module: ElPaso.CLI.Commands.RouterStats,
+      name: "elpaso"
     ]
   end
 end

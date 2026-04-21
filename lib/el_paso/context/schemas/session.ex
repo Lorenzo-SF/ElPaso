@@ -6,10 +6,12 @@ defmodule ElPaso.Context.Schemas.Session do
   use Ecto.Schema
 
   schema "sessions" do
-    field :user_id, :string
-    field :model_id, :string
-    field :status, :string
-    field :created_at, :utc_datetime
+    field(:user_id, :string)
+    field(:model_id, :string)
+    field(:status, :string)
+    field(:context_mode, :string)
+    field(:created_at, :utc_datetime)
+    field(:last_active_at, :utc_datetime)
 
     timestamps()
   end
@@ -19,7 +21,7 @@ defmodule ElPaso.Context.Schemas.Session do
   """
   def changeset(session, attrs) do
     session
-    |> Ecto.Changeset.cast(attrs, [:user_id, :model_id, :status])
+    |> Ecto.Changeset.cast(attrs, [:user_id, :model_id, :status, :context_mode])
     |> Ecto.Changeset.validate_required([:user_id, :model_id])
   end
 end
