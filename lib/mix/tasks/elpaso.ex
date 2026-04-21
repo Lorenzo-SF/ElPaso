@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Elpaso do
   Este comando permite ejecutar las diferentes herramientas de diagnóstico:
 
   mix elpaso router stats
-  mix elpaso router tune
+  mix elpaso router tune [--revert-auto]
   mix elpaso bench
   mix elpaso context export
   mix elpaso config reload

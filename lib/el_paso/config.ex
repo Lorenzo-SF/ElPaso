@@ -26,6 +26,12 @@ defmodule ElPaso.Config do
         coordinator_nodes: [],
         worker_nodes: [],
         discovery: "static"
+      },
+      routing: %{
+        auto_tune: false,
+        auto_tune_min_confidence: 0.85,
+        auto_tune_min_decisions: 50,
+        auto_tune_check_interval_hours: 24
       }
     }
 
@@ -97,6 +103,72 @@ defmodule ElPaso.Config do
   """
   def cluster_mode? do
     cluster_enabled?()
+  end
+
+  # === Auto-tune config ===
+
+  @doc """
+  Devuelve true si auto_tune está habilitado.
+  """
+  def auto_tune_enabled? do
+    config = Loader.get()
+    get_in(config, [:routing, :auto_tune]) == true
+  end
+
+  @doc """
+  Devuelve la confianza mínima para auto-aplicar sugerencias.
+  """
+  def auto_tune_min_confidence do
+    config = Loader.get()
+    get_in(config, [:routing, :auto_tune_min_confidence]) || 0.85
+  end
+
+  @doc """
+  Devuelve el número mínimo de decisiones para auto-aplicar.
+  """
+  def auto_tune_min_decisions do
+    config = Loader.get()
+    get_in(config, [:routing, :auto_tune_min_decisions]) || 50
+  end
+
+  @doc """
+  Devuelve el intervalo de verificación en horas.
+  """
+  def auto_tune_check_interval_hours do
+    config = Loader.get()
+    get_in(config, [:routing, :auto_tune_check_interval_hours]) || 24
+  end
+
+  @doc """
+  Obtiene la affine para una combinación (model, task_type).
+  """
+  def get_affinity(model_id, task_type) do
+    0.5  # Default
+  end
+
+  @doc """
+  Actualiza la affinity para una combinación.
+  """
+  def update_affinity(_model_id, _task_type, _affinity) do
+    :ok
+  end
+
+  # === Loader extensions ===
+
+  defmodule Loader do
+    @doc """
+    Obtiene la affinity para una combinación.
+    """
+    def get_affinity(_model_id, _task_type) do
+      0.5
+    end
+
+    @doc """
+    Actualiza la affinity para una combinación.
+    """
+    def update_affinity(_model_id, _task_type, _affinity) do
+      :ok
+    end
   end
 
   @doc """

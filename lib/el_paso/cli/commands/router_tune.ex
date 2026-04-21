@@ -6,47 +6,51 @@ defmodule ElPaso.CLI.Commands.RouterTune do
   @doc """
   Ejecuta el comando de ajuste del enrutamiento.
   """
-  def run(_opts) do
-    # Simular sugerencias de afinidad (simplificación)
-    suggestions = [
-      %ElPaso.Domain.Types.AffinitySuggestion{
-        model_id: "fast",
-        task_type: :question_answer,
-        current_affinity: 0.8,
-        suggested_affinity: 0.9,
-        delta: 0.1,
-        confidence: 0.95,
-        based_on_n_decisions: 24,
-        reason: "Mejor ajuste para preguntas"
-      },
-      %ElPaso.Domain.Types.AffinitySuggestion{
-        model_id: "heavy",
-        task_type: :code,
-        current_affinity: 0.7,
-        suggested_affinity: 0.8,
-        delta: 0.1,
-        confidence: 0.92,
-        based_on_n_decisions: 18,
-        reason: "Mejor ajuste para código"
-      }
-    ]
-
-    print_suggestions(suggestions)
-
-    IO.puts("[A]plicar cambios  [R]efrescar  [Q]salir > ")
+  def run(opts) do
+    if opts[:revert_auto] do
+      revert_auto_tune()
+    else
+      run_tuner(opts)
+    end
   end
 
-  defp print_suggestions(suggestions) do
-    IO.puts("Sugerencias de ajuste (confianza > 60%, delta > 0.05):")
+  defp revert_auto_tune do
+    case ElPaso.Domain.AutoTuner.revert_last() do
+      {:ok, message} ->
+        IO.puts("✓ #{message}")
 
-    suggestions
-    |> Enum.with_index()
-    |> Enum.each(fn {suggestion, index} ->
-      IO.puts(
-        "#{index + 1}. #{suggestion.model_id} → #{suggestion.task_type}: #{suggestion.current_affinity} → #{suggestion.suggested_affinity} (confianza: #{suggestion.confidence}, n=#{suggestion.based_on_n_decisions})"
-      )
+      {:error, message} ->
+        IO.puts("✗ #{message}")
+    end
+  end
 
-      IO.puts("   Razón: #{suggestion.reason}")
+  defp run_tuner(_opts) do
+    IO.puts("Ejecutando análisis de tendencias...")
+
+    analyses = ElPaso.Domain.RouterAnalyzer.analyze_trends(:last_30d)
+
+    if Enum.empty?(analyses) do
+      IO.puts("No hay datos suficientes para análisis. Se necesitan al menos 500 routing_decisions.")
+    else
+      print_analyses(analyses)
+    end
+  end
+
+  defp print_analyses(analyses) do
+    IO.puts("Análisis de tendencias:\n")
+
+    analyses
+    |> Enum.each(fn a ->
+      trend_icon = case a.success_trend do
+        :improving -> "↑"
+        :degrading -> "↓"
+        :stable -> "→"
+      end
+
+      status = if a.alert, do: "⚠️", else: ""
+
+      IO.puts("#{a.model_id}@#{a.task_type}: #{a.overall_success_rate}% #{trend_icon} (n=#{a.n_decisions}) #{status}")
+      IO.puts("  retry_rate: #{a.retry_rate_pct}%, latencia: #{a.median_latency_ms}ms")
     end)
   end
 end

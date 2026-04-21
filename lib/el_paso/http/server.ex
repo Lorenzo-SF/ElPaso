@@ -90,6 +90,31 @@ defmodule ElPaso.HTTP.Server do
     |> json(%{message: "Endpoint de inferencia"})
   end
 
+  # V2.2: Endpoint para estado del sistema con alertas de degradación
+  get "/status" do
+    # Obtener alertas del router si auto_tune está habilitado
+    alerts = if ElPaso.Config.auto_tune_enabled?() do
+      ElPaso.Domain.RouterAnalyzer.alerts()
+      |> Enum.map(fn a -> %{
+        type: "quality_degradation",
+        model_id: a.model_id,
+        task_type: Atom.to_string(a.task_type),
+        retry_rate_pct: a.retry_rate_pct,
+        trend: Atom.to_string(a.success_trend),
+        n_decisions: a.n_decisions
+      } end)
+    else
+      []
+    end
+
+    conn
+    |> put_status(200)
+    |> json(%{
+      status: "ok",
+      alerts: alerts
+    })
+  end
+
   # Endpoint para el estado del modelo
   get "/models/status" do
     conn

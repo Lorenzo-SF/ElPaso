@@ -65,4 +65,25 @@ defmodule ElPaso.Context.Storage do
   def update_routing_outcome(_request_id, _outcome, _latency_ms) do
     :ok
   end
+
+  @doc """
+  Guardar un auto-tune run.
+  """
+  def save_auto_tune_run(%{applied: _count} = run) do
+    :ok
+  end
+
+  @doc """
+  Obtener los últimos auto-tune runs.
+  """
+  def query_auto_tune_runs(_opts \\ %{}) do
+    []
+  end
+
+  @doc """
+  Obtener el último auto-tune run para hacer revert.
+  """
+  def get_last_auto_tune_run do
+    nil
+  end
 end

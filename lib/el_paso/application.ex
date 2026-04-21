@@ -37,7 +37,10 @@ defmodule ElPaso.Application do
       ElPaso.HTTP.Server,
 
       # Supervisor para el manejo de errores y eventos
-      ElPaso.Event.Supervisor
+      ElPaso.Event.Supervisor,
+      
+      # AutoTuner para aprendizaje adaptativo
+      ElPaso.Domain.AutoTuner
     ]
 
     # Añadir cluster support si está habilitado
