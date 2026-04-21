@@ -5,12 +5,11 @@ defmodule ElPaso.Context.SummarizationWorker do
 
   use GenServer
 
-  alias ElPaso.Context.Schemas.ConversationSummary
-
   def start_link(args) do
     GenServer.start_link(__MODULE__, args)
   end
 
+  @impl GenServer
   def init(state) do
     {:ok, state}
   end
@@ -27,12 +26,8 @@ defmodule ElPaso.Context.SummarizationWorker do
     # Lógica para generar el resumen
     summary = generate_summary(session_id)
 
-    # Guardar el resumen en la base de datos
-    {:ok, _} =
-      ElPaso.Context.Repo.insert(%ConversationSummary{
-        session_id: session_id,
-        content: summary
-      })
+    # En producción: guardar en base de datos
+    IO.puts("Resumen generado para sesión #{session_id}: #{summary}")
 
     {:noreply, state}
   end

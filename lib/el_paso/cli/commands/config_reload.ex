@@ -3,10 +3,6 @@ defmodule ElPaso.CLI.Commands.ConfigReload do
   Comando para recargar la configuración con diff visual.
   """
 
-  alias Zaguan.Drawer.Components.{Header, Table, Message}
-  alias ElPaso.Config.Diff
-  alias ElPaso.Domain.Types.ConfigChange
-
   @doc """
   Ejecuta el comando de recarga de configuración con diff.
   """
@@ -17,33 +13,33 @@ defmodule ElPaso.CLI.Commands.ConfigReload do
     # Obtener la configuración actual (simplificación)
     old_config = ElPaso.Config.load_config()
 
-    changes = Diff.diff(old_config, new_config)
+    diff_result = ElPaso.Config.Diff.diff(old_config, new_config)
+    changes = diff_result.changes
 
     if changes != [] do
-      Header.print("Config Diff", subtitle: "Cambios detectados")
+      IO.puts("=== Config Diff: Cambios detectados ===\n")
 
       print_changes(changes)
 
-      Message.print(:info, "[A]plicar cambios  [R]efrescar  [Q]salir > ")
+      IO.puts("[A]plicar cambios  [R]efrescar  [Q]salir > ")
 
       # En producción se aplicaría la configuración y recargarían los modelos
-      Message.print(:success, "Configuración actualizada")
+      IO.puts("Configuración actualizada")
     else
-      Message.print(:info, "No hay cambios en la configuración")
+      IO.puts("No hay cambios en la configuración")
     end
   end
 
   defp print_changes(changes) do
-    changes
-    |> Enum.map(fn change ->
+    Enum.each(changes, fn change ->
       impact_symbol =
         case change.impact do
-          :requires_full_restart -> "🛑"
-          :requires_model_restart -> "🔄"
-          :hot_reload -> "⚡"
+          :requires_full_restart -> "[FULL]"
+          :requires_model_restart -> "[MODEL]"
+          :hot_reload -> "[HOT]"
         end
 
-      reason =
+      type_text =
         case change.type do
           :added -> "Añadido"
           :removed -> "Eliminado"
@@ -57,12 +53,7 @@ defmodule ElPaso.CLI.Commands.ConfigReload do
           :hot_reload -> "Recarga en caliente"
         end
 
-      [impact_symbol, change.path, reason, impact_text]
+      IO.puts("#{impact_symbol} #{change.path} - #{type_text} (#{impact_text})")
     end)
-    |> Table.print(
-      headers: ["Impacto", "Ruta", "Tipo", "Acción"],
-      headers_color: :cyan,
-      table_border: :rounded
-    )
   end
 end

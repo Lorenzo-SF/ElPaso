@@ -17,6 +17,7 @@ defmodule ElPaso.Domain.OutputCache do
     GenServer.start_link(__MODULE__, args)
   end
 
+  @impl GenServer
   def init(opts) do
     size = Keyword.get(opts, :max_size, @default_max_size)
     ttl = Keyword.get(opts, :ttl, @default_ttl)

@@ -9,6 +9,7 @@ defmodule Mix.Tasks.Elpaso do
   mix elpaso bench
   mix elpaso context export
   mix elpaso config reload
+  mix elpaso cluster status
   """
 
   use Mix.Task

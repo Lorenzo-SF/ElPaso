@@ -1,4 +1,7 @@
 defmodule ElPaso.Application do
+  alias ModelDownloaderRegistry
+  alias ElPaso.Config
+
   @moduledoc """
   La aplicación principal del proyecto ElPaso.
 
@@ -10,7 +13,13 @@ defmodule ElPaso.Application do
 
   @impl Application
   def start(_context, _args) do
-    # Configuración de la aplicación
+    # Inicializar Rate Limiter ETS table
+    ElPaso.Security.RateLimiter.init()
+
+    # Inicializar ModelDownloader Registry
+    ModelDownloaderRegistry.init()
+
+    # Children base
     children = [
       # Supervisor de la gestión de motores de inferencia
       ElPaso.Domain.ModelManager,
@@ -21,15 +30,43 @@ defmodule ElPaso.Application do
       # Supervisor para el procesamiento de resúmenes
       ElPaso.Context.SummarizationSupervisor,
 
+      # Servidor de telemetry para métricas
+      ElPaso.Telemetry.Store,
+
       # Servidor HTTP para las APIs REST
-      ElPaso.HTTP,
+      ElPaso.HTTP.Server,
 
       # Supervisor para el manejo de errores y eventos
       ElPaso.Event.Supervisor
     ]
 
+    # Añadir cluster support si está habilitado
+    final_children = cond do
+      Config.cluster_enabled?() and Config.cluster_discovery() == "gossip" ->
+        # Modo gossip: usar libcluster para descubrimiento automático
+        children ++ [
+          {Cluster.Supervisor, [
+            gossip: [
+              strategy: Cluster.Strategy.Gossip,
+              config: [
+                port: 45_892,
+                multicast_addr: "230.1.1.251"
+              ]
+            ]
+          ]},
+          ElPaso.Cluster.NodeRegistry
+        ]
+        
+      Config.cluster_enabled?() ->
+        # Modo static: NodeRegistry suficiente
+        children ++ [ElPaso.Cluster.NodeRegistry]
+        
+      true ->
+        children
+    end
+
     # Arranca la aplicación con los hijos definidos
     opts = [strategy: :one_for_one, name: ElPaso.Supervisor]
-    Supervisor.start_link(children, opts)
+    Supervisor.start_link(final_children, opts)
   end
 end

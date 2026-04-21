@@ -1,37 +1,15 @@
 defmodule ElPaso.Domain.Types.RouterStatsReport do
   @moduledoc """
-  Estructura que representa un reporte de estadísticas de routing.
+  Estructura para reporte de estadísticas del router.
   """
 
-  defstruct [
-    :period,
-    :total_decisions,
-    :fallback_count,
-    :fallback_rate_pct,
-    :by_task_type,
-    :by_model,
-    :cold_starts,
-    :error_count,
-    :generated_at
-  ]
-
-  @type t :: %RouterStatsReport{
-          period: atom() | tuple(),
-          total_decisions: integer(),
-          fallback_count: integer(),
-          fallback_rate_pct: float(),
-          by_task_type: %{atom() => %{total: integer(), by_model: map()}},
-          by_model: %{
-            String.t() => %{
-              total_calls: integer(),
-              success_rate_pct: float(),
-              avg_latency_ms: integer(),
-              p95_latency_ms: integer(),
-              error_count: integer()
-            }
-          },
-          cold_starts: integer(),
-          error_count: integer(),
-          generated_at: DateTime.t()
-        }
+  defstruct period: :last_hour,
+            total_decisions: 0,
+            fallback_count: 0,
+            fallback_rate_pct: 0.0,
+            cold_starts: 0,
+            error_count: 0,
+            by_model: %{},
+            by_task_type: %{},
+            generated_at: nil
 end

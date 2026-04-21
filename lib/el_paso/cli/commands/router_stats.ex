@@ -1,10 +1,10 @@
 defmodule ElPaso.CLI.Commands.RouterStats do
-  alias Zaguan.Drawer.Components.{Header, Table, Message}
-  alias ElPaso.Domain.Types.RouterStatsReport
+  alias Zaguan.Drawer.Components.{Header, Table}
+  alias ElPaso.Domain.RouterStats
 
   def run(opts) do
     since = opts[:since] || :last_24h
-    report = ElPaso.Domain.RouterStats.aggregate(since)
+    report = RouterStats.aggregate(since)
 
     Header.print("Routing Stats", subtitle: "#{period_label(since)}")
 

@@ -11,7 +11,7 @@ defmodule ElPaso.Domain.Types.ConfigChange do
     :impact
   ]
 
-  @type t :: %ConfigChange{
+  @type t :: %__MODULE__{
           path: String.t(),
           type: :added | :removed | :changed,
           old_value: any(),

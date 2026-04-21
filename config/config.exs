@@ -6,6 +6,9 @@ config :logger, :console,
   level: :debug,
   metadata: [:request_id]
 
+# Configuración de Ecto
+config :elpaso, ecto_repos: [ElPaso.Repo]
+
 # Configuración de la aplicación
 config :elpaso,
   # Puerto por defecto para el servidor HTTP

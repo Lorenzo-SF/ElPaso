@@ -15,10 +15,13 @@ defmodule ElPaso.CLI do
         ElPaso.CLI.Commands.Bench.run(parse_options(rest))
 
       ["context", "export"] ++ rest ->
-        ElPaso.CLI.Commands.Context.export(parse_options(rest))
+        ElPaso.CLI.Commands.Context.run(parse_options(rest))
 
       ["config", "reload"] ++ rest ->
         ElPaso.CLI.Commands.ConfigReload.run(parse_options(rest))
+
+      ["cluster", "status"] ++ rest ->
+        ElPaso.CLI.Commands.ClusterStatus.run(parse_options(rest))
 
       _ ->
         IO.puts("Comandos disponibles:")
@@ -27,6 +30,7 @@ defmodule ElPaso.CLI do
         IO.puts("  mix elpaso bench")
         IO.puts("  mix elpaso context export")
         IO.puts("  mix elpaso config reload")
+        IO.puts("  mix elpaso cluster status")
     end
   end
 

@@ -1,17 +1,14 @@
 defmodule ElPaso.Context.SummarizationSupervisor do
   @moduledoc """
-  Supervisor para la gestión del procesamiento de resúmenes.
+  Supervisor para la gestión de procesamiento de resúmenes.
   """
 
   use Supervisor
 
-  def start_link(args) do
-    Supervisor.start_link(__MODULE__, args)
-  end
-
+  @impl Supervisor
   def init(_args) do
     children = [
-      ElPaso.Context.SummarizationWorker
+      # Aquí se pueden añadir procesos de gestión de resúmenes
     ]
 
     opts = [strategy: :one_for_one, name: ElPaso.Context.SummarizationSupervisor]

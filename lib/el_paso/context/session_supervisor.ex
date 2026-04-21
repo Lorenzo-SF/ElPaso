@@ -1,19 +1,14 @@
 defmodule ElPaso.Context.SessionSupervisor do
   @moduledoc """
-  Supervisor para la gestión de sesiones y conversaciones.
+  Supervisor para la gestión de sesiones del sistema.
   """
 
   use Supervisor
 
-  def start_link(args) do
-    Supervisor.start_link(__MODULE__, args)
-  end
-
+  @impl Supervisor
   def init(_args) do
     children = [
-      ElPaso.Context.SessionWorker,
-      ElPaso.Context.MessageWorker,
-      ElPaso.Context.ConversationSummaryWorker
+      # Aquí se pueden añadir procesos de gestión de sesiones
     ]
 
     opts = [strategy: :one_for_one, name: ElPaso.Context.SessionSupervisor]

@@ -14,7 +14,7 @@ defmodule ElPaso.Domain.Types.AffinitySuggestion do
     :reason
   ]
 
-  @type t :: %AffinitySuggestion{
+  @type t :: %__MODULE__{
           model_id: String.t(),
           task_type: atom(),
           current_affinity: float(),
