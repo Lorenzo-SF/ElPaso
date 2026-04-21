@@ -27,7 +27,11 @@ Implementa gestión de costes y JWT para ElPaso. Lee Documentacion/v3.0.md secci
 Ejecuta mix compile para verificar.
 PROMPT
 )
-run_block "thinker" "CostManager + JWT" "$PROMPT_B1"
+
+if ! run_block "thinker" "CostManager + JWT" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V3.0 Bloque 1. Deteniendo.${NC}"
+    exit 1
+fi
 
 # --- BLOQUE 2: S3Adapter + API Admin (coder) ---
 PROMPT_B2=$(cat <<'PROMPT'
@@ -47,8 +51,15 @@ Implementa S3 y API admin para ElPaso. Lee Documentacion/v3.0.md secciones 3.0.3
 Ejecuta mix compile para verificar.
 PROMPT
 )
-run_block "coder" "S3Adapter + API Admin" "$PROMPT_B2"
 
+if ! run_block "coder" "S3Adapter + API Admin" "$PROMPT_B2"; then
+    echo -e "${RED}✗  Error crítico en V3.0 Bloque 2. Deteniendo.${NC}"
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Commit y tag
+# ---------------------------------------------------------------------------
 git_commit "feat(v3.0): ElPaso como servicio — costes, JWT, S3, admin"
 git_tag "v3.0"
 echo -e "${GREEN}${BOLD}✓ V3.0 completada — Proyecto ElPaso completo${NC}"

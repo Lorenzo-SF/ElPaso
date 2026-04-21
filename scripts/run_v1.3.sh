@@ -33,7 +33,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "gemma" "Dashboard HTML + Telemetry.Store" "$PROMPT_B1"
+if ! run_block "gemma" "Dashboard HTML + Telemetry.Store" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V1.3 Bloque 1. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 2: Prometheus + WebSocket (coder)
@@ -68,7 +71,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Prometheus + WebSocket" "$PROMPT_B2"
+if ! run_block "coder" "Prometheus + WebSocket" "$PROMPT_B2"; then
+    echo -e "${RED}✗  Error crítico en V1.3 Bloque 2. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 3: Auth + Rate Limiting (thinker)
@@ -100,8 +106,13 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "thinker" "Auth + Rate Limiting" "$PROMPT_B3"
+if ! run_block "thinker" "Auth + Rate Limiting" "$PROMPT_B3"; then
+    echo -e "${RED}✗  Error crítico en V1.3 Bloque 3. Deteniendo.${NC}"
+    exit 1
+fi
 
+# ---------------------------------------------------------------------------
+# Commit y tag
 # ---------------------------------------------------------------------------
 git_commit "feat(v1.3): observabilidad — dashboard, prometheus, auth, websocket"
 git_tag "v1.3"

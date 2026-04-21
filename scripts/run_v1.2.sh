@@ -32,7 +32,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "RouterStats + Bench + Export" "$PROMPT_B1"
+if ! run_block "coder" "RouterStats + Bench + Export" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V1.2 Bloque 1. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 2: RouterTuner + Config.Diff (r1)
@@ -64,8 +67,13 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "r1" "RouterTuner + Config.Diff" "$PROMPT_B2"
+if ! run_block "r1" "RouterTuner + Config.Diff" "$PROMPT_B2"; then
+    echo -e "${RED}✗  Error crítico en V1.2 Bloque 2. Deteniendo.${NC}"
+    exit 1
+fi
 
+# ---------------------------------------------------------------------------
+# Commit y tag
 # ---------------------------------------------------------------------------
 git_commit "feat(v1.2): diagnóstico — stats, bench, tuner, diff"
 git_tag "v1.2"

@@ -16,7 +16,11 @@ Implementa clustering para ElPaso. Lee Documentacion/v2.1.md completa.
 4. mix elpaso cluster status. Integrar en Router: cluster_mode? → usar all_model_states_global.
 PROMPT
 )
-run_block "thinker" "NodeRegistry + Router distribuido" "$PROMPT_B1"
+
+if ! run_block "thinker" "NodeRegistry + Router distribuido" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V2.1 Bloque 1. Deteniendo.${NC}"
+    exit 1
+fi
 
 # --- BLOQUE 2: Context.Manager modo cluster (coder) ---
 PROMPT_B2=$(cat <<'PROMPT'
@@ -25,8 +29,15 @@ Implementa Context.Manager cluster para ElPaso. Lee Documentacion/v2.1.md secci�
 Context.Manager: TTL 30s en ETS para cluster. get_session_state verifica timestamp, recarga desde PostgreSQL si expirado. cluster_mode?() condicional. ETS entry: {session_id, state, monotonic_time}.
 PROMPT
 )
-run_block "coder" "Context.Manager cluster" "$PROMPT_B2"
 
+if ! run_block "coder" "Context.Manager cluster" "$PROMPT_B2"; then
+    echo -e "${RED}✗  Error crítico en V2.1 Bloque 2. Deteniendo.${NC}"
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Commit y tag
+# ---------------------------------------------------------------------------
 git_commit "feat(v2.1): clustering multi-nodo"
 git_tag "v2.1"
 echo -e "${GREEN}${BOLD}✓ V2.1 completada${NC}"

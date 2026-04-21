@@ -24,7 +24,11 @@ Implementa análisis estadístico avanzado del router de ElPaso. Lee Documentaci
 Ejecuta mix compile para verificar.
 PROMPT
 )
-run_block "r1" "RouterAnalyzer + Detección retry" "$PROMPT_B1"
+
+if ! run_block "r1" "RouterAnalyzer + Detección retry" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V2.2 Bloque 1. Deteniendo.${NC}"
+    exit 1
+fi
 
 # --- BLOQUE 2: AutoTuner + Alertas (coder) ---
 PROMPT_B2=$(cat <<'PROMPT'
@@ -44,8 +48,15 @@ Implementa auto-tuning y alertas de degradación para ElPaso. Lee Documentacion/
 Ejecuta mix compile para verificar.
 PROMPT
 )
-run_block "coder" "AutoTuner + Alertas" "$PROMPT_B2"
 
+if ! run_block "coder" "AutoTuner + Alertas" "$PROMPT_B2"; then
+    echo -e "${RED}✗  Error crítico en V2.2 Bloque 2. Deteniendo.${NC}"
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Commit y tag
+# ---------------------------------------------------------------------------
 git_commit "feat(v2.2): aprendizaje adaptativo del router"
 git_tag "v2.2"
 echo -e "${GREEN}${BOLD}✓ V2.2 completada${NC}"

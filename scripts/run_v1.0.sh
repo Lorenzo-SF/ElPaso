@@ -22,12 +22,12 @@ IMPLEMENTA ESTOS MÓDULOS:
    - ElPaso.Domain.ModelSupervisor (Supervisor :one_for_one) que supervisa:
      → ElPaso.Domain.ModelRegistry (Registry)
      → ElPaso.Domain.ModelPool (DynamicSupervisor)
-   - ElPaso.Context.Manager (GenServer)
-   - ElPaso.Domain.OutputCache (GenServer)
-   - {Plug.Cowboy, scheme: :http, plug: ElPaso.HTTP.Router, options: [port: config_port]}
+     → ElPaso.Context.Manager (GenServer)
+     → ElPaso.Domain.OutputCache (GenServer)
+     → {Plug.Cowboy, scheme: :http, plug: ElPaso.HTTP.Router, options: [port: config_port]}
 
 2. ElPaso.Config.Schema — Definición NimbleOptions del schema completo:
-   Secciones: meta (version, created_at), system (http_port, log_level, telemetry_enabled, db_url, port_range), session_defaults (latency_tolerance_ms, context_mode, semantic_retrieval, window_size, summary_strategy, summary_trigger_pct, summarize_with_model), engines (map de engine configs con type, binary, base_args, health_check_*, startup/shutdown_timeout_ms), models (lista con id, label, enabled, engine, source, engine_args, inference_defaults, context_spec, routing con priority/cold_start_estimate_ms/task_affinity/conditions/complexity_ceiling, lifecycle), routing (complexity_weights, cold_start_penalty_factor, max_consecutive_errors, fallback_timeout_ms, score_tie_threshold), canonical_prefix (system_prompt_file, reference_documents, version), summarization (prompt_file)
+   Secciones: meta (version, created_at), system (http_port, log_level, telemetry_enabled, db_url, port_range), session_defaults (latency_tolerance_ms, context_mode, semantic_retrieval, window_size, summary_strategy, summary_trigger_pct, summarize_with_model), engines (map de engine configs con type, binary, base_args, health_check_*, startup/shutdown_timeout_ms), models (lista con id, label, enabled, engine, source, engine_args, inference_defaults, context_spec, routing con priority/cold_start_estimate_ms/task_affinity/conditions/complexity_ceiling), routing (complexity_weights, cold_start_penalty_factor, max_consecutive_errors, fallback_timeout_ms, score_tie_threshold), canonical_prefix (system_prompt_file, reference_documents, version), summarization (prompt_file)
 
 3. ElPaso.Config.Loader — Lee ~/.config/elpaso/elpaso.conf (JSON), parsea con Jason, valida con Schema, almacena en ETS para acceso rápido. Funciones: load/1, reload/0, get/0, get_model/1, watch/1 (inotify o polling).
 
@@ -41,7 +41,10 @@ Asegúrate de que mix compile pasa sin errores.
 PROMPT
 )
 
-run_block "thinker" "Arquitectura OTP + Config System" "$PROMPT_B1"
+if ! run_block "thinker" "Arquitectura OTP + Config System" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V1.0 Bloque 1. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 2: Schemas Ecto + Storage + TokenCounter (coder)
@@ -74,7 +77,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Schemas Ecto + Storage" "$PROMPT_B2"
+if ! run_block "coder" "Schemas Ecto + Storage" "$PROMPT_B2"; then
+    echo -e "${RED}✗  Error crítico en V1.0 Bloque 2. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 3: Portable Session Context (coder)
@@ -119,7 +125,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Portable Session Context" "$PROMPT_B3"
+if ! run_block "coder" "Portable Session Context" "$PROMPT_B3"; then
+    echo -e "${RED}✗  Error crítico en V1.0 Bloque 3. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 4: Engine Adapters + Dispatcher (coder)
@@ -145,9 +154,7 @@ IMPLEMENTA:
    - prepare_prefix/2: no-op (implícito en llama-server)
 
 3. ElPaso.Engine.OpenAI — API OpenAI estándar con api_key desde env
-
 4. ElPaso.Engine.Anthropic — con cache_control {"type":"ephemeral"} en system prompt
-
 5. ElPaso.Engine.Ollama — wrapper sobre OpenAI con base_url localhost:11434/v1, api_key nil
 
 6. ElPaso.Engine.Dispatcher:
@@ -168,7 +175,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Engine Adapters + Dispatcher" "$PROMPT_B4"
+if ! run_block "coder" "Engine Adapters + Dispatcher" "$PROMPT_B4"; then
+    echo -e "${RED}✗  Error crítico en V1.0 Bloque 4. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 5: ModelManager + ModelWorker (thinker)
@@ -193,7 +203,7 @@ IMPLEMENTA:
    - start_engine/2: usa Zaguan.Engine.execute/2 para arrancar Port del motor con args fusionados por Config.Merger
    - Health check cada 30s: GET /health del motor, RAM via /proc/{pid}/status, VRAM via nvidia-smi
    - Parada por inactividad: evalúa max_idle_minutes y keepalive_minutes cada 60s
-   - ModelState completo: status (:hot/:warming/:cold/:error/:disabled), pid, port, queue_depth, avg_latency_ms (EMA alpha=0.1), p95_latency_ms (ventana 50 últimas), errores, ram_mb, vram_mb
+   - ModelState completo: status (:hot/:warming/:cold/:error/:disabled), pid, port, queue_depth, avg_latency_ms (EMA alpha=0.1), p95_latency_ms (ventana 50 últimas), errores, ram_mb, vram_mb, started_at, last_call_at, node
    - Suscripción a Zaguan.Engine.subscribe() para eventos de fallos
 
 5. ElPaso.Domain.ModelManager (módulo fachada):
@@ -206,7 +216,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "thinker" "ModelManager + ModelWorker" "$PROMPT_B5"
+if ! run_block "thinker" "ModelManager + ModelWorker" "$PROMPT_B5"; then
+    echo -e "${RED}✗  Error crítico en V1.0 Bloque 5. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 6: Heuristic Routing Engine (r1)
@@ -224,7 +237,7 @@ IMPLEMENTA:
    - complexity_score: función lineal ponderada:
      0.30*normalize(token_estimate) + 0.25*task_type_weight + 0.20*sentence_depth + 0.15*vocabulary_density + 0.10*normalize(question_count)
    - Detección idioma (simple: presencia palabras españolas/inglesas)
-   - has_structured_output_request: detecta peticiones de JSON/tabla/código
+   - has_structured_output_request: detecta peticiones JSON/tabla/código
    - is_continuation: basado en session_id existente
 
 2. ElPaso.Domain.Router.Scorer:
@@ -250,7 +263,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "r1" "Heuristic Routing Engine" "$PROMPT_B6"
+if ! run_block "r1" "Heuristic Routing Engine" "$PROMPT_B6"; then
+    echo -e "${RED}✗  Error crítico en V1.0 Bloque 6. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 7: HTTP Layer + Seguridad (coder)
@@ -258,7 +274,7 @@ run_block "r1" "Heuristic Routing Engine" "$PROMPT_B6"
 PROMPT_B7=$(cat <<'PROMPT'
 Eres un desarrollador Elixir experto. Implementa la capa HTTP de ElPaso.
 
-Lee Documentacion/v1.0.md secciones "ElPaso.HTTP" y "Seguridad básica en V1.0".
+Lee Documentacion/v1.0.md secciones sobre "ElPaso.HTTP" y "Seguridad básica en V1.0".
 
 IMPLEMENTA:
 
@@ -270,10 +286,9 @@ IMPLEMENTA:
    - GET /status: versión, uptime, modelos, sesiones activas, router stats
 
 2. Streaming SSE: cuando stream:true, usar Engine.Dispatcher.stream con callback que envía chunks via Plug.Conn.chunk. Formato: data: {json}\n\n. Primer chunk incluye elpaso metadata. Termina con data: [DONE]\n\n.
-
 3. Formato respuesta no-streaming: OpenAI estándar + objeto "elpaso" con session_id, routing_decision, context_layers_used, model_switched.
 
-4. Errores estructurados: elpaso_503 (no models), elpaso_504 (timeout cold start), elpaso_422 (bad request), elpaso_500 (internal), model_error (502). Formato: {"error": {"message", "type", "code", "param"}}.
+4. Errores estructurados: elpaso_503 (no models), elpaso_504 (timeout cold start), elpaso_422 (bad request), elpaso_500 (internal), model_error (502). Formato: {"error": {"message", "type", "code", "param"}.
 
 5. ElPaso.Security:
    - API key local: si system.api_key configurado, verificar Authorization: Bearer. Si no configurado, acceso libre.
@@ -287,7 +302,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "HTTP Layer + Seguridad" "$PROMPT_B7"
+if ! run_block "coder" "HTTP Layer + Seguridad" "$PROMPT_B7"; then
+    echo -e "${RED}✗  Error crítico en V1.0 Bloque 7. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 8: Config Wizard + CLI + Telemetría (coder)
@@ -332,7 +350,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Config Wizard + CLI + Telemetría" "$PROMPT_B8"
+if ! run_block "coder" "Config Wizard + CLI + Telemetría" "$PROMPT_B8"; then
+    echo -e "${RED}✗  Error crítico en V1.0 Bloque 8. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # Commit y tag

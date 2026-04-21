@@ -48,7 +48,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Embeddings + SemanticRetriever" "$PROMPT_B1"
+if ! run_block "coder" "Embeddings + SemanticRetriever" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V1.1 Bloque 1. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 2: Tokenizadores reales (coder)
@@ -76,7 +79,10 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Tokenizadores reales" "$PROMPT_B2"
+if ! run_block "coder" "Tokenizadores reales" "$PROMPT_B2"; then
+    echo -e "${RED}✗  Error crítico en V1.1 Bloque 2. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 3: Session overrides + Context show + Migrator (thinker)
@@ -111,8 +117,13 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "thinker" "Session overrides + Context show + Migrator" "$PROMPT_B3"
+if ! run_block "thinker" "Session overrides + Context show + Migrator" "$PROMPT_B3"; then
+    echo -e "${RED}✗  Error crítico en V1.1 Bloque 3. Deteniendo.${NC}"
+    exit 1
+fi
 
+# ---------------------------------------------------------------------------
+# Commit y tag
 # ---------------------------------------------------------------------------
 git_commit "feat(v1.1): madurez operacional — embeddings, tokenizers, overrides"
 git_tag "v1.1"

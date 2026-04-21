@@ -34,7 +34,7 @@ PASO 3: Crea módulos placeholder (defmodule con @moduledoc breve) en:
 - lib/elpaso/context/schemas/{session,message,conversation_summary,routing_decision}.ex
 - lib/elpaso/domain/{router,model_manager,model_worker,model_supervisor,model_registry,model_pool,output_cache,router_stats,router_tuner}.ex
 - lib/elpaso/engine/{base,llama_server,openai,anthropic,ollama,vllm,dispatcher,chat_template,registry}.ex
-- lib/elpaso/config/{loader,schema,validator,wizard,merger,environment_detector,condition_evaluator,migrator,diff}.ex
+- lib/elpaso/config/{loader,schema,validator,merger,environment_detector,condition_evaluator,migrator,diff}.ex
 - lib/elpaso/http/{router,dashboard,auth_plug,request_parser,anthropic_proxy,websocket_handler}.ex
 - lib/elpaso/security/{auth,rate_limiter}.ex
 - lib/elpaso/telemetry/{supervisor,store,prometheus_exporter}.ex
@@ -69,7 +69,10 @@ PASO 8: Ejecuta mix deps.get && mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Scaffolding proyecto Elixir" "$PROMPT_B1"
+if ! run_block "coder" "Scaffolding proyecto Elixir" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V0. Deteniendo ejecución.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # Commit y tag

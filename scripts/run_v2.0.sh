@@ -24,16 +24,17 @@ IMPLEMENTA:
      :delta → content_block_delta {type text_delta, text chunk}
      :stop → message_delta {stop_reason end_turn, usage}
    - map_anthropic_model/1: lee integrations.claude_code.model_mapping
-
 2. POST /v1/messages en HTTP.Router: mismo pipeline que chat/completions pero con conversión Anthropic↔interno
-
 3. Config integrations.claude_code: enabled, policy (prefer_local → penalización 0.2 a remotos), fallback_to_remote, model_mapping (claude-opus→heavy, claude-sonnet→fast, etc.)
 
 Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "thinker" "AnthropicProxy + Claude Code" "$PROMPT_B1"
+if ! run_block "thinker" "AnthropicProxy + Claude Code" "$PROMPT_B1"; then
+    echo -e "${RED}✗  Error crítico en V2.0 Bloque 1. Deteniendo.${NC}"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # BLOQUE 2: Plugins + Downloader + Visión (coder)
@@ -73,8 +74,13 @@ Ejecuta mix compile para verificar.
 PROMPT
 )
 
-run_block "coder" "Plugins + Downloader + Visión" "$PROMPT_B2"
+if ! run_block "coder" "Plugins + Downloader + Visión" "$PROMPT_B2"; then
+    echo -e "${RED}✗  Error crítico en V2.0 Bloque 2. Deteniendo.${NC}"
+    exit 1
+fi
 
+# ---------------------------------------------------------------------------
+# git_commit y git_tag
 # ---------------------------------------------------------------------------
 git_commit "feat(v2.0): integraciones — claude code, plugins, downloader, visión"
 git_tag "v2.0"
