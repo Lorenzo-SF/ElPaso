@@ -1,50 +1,79 @@
 defmodule ElPaso.Config do
   @moduledoc """
   Módulo para gestión de configuración del sistema.
+
+  ## CONFIGURACIÓN REQUERIDA
+
+  El sistema REQUIERE que se configure al menos un backend de inferencia.
+  Sin configuración válida, la aplicación NO arrancará.
+
+  ### Variables de entorno requeridas (al menos una):
+
+  - `ELPASO_INFERENCE_URL` - URL del servidor de inferencia (requerido)
+  - `ELPASO_INFERENCE_API_KEY` - API key para autenticación (requerido)
+
+  ### Opcionales:
+
+  - `ELPASO_PORT` - Puerto HTTP (default: 8080)
+  - `ELPASO_MODEL_ROUTING` - Habilitar routing automático (default: false)
+  - `ELPASO_AUTH_ENABLED` - Habilitar autenticación (default: false)
   """
 
   defmodule Loader do
     @moduledoc """
-    Stub para cargar configuración del sistema.
+    Loader de configuración del sistema.
     """
-
-    @default_config %{
-      auth: %{
-        enabled: false,
-        allow_anonymous: true,
-        users: []
-      },
-      integrations: %{
-        claude_code: %{
-          model_mapping: %{}
-        }
-      },
-      cluster: %{
-        enabled: false,
-        node_name: nil,
-        role: :both,
-        coordinator_nodes: [],
-        worker_nodes: [],
-        discovery: "static"
-      },
-      routing: %{
-        auto_tune: false,
-        auto_tune_min_confidence: 0.85,
-        auto_tune_min_decisions: 50,
-        auto_tune_check_interval_hours: 24
-      },
-      cost_management: %{
-        enabled: false,
-        daily_usd: 100.0,
-        alert_at_pct: 80
-      }
-    }
 
     @doc """
     Devuelve la configuración actual del sistema.
+    Falla si no hay configuración mínima requerida.
     """
     def get do
-      @default_config
+      inference_url = System.get_env("ELPASO_INFERENCE_URL")
+      inference_api_key = System.get_env("ELPASO_INFERENCE_API_KEY")
+
+      unless inference_url && inference_api_key do
+        raise """
+        ⚠️ CONFIGURACIÓN REQUERIDA
+
+        El sistema requiere las siguientes variables de entorno:
+
+        export ELPASO_INFERENCE_URL="https://tu-servidor-api.com/v1"
+        export ELPASO_INFERENCE_API_KEY="sk-tu-api-key"
+
+        Ejemplo para OpenAI:
+          export ELPASO_INFERENCE_URL="https://api.openai.com/v1"
+          export ELPASO_INFERENCE_API_KEY="sk-tu-api-key"
+
+        Ejemplo para Ollama local:
+          export ELPASO_INFERENCE_URL="http://localhost:11434/v1"
+          export ELPASO_INFERENCE_API_KEY="no-api-key-required"
+
+        Para más opciones: mix elpaso config --wizard
+        """
+      end
+
+      %{
+        inference: %{
+          url: inference_url,
+          api_key: inference_api_key
+        },
+        auth: %{
+          enabled: System.get_env("ELPASO_AUTH_ENABLED") == "true",
+          allow_anonymous: System.get_env("ELPASO_ALLOW_ANONYMOUS") != "false"
+        },
+        cluster: %{
+          enabled: false,
+          node_name: System.get_env("ELPASO_NODE_NAME"),
+          role: :both
+        },
+        routing: %{
+          auto_tune: System.get_env("ELPASO_MODEL_ROUTING") == "true"
+        },
+        cost_management: %{
+          enabled: false
+        }
+      }
     end
 
     @doc """
@@ -210,5 +239,15 @@ defmodule ElPaso.Config do
   """
   def save_config(_config) do
     :ok
+  end
+
+  @doc """
+  Obtiene el puerto HTTP.
+  """
+  def http_port do
+    case System.get_env("ELPASO_PORT") do
+      nil -> 8080
+      port -> String.to_integer(port)
+    end
   end
 end

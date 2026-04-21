@@ -1,35 +1,58 @@
+if System.otp_release() < "28" do
+  raise "ElPaso requires OTP 28+."
+end
+
 defmodule ElPaso.MixProject do
   use Mix.Project
+
+  @version "0.1.0"
+  @source_url "https://github.com/Lorenzo-SF/ElPaso"
+  @elixir_vsn "1.19.5"
+  @erlang_vsn "28.0"
+  @otp_vsn "28"
+  @binary_name "elpaso"
 
   def project do
     [
       app: :elpaso,
-      version: "0.1.0",
-      elixir: "~> 1.19",
+      version: @version,
+      elixir: "~> " <> @elixir_vsn,
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps_path: "deps",
-      build_path: "_build",
-      description: "ElPaso project",
       deps: deps(),
-      package: %{
-        files: ["lib", "mix.exs", "README.md"],
-        maintainers: [],
-        licenses: ["MIT"],
-        links: %{}
-      }
+      escript: escript(),
+      batamanta: batamanta(),
+      test_coverage: test_coverage(),
+      dialyzer: dialyzer(),
+      docs: docs(),
+      package: package(),
+      aliases: aliases()
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
   def application do
     [
-      extra_applications: [:logger],
-      mod: {ElPaso.Application, []}
+      mod: {ElPaso.Application, []},
+      extra_applications: [:logger, :crypto]
     ]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test"]
+  defp elixirc_paths(_), do: ["lib"]
+
   defp deps do
     [
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:plug, "~> 1.19"},
       {:plug_cowboy, "~> 2.7"},
       {:finch, "~> 0.19"},
@@ -44,15 +67,105 @@ defmodule ElPaso.MixProject do
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:zaguan, path: "../zaguan"},
-      {:telemetry_metrics_prometheus, "~> 1.1"}
+      {:batamanta, path: "../batamanta"},
+      {:telemetry_metrics_prometheus, "~> 1.1"},
+
+      # Dev/Test only
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end
 
-  # Escript configuration (unused but documented for future CLI)
-  # defp escript do
-  #   [
-  #     main_module: ElPaso.CLI.Commands.RouterStats,
-  #     name: "elpaso"
-  #   ]
-  # end
+  defp escript do
+    [main_module: ElPaso.CLI]
+  end
+
+  defp batamanta do
+    [
+      format: :escript,
+      execution_mode: :cli,
+      compression: 1,
+      binary_name: @binary_name
+    ]
+  end
+
+  defp test_coverage do
+    [
+      ignore_modules: [
+        ElPaso.CLI,
+        ElPaso.CLI.Commands,
+        ElPaso.HTTP.Server,
+        ElPaso.HTTP.WebSocketHandler,
+        ElPaso.HTTP.Dashboard,
+        ElPaso.Engine.Plugin.Echo
+      ],
+      summary: [
+        threshold: 70
+      ]
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "_build/plts/dialyzer.plt"},
+      plt_core_path: "_build/plts",
+      flags: ["-Wno_return", "-Wno_match"],
+      plt_add_apps: [:mix]
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md"],
+      source_url: @source_url,
+      source_ref: "v#{@version}"
+    ]
+  end
+
+  defp package do
+    [
+      description: "Multi-model LLM proxy for local and remote inference engines",
+      licenses: ["MIT"],
+      maintainers: ["ElPaso Team"],
+      links: %{"GitHub" => @source_url},
+      files: ~w(lib mix.exs README.md LICENSE .formatter.exs)
+    ]
+  end
+
+  defp aliases do
+    [
+      gen: ["compile", "batamanta", "deploy", "tools_version"],
+      quality: [
+        "format",
+        "compile",
+        "credo --strict",
+        "dialyzer"
+      ],
+      setup: ["deps.get"],
+      "test.coverage": ["test --cover"],
+      lint: ["format --check-formatted", "credo --strict"],
+      "lint.fix": ["format", "credo --strict"],
+      deploy: fn _ ->
+        dest_dir = Path.expand("~/.elpaso")
+        File.mkdir_p!(dest_dir)
+
+        case File.cp("elpaso", Path.join(dest_dir, "elpaso")) do
+          :ok ->
+            File.chmod!(Path.join(dest_dir, "elpaso"), 0o755)
+            Mix.shell().info("✅ Escript installed in #{dest_dir}/elpaso")
+
+          {:error, _} ->
+            Mix.shell().error("❌ Could not copy executable")
+        end
+      end,
+      tools_version: fn _ ->
+        dest_dir = Path.expand("~/.elpaso")
+        path = Path.join(dest_dir, ".tool-versions")
+        File.write!(path, "erlang #{@erlang_vsn}\nelixir #{@elixir_vsn}-otp-#{@otp_vsn}\n")
+        Mix.shell().info("✅ .tool-versions updated")
+      end
+    ]
+  end
 end

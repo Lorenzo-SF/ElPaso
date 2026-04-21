@@ -1,17 +1,19 @@
 defmodule ElPaso.Event.Supervisor do
   @moduledoc """
-  Supervisor para la gestión de eventos y errores del sistema.
+  Supervisor for event and error handling.
   """
 
   use Supervisor
 
+  def start_link(args \\ []) do
+    Supervisor.start_link(__MODULE__, args, name: __MODULE__)
+  end
+
   @impl Supervisor
   def init(_args) do
-    children = [
-      # Aquí se pueden añadir supervisores de eventos o procesos de error
-    ]
+    children = []
 
-    opts = [strategy: :one_for_one, name: ElPaso.Event.Supervisor]
+    opts = [strategy: :one_for_one, name: __MODULE__]
     Supervisor.init(children, opts)
   end
 end

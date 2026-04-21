@@ -1,8 +1,12 @@
 defmodule ElPaso.Telemetry.Store do
   @moduledoc """
-  GenServer que suscribe a eventos de telemetry y los almacena para consultas del dashboard.
+  GenServer that subscribes to telemetry events and stores them for dashboard queries.
   """
   use GenServer
+
+  def start_link(args \\ []) do
+    GenServer.start_link(__MODULE__, args, name: __MODULE__)
+  end
 
   @max_events 1000
 

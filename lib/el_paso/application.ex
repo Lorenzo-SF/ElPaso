@@ -2,6 +2,11 @@ defmodule ElPaso.Application do
   alias ModelDownloaderRegistry
   alias ElPaso.Config
 
+  # Helper para obtener el puerto HTTP
+  defp http_port do
+    Config.http_port() || 8080
+  end
+
   @moduledoc """
   La aplicación principal del proyecto ElPaso.
 
@@ -33,8 +38,8 @@ defmodule ElPaso.Application do
       # Servidor de telemetry para métricas
       ElPaso.Telemetry.Store,
 
-      # Servidor HTTP para las APIs REST
-      ElPaso.HTTP.Server,
+      # Servidor HTTP para las APIs REST (usando Plug.Cowboy)
+      {Plug.Cowboy, scheme: :http, plug: ElPaso.HTTP.Server, port: http_port()},
 
       # Supervisor para el manejo de errores y eventos
       ElPaso.Event.Supervisor,

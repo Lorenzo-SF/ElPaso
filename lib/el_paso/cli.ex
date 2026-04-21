@@ -1,7 +1,19 @@
 defmodule ElPaso.CLI do
   @moduledoc """
-  Módulo principal para las comandos de línea de comandos.
+  CLI module for ElPaso commands.
   """
+
+  @doc """
+  Main entry point for escript.
+  """
+  def main(args \\ []) do
+    run(args)
+  end
+
+  @doc """
+  Executes a command.
+  """
+  def run([]), do: help()
 
   def run(args) do
     case args do
@@ -14,24 +26,34 @@ defmodule ElPaso.CLI do
       ["bench"] ++ rest ->
         ElPaso.CLI.Commands.Bench.run(parse_options(rest))
 
-      ["context", "export"] ++ rest ->
+      ["context"] ++ rest ->
         ElPaso.CLI.Commands.Context.run(parse_options(rest))
 
-      ["config", "reload"] ++ rest ->
+      ["config"] ++ rest ->
         ElPaso.CLI.Commands.ConfigReload.run(parse_options(rest))
 
-      ["cluster", "status"] ++ rest ->
+      ["cluster"] ++ rest ->
         ElPaso.CLI.Commands.ClusterStatus.run(parse_options(rest))
 
       _ ->
-        IO.puts("Comandos disponibles:")
-        IO.puts("  mix elpaso router stats")
-        IO.puts("  mix elpaso router tune")
-        IO.puts("  mix elpaso bench")
-        IO.puts("  mix elpaso context export")
-        IO.puts("  mix elpaso config reload")
-        IO.puts("  mix elpaso cluster status")
+        help()
     end
+  end
+
+  defp help do
+    IO.puts("""
+    ElPaso CLI
+
+    Usage: elpaso <command> [options]
+
+    Available commands:
+      mix elpaso router stats    # Router statistics
+      mix elpaso router tune    # Router auto-tuning
+      mix elpaso bench          # Benchmark
+      mix elpaso context       # Context management
+      mix elpaso config         # Reload configuration
+      mix elpaso cluster       # Cluster status
+    """)
   end
 
   defp parse_options(args) do

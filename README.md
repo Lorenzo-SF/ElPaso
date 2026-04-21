@@ -2,81 +2,81 @@
 
 **Multi-model LLM proxy written in Elixir**
 
-El Paso decide cuál usar en cada momento.
+Choose your model, forget the configuration. El Paso decides which one to use.
 
-## ¿Qué es El Paso?
+## What is El Paso?
 
-El Paso es un **proxy de inferencia multi-modelo** que te da un único endpoint para acceder a múltiples LLMs — locales (llama.cpp, Ollama, vLLM) o remotos (OpenAI, Anthropic).
+El Paso is a **multi-model inference proxy** that gives you a single endpoint to access multiple LLMs — local (llama.cpp, Ollama, vLLM) or remote (OpenAI, Anthropic).
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Tu App                           │
-│                      ↓                             │
+│                    Your App                        │
+│                      ↓                           │
 │               POST /v1/chat/completions            │
-│                      ↓                             │
-│  ┌─────────────────────────────────────────┐      │
-│  │  🤖 El Paso Router                     │      │
-│  │  "Necesito código" → coder (Qwen)      │      │
-│  │  "Explica esto"   → reasoning (R1)    │      │
-│  │  "Resumen"        → fast (Gemma)       │      │
-│  └─────────────────────────────────────────┘      │
-│                      ↓                             │
-│        ┌──────────┬──────────┬──────────┐        │
-│        │  llama   │  Ollama  │  OpenAI  │        │
-│        │  server  │  local  │   API    │        │
-│        └──────────┴──────────┴──────────┘        │
+│                      ↓                           │
+│  ┌─────────────────────────────────────────┐  │
+│  │  🤖 El Paso Router                      │  │
+│  │  "I need code"     → coder (Qwen)       │  │
+│  │  "Explain this"    → reasoning (R1)     │  │
+│  │  "Summarize"       → fast (Gemma)          │  │
+│  └─────────────────────────────────────────┘  │
+│                      ↓                        │
+│        ┌──────────┬──────────┬──────────┐      │
+│        │  llama   │  Ollama  │  OpenAI  │      │
+│        │  server  │  local  │   API    │      │
+│        └──────────┴──────────┴──────────┘      │
 └─────────────────────────────────────────────────────┘
 ```
 
-## Características Principales
+## Key Features
 
-- 🧠 **Enrutamiento Inteligente** — Elige el mejor modelo según el tipo de tarea
-- 🔄 **Contexto Portable** — La conversación sigue al usuario entre modelos
-- ⚡ **Gestión de Motores** — Arrancar/parar modelos automáticamente
-- 💾 **Cache LRU+TTL** — Evita repetir inferencias costosas
-- 📊 **Métricas** — Prometheus + Telemetry integrado
-- 🔐 **Auth** — JWT y rate limiting integrados
+- 🧠 **Smart Routing** — Chooses the best model based on task type
+- 🔄 **Portable Context** — Conversation follows the user across models
+- ⚡ **Engine Management** — Auto start/stop models
+- 💾 **LRU+TTL Cache** — Avoid repeating costly inferences
+- 📊 **Metrics** — Prometheus + Telemetry built-in
+- 🔐 **Auth** — JWT and rate limiting integrated
 
-## Inicio Rápido
+## Quick Start
 
 ```bash
-# 1. Instalar dependencias
+# 1. Install dependencies
 mix deps.get
 
-# 2. Compilar
+# 2. Compile
 mix compile
 
-# 3. Arrancar el servidor
+# 3. Run server
 mix run --no-halt
 
-# 4. Probar
+# 4. Test
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "messages": [{"role": "user", "content": "Hola!"}],
+    "messages": [{"role": "user", "content": "Hello!"}],
     "model": "auto"
   }'
 ```
 
-## API
+## API Endpoints
 
-| Endpoint | Método | Descripción |
-|---------|--------|-------------|
-| `/v1/chat/completions` | POST | Chat completo (compat OpenAI) |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/chat/completions` | POST | Chat completion (OpenAI compat) |
 | `/v1/messages` | POST | Anthropic API compat |
 | `/v1/messages_stream` | POST | Streaming |
-| `/models/status` | GET | Estado de modelos |
-| `/status` | GET | Estado del sistema + alertas |
-| `/dashboard` | GET | Dashboard web |
-| `/metrics` | GET | Métricas Prometheus |
+| `/models/status` | GET | Model status |
+| `/status` | GET | System status + alerts |
+| `/dashboard` | GET | Web dashboard |
+| `/metrics` | GET | Prometheus metrics |
 
-### Overrides de El Paso
+### El Paso Overrides
 
 ```json
 {
   "messages": [...],
   "elpaso": {
-    "session_id": "mi-sesion",
+    "session_id": "my-session",
     "force_model": "gemma",
     "context_mode": "transparent",
     "window_size": 10
@@ -84,9 +84,9 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 }
 ```
 
-## Configuración
+## Configuration
 
-Edita `config/runtime.exs` o usa variables de entorno:
+Edit `config/runtime.exs` or use environment variables:
 
 ```elixir
 config :elpaso,
@@ -94,48 +94,74 @@ config :elpaso,
   port: System.get_env("ELPASO_PORT", "8080") |> String.to_integer()
 ```
 
-### Modelos Disponibles
+### Available Models
 
-| ID | Modelo | Especialidad | VRAM |
+| ID | Model | Specialty | VRAM |
 |----|--------|-------------|------|
-| `fast` | Gemma 3 4B | Rápido, tareas simples | 4GB |
-| `heavy` | Llama 3 8B | Tareas complejas | 8GB |
-| `coder` | Qwen Coder | Código | 6GB |
-| `r1` | DeepSeek R1 | Razonamiento | 4GB |
+| `fast` | Gemma 3 4B | Fast, simple tasks | 4GB |
+| `heavy` | Llama 3 8B | Complex tasks | 8GB |
+| `coder` | Qwen Coder | Code generation | 6GB |
+| `r1` | DeepSeek R1 | Reasoning | 4GB |
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
 lib/el_paso/
-├── context/           # Gestión de conversaciones
-│   ├── builder.ex    # Ensambla el prompt
-│   ├── manager.ex    # Estado en memoria
-│   ├── storage.ex   # Persistencia PostgreSQL
+├── context/           # Conversation management
+│   ├── builder.ex    # Builds the prompt
+│   ├── manager.ex    # In-memory state
+│   ├── storage.ex    # PostgreSQL persistence
 │   └── schemas/     # Ecto schemas
-├── domain/           # Lógica de negocio
-│   ├── router.ex     # Enrutamiento heurístico
-│   ├── model_manager.ex  # Ciclo de vida de modelos
-│   └── auto_tuner.go # Ajuste automático
-├── engine/           # Motores de inferencia
-│   ├── dispatcher.ex # Punto de entrada
-│   └── ollama.ex    # Adapter Ollama
-├── http/             # Servidor HTTP
+├── domain/            # Business logic
+│   ├── router.ex     # Heuristic routing
+│   ├── model_manager.ex  # Model lifecycle
+│   └── auto_tuner.go # Auto-tuning
+├── engine/           # Inference engines
+│   ├── dispatcher.ex # Single entry point
+│   └── ollama.ex    # Ollama adapter
+├── http/             # HTTP server
 └── security/         # Auth & rate limiting
 ```
 
-## Desarrollo
+## CLI Commands
 
 ```bash
-# Tests
-mix test
+# Router statistics
+mix elpaso router stats
 
-# Credo (linting)
-mix credo
+# Router auto-tuning
+mix elpaso router tune
 
-# Deps/update
-mix deps.update --all
+# Benchmark
+mix elpaso bench
+
+# Context management
+mix elpaso context
+
+# Reload configuration
+mix elpaso config
+
+# Cluster status
+mix elPaso cluster
 ```
 
-## Licencia
+## Development
+
+```bash
+# Run tests
+mix test
+
+# Run with IEx
+iex -S mix
+
+# Quality checks
+mix gen        # Generate escript
+mix quality   # Format + compile + credo
+
+# Generate documentation
+mix docs
+```
+
+## License
 
 MIT
