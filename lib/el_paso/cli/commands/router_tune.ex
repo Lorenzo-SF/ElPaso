@@ -30,7 +30,9 @@ defmodule ElPaso.CLI.Commands.RouterTune do
     analyses = ElPaso.Domain.RouterAnalyzer.analyze_trends(:last_30d)
 
     if Enum.empty?(analyses) do
-      IO.puts("No hay datos suficientes para análisis. Se necesitan al menos 500 routing_decisions.")
+      IO.puts(
+        "No hay datos suficientes para análisis. Se necesitan al menos 500 routing_decisions."
+      )
     else
       print_analyses(analyses)
     end
@@ -41,15 +43,19 @@ defmodule ElPaso.CLI.Commands.RouterTune do
 
     analyses
     |> Enum.each(fn a ->
-      trend_icon = case a.success_trend do
-        :improving -> "↑"
-        :degrading -> "↓"
-        :stable -> "→"
-      end
+      trend_icon =
+        case a.success_trend do
+          :improving -> "↑"
+          :degrading -> "↓"
+          :stable -> "→"
+        end
 
       status = if a.alert, do: "⚠️", else: ""
 
-      IO.puts("#{a.model_id}@#{a.task_type}: #{a.overall_success_rate}% #{trend_icon} (n=#{a.n_decisions}) #{status}")
+      IO.puts(
+        "#{a.model_id}@#{a.task_type}: #{a.overall_success_rate}% #{trend_icon} (n=#{a.n_decisions}) #{status}"
+      )
+
       IO.puts("  retry_rate: #{a.retry_rate_pct}%, latencia: #{a.median_latency_ms}ms")
     end)
   end

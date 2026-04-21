@@ -38,35 +38,38 @@ defmodule ElPaso.Application do
 
       # Supervisor para el manejo de errores y eventos
       ElPaso.Event.Supervisor,
-      
+
       # AutoTuner para aprendizaje adaptativo
       ElPaso.Domain.AutoTuner
     ]
 
     # Añadir cluster support si está habilitado
-    final_children = cond do
-      Config.cluster_enabled?() and Config.cluster_discovery() == "gossip" ->
-        # Modo gossip: usar libcluster para descubrimiento automático
-        children ++ [
-          {Cluster.Supervisor, [
-            gossip: [
-              strategy: Cluster.Strategy.Gossip,
-              config: [
-                port: 45_892,
-                multicast_addr: "230.1.1.251"
-              ]
+    final_children =
+      cond do
+        Config.cluster_enabled?() and Config.cluster_discovery() == "gossip" ->
+          # Modo gossip: usar libcluster para descubrimiento automático
+          children ++
+            [
+              {Cluster.Supervisor,
+               [
+                 gossip: [
+                   strategy: Cluster.Strategy.Gossip,
+                   config: [
+                     port: 45_892,
+                     multicast_addr: "230.1.1.251"
+                   ]
+                 ]
+               ]},
+              ElPaso.Cluster.NodeRegistry
             ]
-          ]},
-          ElPaso.Cluster.NodeRegistry
-        ]
-        
-      Config.cluster_enabled?() ->
-        # Modo static: NodeRegistry suficiente
-        children ++ [ElPaso.Cluster.NodeRegistry]
-        
-      true ->
-        children
-    end
+
+        Config.cluster_enabled?() ->
+          # Modo static: NodeRegistry suficiente
+          children ++ [ElPaso.Cluster.NodeRegistry]
+
+        true ->
+          children
+      end
 
     # Arranca la aplicación con los hijos definidos
     opts = [strategy: :one_for_one, name: ElPaso.Supervisor]

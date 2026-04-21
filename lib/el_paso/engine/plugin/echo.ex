@@ -76,14 +76,8 @@ defmodule ElPaso.Engine.Plugin.Echo do
 
   # Funciones auxiliares
 
-  defp extract_content(prompt) do
+defp extract_content(prompt) do
     case prompt do
-      %{messages: messages} ->
-        messages
-        |> Enum.filter(fn m -> m.role == "user" end)
-        |> List.first()
-        |> Map.get(:content, "")
-
       %{system: system, messages: messages} ->
         system_content = if system, do: "[System]: #{system}\n", else: ""
 
@@ -94,11 +88,14 @@ defmodule ElPaso.Engine.Plugin.Echo do
 
         system_content <> user_content
 
+      %{messages: messages} ->
+        messages
+        |> Enum.filter(fn m -> m.role == "user" end)
+        |> List.first()
+        |> Map.get(:content, "")
+
       _ when is_binary(prompt) ->
         prompt
-
-      _ ->
-        ""
     end
   end
 

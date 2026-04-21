@@ -1,7 +1,7 @@
 defmodule ElPaso.Domain.AutoTuner do
   @moduledoc """
   GenServer para auto-tuning periódico del router.
-  
+
   Se ejecuta cada 24 horas (configurable) y aplica automáticamente
   sugerencias de alta confianza.
   """
@@ -12,8 +12,6 @@ defmodule ElPaso.Domain.AutoTuner do
   alias ElPaso.Config
   alias ElPaso.Domain.RouterAnalyzer
   alias ElPaso.Context.Storage
-
-  @check_interval :timer.hours(1)
 
   # client API
 
@@ -73,14 +71,22 @@ defmodule ElPaso.Domain.AutoTuner do
       nil ->
         {:reply, {:error, "No hay auto-tune runs para revertir"}, state}
 
-      last_run ->
+      last_run_obj ->
         # Revertir cambios
-        Enum.each(last_run.changes, fn change ->
-          Config.Loader.update_affinity(change.model_id, change.task_type, change.previous_affinity)
-          Logger.info("Revertido: #{change.model_id}.#{change.task_type}: #{change.new_affinity} → #{change.previous_affinity}")
+        changes = Map.get(last_run_obj, :changes, [])
+        Enum.each(changes, fn change ->
+          Config.Loader.update_affinity(
+            Map.get(change, :model_id),
+            Map.get(change, :task_type),
+            Map.get(change, :previous_affinity)
+          )
+
+          Logger.info(
+            "Revertido: #{Map.get(change, :model_id)}.#{Map.get(change, :task_type)}: #{Map.get(change, :new_affinity)} → #{Map.get(change, :previous_affinity)}"
+          )
         end)
 
-        {:reply, {:ok, "Revertidos #{length(last_run.changes)} cambios"}, state}
+        {:reply, {:ok, "Revertidos #{length(changes)} cambios"}, state}
     end
   end
 
@@ -95,16 +101,18 @@ defmodule ElPaso.Domain.AutoTuner do
       min_decisions = Config.auto_tune_min_decisions()
 
       # Filtrar sugerencias auto-aplicables
-      appliable = Enum.filter(analyses, fn analysis ->
-        analysis.n_decisions >= min_decisions and
-          calculate_confidence(analysis) >= min_confidence and
-          analysis.success_trend in [:improving, :degrading]
-      end)
+      appliable =
+        Enum.filter(analyses, fn analysis ->
+          analysis.n_decisions >= min_decisions and
+            calculate_confidence(analysis) >= min_confidence and
+            analysis.success_trend in [:improving, :degrading]
+        end)
 
       # Aplicar cambios
-      changes = Enum.map(appliable, fn analysis ->
-        apply_suggestion(analysis)
-      end)
+      changes =
+        Enum.map(appliable, fn analysis ->
+          apply_suggestion(analysis)
+        end)
 
       if length(changes) > 0 do
         # Guardar run para posible revert
@@ -145,7 +153,9 @@ defmodule ElPaso.Domain.AutoTuner do
     # Aplicar cambio
     Config.Loader.update_affinity(analysis.model_id, analysis.task_type, suggested_affinity)
 
-    Logger.info("Auto-tune: #{analysis.model_id}.#{analysis.task_type}: #{current_affinity} → #{suggested_affinity}")
+    Logger.info(
+      "Auto-tune: #{analysis.model_id}.#{analysis.task_type}: #{current_affinity} → #{suggested_affinity}"
+    )
 
     %{
       model_id: analysis.model_id,
@@ -159,19 +169,21 @@ defmodule ElPaso.Domain.AutoTuner do
     # Confianza basada en número de decisiones y varianza de la trend
     n_factor = min(analysis.n_decisions / 500.0, 1.0)
 
-    trend_factor = case analysis.success_trend do
-      :improving -> 0.9
-      :degrading -> 1.0  # Alta confianza si está degradando
-      :stable -> 0.5
-    end
+    trend_factor =
+      case analysis.success_trend do
+        :improving -> 0.9
+        # Alta confianza si está degradando
+        :degrading -> 1.0
+        :stable -> 0.5
+      end
 
-    n_factor * trend_factor
+    (n_factor * trend_factor)
     |> Float.round(2)
   end
 
   defp calculate_best_affinity(analysis) do
     current = Config.Loader.get_affinity(analysis.model_id, analysis.task_type)
-    
+
     # Aumentar affinity si está mejorando, reducir si está degradando
     case analysis.success_trend do
       :improving ->

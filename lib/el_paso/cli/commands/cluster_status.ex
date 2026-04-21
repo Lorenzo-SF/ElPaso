@@ -1,7 +1,7 @@
 defmodule ElPaso.CLI.Commands.ClusterStatus do
   @moduledoc """
   Muestra el estado del cluster: nodos, roles y modelos disponibles.
-  
+
   Uso: mix elpaso cluster status
   """
 
@@ -16,9 +16,9 @@ defmodule ElPaso.CLI.Commands.ClusterStatus do
 
       # Mostrar nodos conectados
       nodes = ElPaso.Cluster.NodeRegistry.all_nodes()
-      
+
       IO.puts("Nodos conectados (#{length(nodes)}):")
-      
+
       if Enum.empty?(nodes) do
         IO.puts("  (ninguno)\n")
       else
@@ -31,15 +31,15 @@ defmodule ElPaso.CLI.Commands.ClusterStatus do
 
       # Mostrar modelos disponibles en cada nodo
       IO.puts("Modelos disponibles por nodo:")
-      
+
       model_states = ElPaso.Cluster.NodeRegistry.all_model_states()
-      
+
       if Enum.empty?(model_states) do
         IO.puts("  (ninguno)")
       else
         Enum.each(model_states, fn {node, states} ->
           IO.puts("  #{node}:")
-          
+
           if Enum.empty?(states) do
             IO.puts("    (sin modelos)")
           else

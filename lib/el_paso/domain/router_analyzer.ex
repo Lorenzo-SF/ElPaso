@@ -1,7 +1,7 @@
 defmodule ElPaso.Domain.RouterAnalyzer do
   @moduledoc """
   Analiza el rendimiento del router a lo largo del tiempo.
-  
+
   Calcula tendencias, tasas de retry y genera sugerencias auto-aplicables.
   """
 
@@ -11,24 +11,33 @@ defmodule ElPaso.Domain.RouterAnalyzer do
 
   @type trend :: :improving | :stable | :degrading
 
-  defstruct [:model_id, :task_type, :n_decisions, :overall_success_rate, :success_trend,
-            :median_latency_ms, :retry_rate_pct, :alert, :weekly_breakdown]
+  defstruct [
+    :model_id,
+    :task_type,
+    :n_decisions,
+    :overall_success_rate,
+    :success_trend,
+    :median_latency_ms,
+    :retry_rate_pct,
+    :alert,
+    :weekly_breakdown
+  ]
 
   @type t :: %__MODULE__{
-    model_id: String.t(),
-    task_type: atom(),
-    n_decisions: non_neg_integer(),
-    overall_success_rate: float(),
-    success_trend: trend(),
-    median_latency_ms: non_neg_integer(),
-    retry_rate_pct: float(),
-    alert: boolean(),
-    weekly_breakdown: [%{week: Date.t(), success_rate: float(), n: integer()}]
-  }
+          model_id: String.t(),
+          task_type: atom(),
+          n_decisions: non_neg_integer(),
+          overall_success_rate: float(),
+          success_trend: trend(),
+          median_latency_ms: non_neg_integer(),
+          retry_rate_pct: float(),
+          alert: boolean(),
+          weekly_breakdown: [%{week: Date.t(), success_rate: float(), n: integer()}]
+        }
 
   @doc """
   Analiza tendencias de rendimiento para cada combinación (model, task_type).
-  
+
   Argumentos:
   - since: :last_7d, :last_30d, :last_90d (default: :last_30d)
   """
@@ -57,7 +66,6 @@ defmodule ElPaso.Domain.RouterAnalyzer do
   defp analyze_combination(model, task, group) do
     windows = split_into_weekly_windows(group)
     success_rates = Enum.map(windows, &success_rate/1)
-    latencies = Enum.map(windows, &median_latency/1)
 
     trend = calculate_trend(success_rates)
     retry_rate = calculate_retry_rate(group)
@@ -85,7 +93,9 @@ defmodule ElPaso.Domain.RouterAnalyzer do
 
     # Obtener rango de fechas
     case {List.first(sorted), List.last(sorted)} do
-      {nil, _} -> []
+      {nil, _} ->
+        []
+
       {first, last} ->
         # Crear ventanas de 7 días
         date_range = Date.range(first.decided_at, last.decided_at)
@@ -94,7 +104,7 @@ defmodule ElPaso.Domain.RouterAnalyzer do
         Enum.map(weeks, fn week_range ->
           Enum.filter(sorted, fn d ->
             Date.compare(d.decided_at, List.first(week_range)) in [:gt, :eq] and
-            Date.compare(d.decided_at, List.last(week_range)) in [:lt, :eq]
+              Date.compare(d.decided_at, List.last(week_range)) in [:lt, :eq]
           end)
         end)
     end
@@ -112,10 +122,13 @@ defmodule ElPaso.Domain.RouterAnalyzer do
   end
 
   defp median_latency(decisions) do
-    latencies = Enum.map(decisions, & &1.decision_latency_us) |> Enum.reject(&(&1 == nil or &1 == 0))
+    latencies =
+      Enum.map(decisions, & &1.decision_latency_us) |> Enum.reject(&(&1 == nil or &1 == 0))
 
     case latencies do
-      [] -> 0
+      [] ->
+        0
+
       list ->
         sorted = Enum.sort(list)
         mid = div(length(sorted), 2)
@@ -128,6 +141,7 @@ defmodule ElPaso.Domain.RouterAnalyzer do
       :stable
     else
       slope = linear_regression_slope(rates_over_time)
+
       cond do
         slope > 0.02 -> :improving
         slope < -0.02 -> :degrading
@@ -138,11 +152,12 @@ defmodule ElPaso.Domain.RouterAnalyzer do
 
   defp linear_regression_slope(values) when is_list(values) do
     n = length(values)
+
     if n < 2 do
       0.0
     else
       # Simple linear regression: y = mx + b
-      x = Enum.to_list(0..(n-1))
+      x = Enum.to_list(0..(n - 1))
       y = values
 
       sum_x = Enum.sum(x)
@@ -163,12 +178,13 @@ defmodule ElPaso.Domain.RouterAnalyzer do
   defp calculate_retry_rate(decisions) do
     # Retry = dos mensajes del mismo usuario en menos de 10 segundos
     # agrupados por sesión
-    retry_count = decisions
-    |> Enum.group_by(fn d -> d.session_id end)
-    |> Enum.flat_map(fn {_sid, session_decisions} ->
-      detect_retries(session_decisions)
-    end)
-    |> length()
+    retry_count =
+      decisions
+      |> Enum.group_by(fn d -> d.session_id end)
+      |> Enum.flat_map(fn {_sid, session_decisions} ->
+        detect_retries(session_decisions)
+      end)
+      |> length()
 
     total = length(decisions)
 
@@ -188,9 +204,12 @@ defmodule ElPaso.Domain.RouterAnalyzer do
     Enum.reduce(sorted, [], fn
       curr, acc ->
         case acc do
-          [] -> [curr]
+          [] ->
+            [curr]
+
           [prev | rest] ->
             diff = DateTime.diff(curr.decided_at, prev.decided_at, :second)
+
             if diff > 0 and diff < 10 do
               [curr, prev | rest]
             else
@@ -200,7 +219,7 @@ defmodule ElPaso.Domain.RouterAnalyzer do
     end)
   end
 
-  defp should_alert?(retry_rate, _trend, n) when n < 20 do
+  defp should_alert?(_retry_rate, _trend, n) when n < 20 do
     false
   end
 
@@ -209,10 +228,11 @@ defmodule ElPaso.Domain.RouterAnalyzer do
   end
 
   defp week_breakdown(decisions) do
-    first_date = case List.first(decisions) do
-      nil -> Date.utc_today()
-      d -> d.decided_at
-    end
+    first_date =
+      case List.first(decisions) do
+        nil -> Date.utc_today()
+        d -> d.decided_at
+      end
 
     %{
       week: first_date,

@@ -27,8 +27,16 @@ defmodule ElPaso.Security.Auth do
     end
   end
 
-  defp find_user_by_key(users, api_key) do
-    Enum.find(users, fn u -> u.api_key == api_key end)
+  @doc """
+  Verifica si una API key es válida para /auth/token.
+  """
+  def valid_api_key?(api_key) do
+    auth_config = ElPaso.Config.Loader.get().auth
+    users = Map.get(auth_config, :users, [])
+
+    # Verificar en la lista de usuarios o usar API key global
+    find_user_by_key(users, api_key) != nil or
+      api_key == Application.get_env(:elpaso, :inference_api_key)
   end
 
   @doc """
@@ -39,5 +47,9 @@ defmodule ElPaso.Security.Auth do
       ["Bearer " <> key] -> key
       _ -> nil
     end
+  end
+
+  defp find_user_by_key(users, api_key) do
+    Enum.find(users, fn u -> u.api_key == api_key end)
   end
 end

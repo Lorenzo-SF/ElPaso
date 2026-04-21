@@ -40,6 +40,9 @@ defmodule ElPaso.MixProject do
       {:nimble_options, "~> 1.1"},
       {:telemetry, "~> 1.2"},
       {:libcluster, "~> 3.4"},
+      {:jose, "~> 1.11"},
+      {:ex_aws, "~> 2.5"},
+      {:ex_aws_s3, "~> 2.5"},
       {:zaguan, path: "../zaguan"},
       {:telemetry_metrics_prometheus, "~> 1.1"}
     ]

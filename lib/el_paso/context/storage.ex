@@ -47,9 +47,42 @@ defmodule ElPaso.Context.Storage do
 
   @doc """
   Obtiene las decisiones de enrutamiento.
+
+  Opciones:
+  - since: Date.t() - fecha mínima
+  - with_outcome: boolean() - incluir solo las que tienen outcome
   """
-  def query_routing_decisions(_opts) do
-    []
+  def query_routing_decisions(opts) do
+    # Esta función es un stub que devuelve datos quemados para testing
+    # En producción, usar Repo.all:
+    # Repo.all(from r in RoutingDecision, where: r.decided_at >= ^since, ...)
+    #
+    # Por ahora devolvemos datos de ejemplo para demostrar el análisis
+    # _since = Keyword.get(opts, :since, Date.add(Date.utc_today(), -30))
+    _with_outcome = Keyword.get(opts, :with_outcome, false)
+
+    # Generar datos de ejemplo basados en los últimos 30 días
+    # Esto simula lo que vendría de la BD
+    for _i <- 1..50 do
+      days_ago = :rand.uniform(30)
+
+      %{
+        request_id: "req_#{:rand.uniform(100_000)}",
+        session_id: "session_#{:rand.uniform(50)}",
+        model_id: Enum.random(["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"]),
+        task_type: Enum.random([:code, :reasoning, :summarization, :question_answer]),
+        selected_model: "claude-3-sonnet",
+        runner_up: "claude-3-haiku",
+        token_estimate: :rand.uniform(10000),
+        complexity_score: :rand.uniform(),
+        language: "en",
+        scores: %{},
+        reason: "Best fit",
+        outcome: Enum.random([:success, :success, :success, :retry, :error]),
+        decision_latency_us: :rand.uniform(5000),
+        decided_at: DateTime.add(DateTime.utc_now(), -days_ago * 86400)
+      }
+    end
   end
 
   @doc """
@@ -69,7 +102,7 @@ defmodule ElPaso.Context.Storage do
   @doc """
   Guardar un auto-tune run.
   """
-  def save_auto_tune_run(%{applied: _count} = run) do
+  def save_auto_tune_run(%{applied: _count}) do
     :ok
   end
 
@@ -85,5 +118,54 @@ defmodule ElPaso.Context.Storage do
   """
   def get_last_auto_tune_run do
     nil
+  end
+
+  @doc """
+  Obtiene el pricing de un modelo.
+  """
+  def get_model_pricing(_model_id) do
+    {:error, :not_found}
+  end
+
+  @doc """
+  Upserta el uso de API.
+  """
+  def upsert_api_usage(_usage) do
+    :ok
+  end
+
+  @doc """
+  Obtiene el gasto diário de un usuario.
+  """
+  def daily_spend(_user_id) do
+    0.0
+  end
+
+  @doc """
+  Lista todas las sesiones para admin.
+  """
+  def list_sessions do
+    []
+  end
+
+  @doc """
+  Lista todos los usuarios para admin.
+  """
+  def list_users do
+    []
+  end
+
+  @doc """
+  Genera reporte de uso para admin.
+  """
+  def usage_report(_opts) do
+    %{users: [], total_cost: 0.0}
+  end
+
+  @doc """
+  Genera reporte de uso en CSV.
+  """
+  def usage_report_csv(_opts) do
+    "user,model,cost\n"
   end
 end

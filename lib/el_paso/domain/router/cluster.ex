@@ -50,7 +50,10 @@ defmodule ElPaso.Domain.Router.Cluster do
               Logger.warning("Node #{node_info.node} unreachable, excluding from routing")
               []
           end
-        end, timeout: 600, on_timeout: :kill_task)
+        end,
+        timeout: 600,
+        on_timeout: :kill_task
+      )
       |> Enum.flat_map(fn
         {:ok, states} -> states
         {:exit, _} -> []

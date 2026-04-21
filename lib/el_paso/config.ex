@@ -32,6 +32,11 @@ defmodule ElPaso.Config do
         auto_tune_min_confidence: 0.85,
         auto_tune_min_decisions: 50,
         auto_tune_check_interval_hours: 24
+      },
+      cost_management: %{
+        enabled: false,
+        daily_usd: 100.0,
+        alert_at_pct: 80
       }
     }
 
@@ -40,6 +45,20 @@ defmodule ElPaso.Config do
     """
     def get do
       @default_config
+    end
+
+    @doc """
+    Obtiene la affinity para una combinación.
+    """
+    def get_affinity(_model_id, _task_type) do
+      0.5
+    end
+
+    @doc """
+    Actualiza la affinity para una combinación.
+    """
+    def update_affinity(_model_id, _task_type, _affinity) do
+      :ok
     end
   end
 
@@ -139,43 +158,50 @@ defmodule ElPaso.Config do
     get_in(config, [:routing, :auto_tune_check_interval_hours]) || 24
   end
 
+  # === Cost management config ===
+
+  @doc """
+  Devuelve true si cost_management está habilitado.
+  """
+  def cost_management_enabled? do
+    config = Loader.get()
+    get_in(config, [:cost_management, :enabled]) == true
+  end
+
+  @doc """
+  Devuelve el budget diario en USD.
+  """
+  def daily_usd_limit do
+    config = Loader.get()
+    get_in(config, [:cost_management, :daily_usd]) || 100.0
+  end
+
+  @doc """
+  Devuelve el porcentaje de alert para el budget.
+  """
+  def cost_alert_at_pct do
+    config = Loader.get()
+    get_in(config, [:cost_management, :alert_at_pct]) || 80
+  end
+
   @doc """
   Obtiene la affine para una combinación (model, task_type).
   """
   def get_affinity(model_id, task_type) do
-    0.5  # Default
+    Loader.get_affinity(model_id, task_type)
   end
 
   @doc """
   Actualiza la affinity para una combinación.
   """
-  def update_affinity(_model_id, _task_type, _affinity) do
-    :ok
-  end
-
-  # === Loader extensions ===
-
-  defmodule Loader do
-    @doc """
-    Obtiene la affinity para una combinación.
-    """
-    def get_affinity(_model_id, _task_type) do
-      0.5
-    end
-
-    @doc """
-    Actualiza la affinity para una combinación.
-    """
-    def update_affinity(_model_id, _task_type, _affinity) do
-      :ok
-    end
+  def update_affinity(model_id, task_type, affinity) do
+    Loader.update_affinity(model_id, task_type, affinity)
   end
 
   @doc """
   Carga la configuración del sistema.
   """
   def load_config do
-    # Implementación temporal
     %{}
   end
 
@@ -183,7 +209,6 @@ defmodule ElPaso.Config do
   Guarda la configuración del sistema.
   """
   def save_config(_config) do
-    # Implementación temporal
     :ok
   end
 end

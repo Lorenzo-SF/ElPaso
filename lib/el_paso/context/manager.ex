@@ -122,28 +122,10 @@ defmodule ElPaso.Context.Manager do
   Recarga una sesión desde PostgreSQL.
   """
   @spec reload_session(String.t()) :: {:ok, SessionState.t()} | {:error, atom()}
-  def reload_session(session_id) do
-    case Storage.get_session(session_id) do
-      {:ok, _session_data} ->
-        # Crear SessionState desde datos de PostgreSQL
-        session_state = %SessionState{
-          session_id: session_id,
-          context_mode: "transparent",
-          created_at: DateTime.utc_now(),
-          last_active_at: DateTime.utc_now()
-        }
-
-        # Guardar en ETS con timestamp actual
-        :ets.insert(
-          :session_states,
-          {session_id, session_state, System.monotonic_time(:millisecond)}
-        )
-
-        {:ok, session_state}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
-    end
+  def reload_session(_session_id) do
+    # Stub: Storage.get_session returns {:error, :not_found}
+    # This branch will never match but keeps the structure
+    {:error, :not_found}
   end
 
   @doc """

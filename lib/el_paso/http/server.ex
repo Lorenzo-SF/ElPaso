@@ -93,19 +93,22 @@ defmodule ElPaso.HTTP.Server do
   # V2.2: Endpoint para estado del sistema con alertas de degradación
   get "/status" do
     # Obtener alertas del router si auto_tune está habilitado
-    alerts = if ElPaso.Config.auto_tune_enabled?() do
-      ElPaso.Domain.RouterAnalyzer.alerts()
-      |> Enum.map(fn a -> %{
-        type: "quality_degradation",
-        model_id: a.model_id,
-        task_type: Atom.to_string(a.task_type),
-        retry_rate_pct: a.retry_rate_pct,
-        trend: Atom.to_string(a.success_trend),
-        n_decisions: a.n_decisions
-      } end)
-    else
-      []
-    end
+    alerts =
+      if ElPaso.Config.auto_tune_enabled?() do
+        ElPaso.Domain.RouterAnalyzer.alerts()
+        |> Enum.map(fn a ->
+          %{
+            type: "quality_degradation",
+            model_id: a.model_id,
+            task_type: Atom.to_string(a.task_type),
+            retry_rate_pct: a.retry_rate_pct,
+            trend: Atom.to_string(a.success_trend),
+            n_decisions: a.n_decisions
+          }
+        end)
+      else
+        []
+      end
 
     conn
     |> put_status(200)
@@ -113,6 +116,125 @@ defmodule ElPaso.HTTP.Server do
       status: "ok",
       alerts: alerts
     })
+  end
+
+  # V3.0: Endpoint de autenticación JWT
+  post "/auth/token" do
+    with {:ok, body, _conn} <- read_body(conn),
+         {:ok, params} <- Jason.decode(body),
+         user_id <- Map.get(params, "user_id"),
+         api_key <- Map.get(params, "api_key"),
+         true <- ElPaso.Security.Auth.valid_api_key?(api_key) do
+      token = ElPaso.Security.JWT.generate_token(user_id, :user)
+
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(
+        200,
+        Jason.encode!(%{
+          token: token,
+          expires_in: 86400
+        })
+      )
+    else
+      _reason ->
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(
+          401,
+          Jason.encode!(%{
+            error: "unauthorized",
+            message: "Invalid credentials"
+          })
+        )
+    end
+  end
+
+  # V3.0: Admin endpoints requieren autenticación
+  get "/admin/sessions" do
+    # Verificar admin auth
+    case verify_admin_auth(conn) do
+      {:ok, _user} ->
+        sessions = ElPaso.Context.Storage.list_sessions()
+
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, Jason.encode!(%{sessions: sessions}))
+
+      _ ->
+        conn
+        |> put_status(403)
+        |> send_resp(403, Jason.encode!(%{error: "admin access required"}))
+    end
+  end
+
+  get "/admin/users" do
+    case verify_admin_auth(conn) do
+      {:ok, _user} ->
+        users = ElPaso.Context.Storage.list_users()
+
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, Jason.encode!(%{users: users}))
+
+      _ ->
+        conn
+        |> put_status(403)
+        |> send_resp(403, Jason.encode!(%{error: "admin access required"}))
+    end
+  end
+
+  get "/admin/usage/report" do
+    case verify_admin_auth(conn) do
+      {:ok, _user} ->
+        report =
+          ElPaso.Context.Storage.usage_report(%{
+            user_id: Map.get(conn.params, "user_id"),
+            model_id: Map.get(conn.params, "model_id"),
+            period: Map.get(conn.params, "period", "30d")
+          })
+
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, Jason.encode!(report))
+
+      _ ->
+        conn
+        |> put_status(403)
+        |> send_resp(403, Jason.encode!(%{error: "admin access required"}))
+    end
+  end
+
+  get "/admin/usage/report.csv" do
+    case verify_admin_auth(conn) do
+      {:ok, _user} ->
+        report = ElPaso.Context.Storage.usage_report_csv(conn.params)
+
+        conn
+        |> put_resp_content_type("text/csv")
+        |> send_resp(200, report)
+
+      _ ->
+        conn
+        |> put_status(403)
+        |> send_resp(403, Jason.encode!(%{error: "admin access required"}))
+    end
+  end
+
+  # Helper para verificar admin auth
+  defp verify_admin_auth(conn) do
+    case get_req_header(conn, "authorization") do
+      [auth_header] ->
+        token = String.replace(auth_header, ~r/^Bearer\s+/i, "")
+
+        case ElPaso.Security.JWT.verify_token(token) do
+          {:ok, %{role: :admin}} -> {:ok, %{role: :admin}}
+          _ -> {:error, :not_admin}
+        end
+
+      _ ->
+        {:error, :no_token}
+    end
   end
 
   # Endpoint para el estado del modelo
