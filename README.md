@@ -1,80 +1,141 @@
-# ElPaso
+# 🚀 El Paso
 
-**Runtime**: Elixir 1.19.5-otp-28
+**Multi-model LLM proxy written in Elixir**
 
-ElPaso es un proxy de inferencia multi-modelo escrito en Elixir. Su objetivo es
-proporcionar un único endpoint de acceso a múltiples modelos LLM, permitiendo al
-usuario trabajar con ellos de forma transparente sin necesidad de gestionar cada
-motor por separado.
+El Paso decide cuál usar en cada momento.
 
-El foco principal son los modelos locales: llama.cpp (via llama-server), vLLM,
-Ollama y otros runtimes compatibles con la API de OpenAI. Sin renunciar a proveedores
-externos como OpenAI o Anthropic cuando sean necesarios.
+## ¿Qué es El Paso?
 
-ElPaso decide qué modelo usar en cada momento, gestiona el ciclo de vida de los
-procesos de motor, mantiene el contexto de conversación portable entre modelos, y
-garantiza que el cambio entre ellos sea invisible para el usuario.
-
-## Características
-
-- Soporte multi-modelo con tolerancia a fallos
-- Gestión del ciclo de vida de motores de inferencia
-- Contexto de conversación portable
-- Integración con frameworks TUI/CLI (Zaguan)
-- Cache LRU+TTL para respuestas
-- Sistema de enrutamiento inteligente
-
-## Estructura del proyecto
+El Paso es un **proxy de inferencia multi-modelo** que te da un único endpoint para acceder a múltiples LLMs — locales (llama.cpp, Ollama, vLLM) o remotos (OpenAI, Anthropic).
 
 ```
-lib/
-├── el_paso/
-│   ├── application.ex          # Punto de entrada de la aplicación
-│   ├── context/
-│   │   ├── schemas/            # Schemas Ecto para tablas PostgreSQL
-│   │   ├── session_supervisor.ex         # Supervisor de sesiones
-│   │   └── summarization_supervisor.ex  # Supervisor de procesamiento de resúmenes
-│   ├── domain/
-│   │   ├── model_manager.ex              # Gestor de motores de inferencia
-│   │   └── output_cache.ex                 # Cache para respuestas
-│   ├── engine/
-│   │   ├── dispatcher.ex       # Punto de entrada único para inferencia
-│   │   ├── chat_template.ex              # Formateador de mensajes
-│   │   └── ollama.ex                     # Wrapper para Ollama
-│   └── http/
-│       └── server.ex                     # Servidor HTTP para APIs REST
-└── mix.exs                           # Archivo de configuración Mix
+┌─────────────────────────────────────────────────────┐
+│                    Tu App                           │
+│                      ↓                             │
+│               POST /v1/chat/completions            │
+│                      ↓                             │
+│  ┌─────────────────────────────────────────┐      │
+│  │  🤖 El Paso Router                     │      │
+│  │  "Necesito código" → coder (Qwen)      │      │
+│  │  "Explica esto"   → reasoning (R1)    │      │
+│  │  "Resumen"        → fast (Gemma)       │      │
+│  └─────────────────────────────────────────┘      │
+│                      ↓                             │
+│        ┌──────────┬──────────┬──────────┐        │
+│        │  llama   │  Ollama  │  OpenAI  │        │
+│        │  server  │  local  │   API    │        │
+│        └──────────┴──────────┴──────────┘        │
+└─────────────────────────────────────────────────────┘
 ```
 
-## Dependencias
+## Características Principales
 
-- `:plug_cowboy` - Servidor HTTP
-- `:finch` - Cliente HTTP
-- `:jason` - Serialización JSON
-- `:ecto_sql` - SQL para Ecto
-- `:postgrex` - Driver PostgreSQL
-- `:pgvector` - Soporte para vectores de embeddings
-- `:nimble_options` - Manejo de opciones
-- `:telemetry` - Monitoreo y métricas
-- `:zaguan` - Framework TUI/CLI
+- 🧠 **Enrutamiento Inteligente** — Elige el mejor modelo según el tipo de tarea
+- 🔄 **Contexto Portable** — La conversación sigue al usuario entre modelos
+- ⚡ **Gestión de Motores** — Arrancar/parar modelos automáticamente
+- 💾 **Cache LRU+TTL** — Evita repetir inferencias costosas
+- 📊 **Métricas** — Prometheus + Telemetry integrado
+- 🔐 **Auth** — JWT y rate limiting integrados
+
+## Inicio Rápido
+
+```bash
+# 1. Instalar dependencias
+mix deps.get
+
+# 2. Compilar
+mix compile
+
+# 3. Arrancar el servidor
+mix run --no-halt
+
+# 4. Probar
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Hola!"}],
+    "model": "auto"
+  }'
+```
+
+## API
+
+| Endpoint | Método | Descripción |
+|---------|--------|-------------|
+| `/v1/chat/completions` | POST | Chat completo (compat OpenAI) |
+| `/v1/messages` | POST | Anthropic API compat |
+| `/v1/messages_stream` | POST | Streaming |
+| `/models/status` | GET | Estado de modelos |
+| `/status` | GET | Estado del sistema + alertas |
+| `/dashboard` | GET | Dashboard web |
+| `/metrics` | GET | Métricas Prometheus |
+
+### Overrides de El Paso
+
+```json
+{
+  "messages": [...],
+  "elpaso": {
+    "session_id": "mi-sesion",
+    "force_model": "gemma",
+    "context_mode": "transparent",
+    "window_size": 10
+  }
+}
+```
 
 ## Configuración
 
-La configuración se encuentra en `config/`. Los archivos principales son:
+Edita `config/runtime.exs` o usa variables de entorno:
 
-- `config/config.exs` - Configuración base
-- `config/dev.exs` - Configuración de desarrollo
-- `config/test.exs` - Configuración de pruebas
-- `config/runtime.exs` - Configuración de tiempo de ejecución
+```elixir
+config :elpaso,
+  api_key: System.get_env("ELPASO_API_KEY"),
+  port: System.get_env("ELPASO_PORT", "8080") |> String.to_integer()
+```
+
+### Modelos Disponibles
+
+| ID | Modelo | Especialidad | VRAM |
+|----|--------|-------------|------|
+| `fast` | Gemma 3 4B | Rápido, tareas simples | 4GB |
+| `heavy` | Llama 3 8B | Tareas complejas | 8GB |
+| `coder` | Qwen Coder | Código | 6GB |
+| `r1` | DeepSeek R1 | Razonamiento | 4GB |
+
+## Estructura del Proyecto
+
+```
+lib/el_paso/
+├── context/           # Gestión de conversaciones
+│   ├── builder.ex    # Ensambla el prompt
+│   ├── manager.ex    # Estado en memoria
+│   ├── storage.ex   # Persistencia PostgreSQL
+│   └── schemas/     # Ecto schemas
+├── domain/           # Lógica de negocio
+│   ├── router.ex     # Enrutamiento heurístico
+│   ├── model_manager.ex  # Ciclo de vida de modelos
+│   └── auto_tuner.go # Ajuste automático
+├── engine/           # Motores de inferencia
+│   ├── dispatcher.ex # Punto de entrada
+│   └── ollama.ex    # Adapter Ollama
+├── http/             # Servidor HTTP
+└── security/         # Auth & rate limiting
+```
 
 ## Desarrollo
 
-Para comenzar a desarrollar:
+```bash
+# Tests
+mix test
 
-1. Ejecutar `mix deps.get` para obtener las dependencias
-2. Ejecutar `mix compile` para compilar el proyecto
-3. Ejecutar `mix test` para correr las pruebas
+# Credo (linting)
+mix credo
+
+# Deps/update
+mix deps.update --all
+```
 
 ## Licencia
 
-Este proyecto está licenciado bajo los términos de la licencia MIT.
+MIT

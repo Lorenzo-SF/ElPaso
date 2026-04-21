@@ -1,11 +1,9 @@
 defmodule ElPaso.HTTP.RequestParser do
   @moduledoc """
   Parser para requests HTTP de chat completions.
-  
+
   Extrae los overrides de sesión del campo 'elpaso' en el request.
   """
-
-  alias ElPaso.Context.Schemas.Message
 
   # Estructura para overrides de sesión
   defmodule SessionOverrides do
@@ -39,27 +37,30 @@ defmodule ElPaso.HTTP.RequestParser do
     case Jason.decode(body) do
       {:ok, params} ->
         with {:ok, overrides} <- extract_elpaso_overrides(params),
-               :ok <- validate_request(params) do
-          {:ok, %{
-            messages: params["messages"],
-            model: params["model"] || "auto",
-            stream: params["stream"] || false,
-            temperature: params["temperature"],
-            max_tokens: params["max_tokens"],
-            session_id: overrides.session_id || params["user"],
-            overrides: overrides
-          }}
+             :ok <- validate_request(params) do
+          {:ok,
+           %{
+             messages: params["messages"],
+             model: params["model"] || "auto",
+             stream: params["stream"] || false,
+             temperature: params["temperature"],
+             max_tokens: params["max_tokens"],
+             session_id: overrides.session_id || params["user"],
+             overrides: overrides
+           }}
         else
           error -> error
         end
-      {:error, _} -> {:error, :invalid_json}
+
+      {:error, _} ->
+        {:error, :invalid_json}
     end
   end
 
   # Funciones auxiliares
   defp extract_elpaso_overrides(params) do
     ep = params["elpaso"] || %{}
-    
+
     overrides = %SessionOverrides{
       session_id: ep["session_id"],
       context_mode: ep["context_mode"],
@@ -68,12 +69,11 @@ defmodule ElPaso.HTTP.RequestParser do
       latency_tolerance_ms: ep["latency_tolerance_ms"],
       summarize_with_model: ep["summarize_with_model"]
     }
-    
+
     {:ok, overrides}
   end
 
-  defp validate_request(params) do
-    # Validación básica del request
+  defp validate_request(_params) do
     :ok
   end
 end

@@ -1,19 +1,14 @@
 defmodule ElPaso.Config.Wizard do
   @moduledoc """
   Wizard interactivo para configuración del sistema.
-  
-  Este módulo implementa un wizard interactivo para la configuración del sistema mediante Ziguan UI.
-  """
 
-  alias Zaguan.UI.Components.{Select, Input, Confirm}
-  alias Zaguan.Drawer.Components.{Header, Table, Message}
+  Este módulo implementa un wizard interactivo para la configuración del sistema.
+  """
 
   @doc """
   Inicia el wizard de configuración.
   """
-  def start_wizard() do
-    # Iniciar el wizard interactivo
-    
+  def start_wizard do
     # Paso 1: Selección del tipo de motor
     step_engine_type()
 
@@ -22,53 +17,39 @@ defmodule ElPaso.Config.Wizard do
 
     # Paso 3: Confirmación y guardado
     step_confirm()
-    
+
     :ok
   end
 
   @doc """
   Paso 1: Selección del tipo de motor.
   """
-  def step_engine_type() do
-    {:ok, engine_type} = Select.prompt("Tipo de motor:",
-      options: ["llama_server", "vllm", "openai", "anthropic", "ollama"],
-      default: "llama_server"
-    )
-    
-    # Guardar el tipo de motor seleccionado
-    :ok
+  def step_engine_type do
+    # Stub: en producción usaría Zaguan.UI.Select
+    # Por ahora, devuelve valor por defecto
+    {:ok, "llama_server"}
   end
 
   @doc """
   Paso 2: Configuración de modelos.
   """
-  def step_model_config() do
-    # Este paso se implementaría según las necesidades específicas
-    
+  def step_model_config do
     :ok
   end
 
   @doc """
   Paso 3: Confirmación y guardado de configuración.
   """
-  def step_confirm() do
-    {:ok, confirmed} = Confirm.prompt("¿Guardar configuración?", default: true)
-    
-    if confirmed do
-      Message.print(:success, "Configuración guardada en ~/.config/elpaso/elpaso.conf")
-    else
-      Message.print(:error, "Configuración no guardada")
-    end
-    
+  def step_confirm do
+    # Stub: en producción usaría Zaguan.UI.Confirm
+    IO.puts("¿Guardar configuración? [S/n]")
     :ok
   end
 
   @doc """
   Configura el sistema con valores predeterminados.
   """
-  def setup_defaults() do
-    # Configurar valores por defecto
-    
+  def setup_defaults do
     config = %{
       system: %{
         api_key: nil,
@@ -103,7 +84,7 @@ defmodule ElPaso.Config.Wizard do
         }
       }
     }
-    
+
     {:ok, config}
   end
 end

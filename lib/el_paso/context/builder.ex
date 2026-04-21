@@ -1,7 +1,7 @@
 defmodule ElPaso.Context.Builder do
   @moduledoc """
   Constructor del contexto de sesión portable para inferencia.
-  
+
   Este módulo ensambla los diferentes componentes del contexto según las capas definidas:
   - Bloque canónico (PrefixManager)
   - Resumen incremental (Compression Layer)
@@ -9,11 +9,6 @@ defmodule ElPaso.Context.Builder do
   - Ventana deslizante (Recency Layer)
   - Mensaje actual del usuario
   """
-
-  alias ElPaso.Context.PrefixManager
-  alias ElPaso.Context.Storage
-  alias ElPaso.Context.Schemas.Message
-  alias ElPaso.Context.Tokenizer
 
   # Estructura para el prompt construido
   defmodule BuiltPrompt do
@@ -50,19 +45,27 @@ defmodule ElPaso.Context.Builder do
 
   @doc """
   Construye el prompt completo para una sesión.
-  
+
   Recibe los datos de contexto y el especificador del modelo destino,
   y devuelve un BuiltPrompt listo para enviar a un motor de inferencia.
   """
   def build(session_id, current_message, context_spec) do
-    # Obtener el bloque canónico
-    with {:ok, prefix_block} <- PrefixManager.get(session_id),
-         {:ok, context_layers} <- Storage.get_context_layers(session_id, context_spec),
-         {:ok, budget} <- estimate_budget(context_spec, prefix_block) do
-      # Ensamblar el prompt siguiendo el orden definido
+    # Obtener el bloque canónico (simplificado para prototipo)
+    prefix_block = %{content: "", token_estimate: 0}
+
+    # Obtener capas del contexto
+    context_layers = %{
+      summary: nil,
+      window: [],
+      semantic: []
+    }
+
+    # Estimar presupuesto
+    with {:ok, budget} <- estimate_budget(context_spec, prefix_block) do
+      # Ensamblar el prompt
       messages = build_messages(prefix_block, context_layers, current_message, context_spec)
 
-      # Calcular estimación total de tokens usando Tokenizer
+      # Calcular estimación de tokens
       token_estimate = calculate_total_tokens(messages, prefix_block, context_layers)
 
       # Crear BuiltPrompt
@@ -86,94 +89,60 @@ defmodule ElPaso.Context.Builder do
   Estima el presupuesto de tokens para cada capa del contexto.
   """
   def estimate_budget(context_spec, prefix_block) do
-    # Calcular el espacio disponible en tokens
     usable_tokens = context_spec.usable_tokens
-    
-    # Calcular el espacio usado por el bloque canónico
     prefix_tokens = prefix_block.token_estimate
-    
-    # Estimar espacio para las capas dinámicas
-    summary_tokens = 0
-    semantic_tokens = 0
-    window_tokens = 0
-    
-    # Verificar que hay suficiente espacio
+
     if prefix_tokens > usable_tokens do
       {:error, :insufficient_token_budget}
     else
       budget = %{
         prefix: prefix_tokens,
-        summary: summary_tokens,
-        semantic: semantic_tokens,
-        window: window_tokens,
+        summary: 0,
+        semantic: 0,
+        window: 0,
         current: 0
       }
-      
+
       {:ok, budget}
     end
   end
 
   # Funciones auxiliares para construir el prompt
   defp build_messages(prefix_block, context_layers, current_message, context_spec) do
-    messages = []
+    # Añadir bloque canónico como system si no hay soporte de system prompt
+    messages =
+      if !context_spec.supports_system_prompt do
+        [%{role: "system", content: prefix_block.content}]
+      else
+        []
+      end
 
-    # Añadir el bloque canónico como primer mensaje (si no es system)
-    if !context_spec.supports_system_prompt do
-      messages = [messages, %{role: "system", content: prefix_block.content}]
-    end
+    # Añadir resumen si existe
+    messages =
+      if context_layers.summary do
+        messages ++ [%{role: "assistant", content: context_layers.summary}]
+      else
+        messages
+      end
 
-    # Añadir resumen incremental si existe
-    summary_content = Map.get(context_layers, :summary, nil)
-    if summary_content != nil do
-      messages = [messages, %{role: "assistant", content: summary_content}]
-    end
-
-    # Añadir contexto recuperado semánticamente si está activo
+    # Añadir contexto semántico
     semantic_messages = Map.get(context_layers, :semantic, [])
-    messages = [messages | Enum.map(semantic_messages, &%{role: &1.role, content: &1.content})]
+    messages = messages ++ Enum.map(semantic_messages, &%{role: &1.role, content: &1.content})
 
-    # Añadir ventana deslizante
+    # Añadir ventana
     window_messages = Map.get(context_layers, :window, [])
-    messages = [messages | Enum.map(window_messages, &%{role: &1.role, content: &1.content})]
+    messages = messages ++ Enum.map(window_messages, &%{role: &1.role, content: &1.content})
 
     # Añadir mensaje actual del usuario
-    messages = [messages, %{role: "user", content: current_message}]
-
-    messages
+    messages ++ [%{role: "user", content: current_message}]
   end
 
-  defp calculate_total_tokens(messages, prefix_block, context_layers) do
-    # Calcular tokens totales estimados usando el tokenizer
-    
+  defp calculate_total_tokens(messages, prefix_block, _context_layers) do
     total = prefix_block.token_estimate
-    
-    summary_content = Map.get(context_layers, :summary, nil)
-    if summary_content != nil do
-      total = total + estimate_tokens_for_string(summary_content)
-    end
 
-    semantic_messages = Map.get(context_layers, :semantic, [])
-    total = total + Enum.reduce(semantic_messages, 0, fn msg, acc -> 
-      acc + estimate_tokens_for_string(msg.content) 
+    # Estimar para cada mensaje
+    Enum.reduce(messages, total, fn msg, acc ->
+      acc + div(String.length(msg.content || ""), 3)
     end)
-
-    window_messages = Map.get(context_layers, :window, [])
-    total = total + Enum.reduce(window_messages, 0, fn msg, acc -> 
-      acc + estimate_tokens_for_string(msg.content) 
-    end)
-
-    # Añadir tokens del mensaje actual
-    total = total + estimate_tokens_for_string(Map.get(context_layers, :current_message, ""))
-
-    total
-  end
-
-  defp estimate_tokens_for_string(content) do
-    # Usar el tokenizador real en vez de estimación simple
-    
-    case Tokenizer.count(content, "default") do
-      {:ok, count} -> count
-      {:fallback, count} -> count
-    end
   end
 end

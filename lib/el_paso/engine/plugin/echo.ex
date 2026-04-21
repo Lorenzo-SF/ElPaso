@@ -76,7 +76,7 @@ defmodule ElPaso.Engine.Plugin.Echo do
 
   # Funciones auxiliares
 
-defp extract_content(prompt) do
+  defp extract_content(prompt) do
     case prompt do
       %{system: system, messages: messages} ->
         system_content = if system, do: "[System]: #{system}\n", else: ""

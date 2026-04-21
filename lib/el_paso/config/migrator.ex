@@ -1,7 +1,7 @@
 defmodule ElPaso.Config.Migrator do
   @moduledoc """
   Migrador de configuración entre versiones.
-  
+
   Implementa la migración de V1.0 a V1.1.
   """
 
@@ -10,10 +10,11 @@ defmodule ElPaso.Config.Migrator do
   """
   def migrate(config, from_version, to_version) do
     # Esta implementación es simplificada para prototipo
-    
+
     case find_migration_path(from_version, to_version) do
       [] ->
         {:error, :no_migration_path}
+
       path ->
         Enum.reduce_while(path, {:ok, config}, fn {from, to}, {:ok, acc} ->
           case apply_migration(acc, from, to) do
@@ -34,7 +35,7 @@ defmodule ElPaso.Config.Migrator do
   # Funciones auxiliares
   defp find_migration_path(from, to) do
     # Simplificación - en producción se usaría un mapa de rutas
-    
+
     case {from, to} do
       {"1.0", "1.1"} -> [{"1.0", "1.1"}]
       _ -> []
@@ -45,6 +46,7 @@ defmodule ElPaso.Config.Migrator do
     case {from, to} do
       {"1.0", "1.1"} ->
         migrate_1_0_to_1_1(config)
+
       _ ->
         {:error, :unknown_migration}
     end
@@ -52,24 +54,29 @@ defmodule ElPaso.Config.Migrator do
 
   defp migrate_1_0_to_1_1(config) do
     # Migración de V1.0 a V1.1
-    
+
     # Añadir sección embeddings
-    migrated_config = config
-    |> Map.put_new("embeddings", default_embeddings_config())
-    
+    migrated_config =
+      config
+      |> Map.put_new("embeddings", default_embeddings_config())
+
     # Añadir tokenizer a cada modelo
     models = Map.get(migrated_config, "models", %{})
-    updated_models = Enum.reduce(models, %{}, fn {model_id, model}, acc ->
-      updated_model = model
-      |> Map.put_new("context_spec", %{})
-      |> Map.update!("context_spec", fn spec ->
-        spec
-        |> Map.put_new("tokenizer", "estimate")
-        |> Map.put_new("supports_vision", false)
+
+    updated_models =
+      Enum.reduce(models, %{}, fn {model_id, model}, acc ->
+        updated_model =
+          model
+          |> Map.put_new("context_spec", %{})
+          |> Map.update!("context_spec", fn spec ->
+            spec
+            |> Map.put_new("tokenizer", "estimate")
+            |> Map.put_new("supports_vision", false)
+          end)
+
+        Map.put(acc, model_id, updated_model)
       end)
-      Map.put(acc, model_id, updated_model)
-    end)
-    
+
     migrated_config
     |> Map.put("models", updated_models)
     |> Map.put("meta", Map.put_new(%{}, "version", "1.1"))

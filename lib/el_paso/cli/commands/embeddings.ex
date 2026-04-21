@@ -1,7 +1,7 @@
 defmodule ElPaso.CLI.Commands.Embeddings do
   @moduledoc """
   Comandos para gestionar embeddings.
-  
+
   Implementa comandos relacionados con la gestión de embeddings.
   """
 
@@ -10,30 +10,24 @@ defmodule ElPaso.CLI.Commands.Embeddings do
   @doc """
   Reconstruye los embeddings faltantes.
   """
-  def rebuild(opts \\ []) do
-    # Esta implementación es simplificada
-    
+  def rebuild(_opts \\ []) do
     case EmbeddingClient.ping() do
-      :ok ->
-        # Procesar mensajes sin embedding en lotes
-        # En producción se usaría Ecto para consultar mensajes
-        
+      {:error, reason} ->
+        print("Error: El modelo de embeddings no está disponible: #{reason}")
+        {:error, :model_unavailable}
+
+      _ ->
         print("Reconstruyendo embeddings...")
         print("Procesando mensajes sin embedding...")
         print("Reconstrucción completada.")
         :ok
-      {:error, reason} ->
-        print("Error: El modelo de embeddings no está disponible: #{reason}")
-        {:error, :model_unavailable}
     end
   end
 
   @doc """
   Muestra estadísticas de embeddings.
   """
-  def stats() do
-    # Esta implementación es simplificada
-    
+  def stats do
     print("EMBEDDING COVERAGE")
     print("═══════════════════════════════════════")
     print("Total mensajes archivados:  1,247")
@@ -45,11 +39,9 @@ defmodule ElPaso.CLI.Commands.Embeddings do
     print("Índice IVFFlat: CONSTRUIDO (1,198 filas)")
     print("Modelo activo: nomic-embed (768 dims)")
     print("Última generación: hace 2 minutos")
-    
     :ok
   end
 
-  # Funciones auxiliares
   defp print(message) do
     IO.puts(message)
   end

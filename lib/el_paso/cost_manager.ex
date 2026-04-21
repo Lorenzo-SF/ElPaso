@@ -58,7 +58,7 @@ defmodule ElPaso.CostManager do
     #   {:ok, pricing} -> ...
     #   {:error, _} -> ...
     # end
-    
+
     # Fallback a configuración por defecto directamente
     default_pricing(model_id)
   end

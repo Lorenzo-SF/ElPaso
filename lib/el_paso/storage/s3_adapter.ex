@@ -42,7 +42,7 @@ defmodule ElPaso.Storage.S3Adapter do
     end
   end
 
-@doc """
+  @doc """
   Sube un archivo local a S3.
 
   ## Parámetros
@@ -52,24 +52,25 @@ defmodule ElPaso.Storage.S3Adapter do
   @spec upload(String.t(), String.t()) :: :ok | {:error, term()}
   def upload(local_path, s3_uri) do
     %{bucket: bucket, key: key} = parse_s3_uri(s3_uri)
-    
+
     if File.exists?(local_path) do
       try do
         # Upload with streaming
-        result = local_path
-        |> File.stream!([], 65_536)
-        |> ExAws.S3.upload(bucket, key)
-        |> ExAws.request()
-        
+        result =
+          local_path
+          |> File.stream!([], 65_536)
+          |> ExAws.S3.upload(bucket, key)
+          |> ExAws.request()
+
         case result do
-          {:ok, _} -> 
+          {:ok, _} ->
             Logger.info("Subido #{local_path} -> #{s3_uri}")
             :ok
-          {:error, reason} -> 
+
+          {:error, reason} ->
             Logger.error("Error subiendo a S3: #{inspect(reason)}")
             {:error, reason}
         end
-        
       rescue
         error ->
           Logger.error("Error subiendo a S3: #{inspect(error)}")

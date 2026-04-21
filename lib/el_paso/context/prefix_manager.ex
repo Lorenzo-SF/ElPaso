@@ -1,18 +1,13 @@
 defmodule ElPaso.Context.PrefixManager do
   @moduledoc """
   Gestor del bloque canónico de prompt compartido.
-  
+
   Este módulo es responsable de construir y gestionar el bloque canónico que se coloca
   siempre al inicio de cada prompt enviado a cualquier motor de inferencia. Este bloque está diseñado
   para maximizar los beneficios del KV cache de los motores de inferencia.
   """
 
   use GenServer
-
-  alias ElPaso.Context.Schemas.Session
-  alias ElPaso.Context.Schemas.Message
-  alias ElPaso.Context.Schemas.ConversationSummary
-  alias ElPaso.Context.Schemas.RoutingDecision
 
   # Estructura para el bloque canónico
   defmodule PrefixBlock do
@@ -29,7 +24,7 @@ defmodule ElPaso.Context.PrefixManager do
       :version
     ]
 
-    @type t :: %PrefixBlock{
+    @type t :: %__MODULE__{
             session_id: String.t(),
             content: String.t(),
             hash: binary(),
@@ -108,33 +103,29 @@ defmodule ElPaso.Context.PrefixManager do
 
   # Funciones auxiliares
   defp build_prefix_content(config) do
-    # Construir el bloque canónico siguiendo el orden definido
-    sections = []
-
     # Sección 1: System prompt base
     system_prompt = Map.get(config, :system_prompt, "Eres un asistente útil y preciso.")
-    sections = [sections, system_prompt]
 
     # Sección 2: Perfil de capacidades (opcional)
     capabilities = Map.get(config, :capabilities, "")
-    if capabilities != "" do
-      sections = [sections, capabilities]
-    end
 
     # Sección 3: Documentos de referencia fijos (opcional)
     references = Map.get(config, :references, [])
-    if references != [] do
-      reference_content = Enum.join(references, "\n")
-      sections = [sections, reference_content]
-    end
 
-    # Separador explícito
-    separator = "---BEGIN DYNAMIC CONTEXT---"
-    sections = [sections, separator]
+    # Construir lista de secciones no vacías
+    sections =
+      [system_prompt]
+      |> maybe_add(capabilities != "", capabilities)
+      |> maybe_add(references != [], Enum.join(references, "\n"))
 
-    # Unir todas las secciones
-    Enum.join(sections, "\n")
+    # Añadir separador y unir
+    sections
+    |> Enum.concat(["---BEGIN DYNAMIC CONTEXT---"])
+    |> Enum.join("\n")
   end
+
+  defp maybe_add(list, true, value), do: list ++ [value]
+  defp maybe_add(list, false, _), do: list
 
   defp estimate_tokens(content) do
     # Estimación simple basada en caracteres (3 caracteres ≈ 1 token)

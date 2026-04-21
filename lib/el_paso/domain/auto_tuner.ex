@@ -74,6 +74,7 @@ defmodule ElPaso.Domain.AutoTuner do
       last_run_obj ->
         # Revertir cambios
         changes = Map.get(last_run_obj, :changes, [])
+
         Enum.each(changes, fn change ->
           Config.Loader.update_affinity(
             Map.get(change, :model_id),
