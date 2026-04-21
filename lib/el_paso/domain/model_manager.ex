@@ -32,6 +32,15 @@ defmodule ElPaso.Domain.ModelManager do
   Arranca un proceso del motor de inferencia.
   """
   def start_engine_process(model_config, merged_args) do
+    # Política para motores locales: reintentar 3 veces con backoff exponencial
+    policy = Policies.new(
+      on_error: :retry,
+      max_retries: 3,
+      retry_delay: 2000,
+      on_timeout: :stop,
+      timeout: 60_000
+    )
+
     cmd = build_command(model_config.engine_binary, merged_args)
 
     # Zaguan.Engine.execute lanza el Worker bajo WorkerSupervisor
@@ -67,7 +76,7 @@ defmodule ElPaso.Domain.ModelManager do
     engine_binary <> " " <> Enum.join(args, " ")
   end
 
-  defp launch_and_monitor(cmd, model_config) do
+  defp launch_and_monitor(cmd, _model_config) do
     # Lógica para lanzar y monitorear el proceso del motor
     :ok
   end
@@ -75,5 +84,21 @@ defmodule ElPaso.Domain.ModelManager do
   defp do_health_check(_id) do
     # Lógica de verificación de salud del modelo
     :ok
+  end
+
+  @doc """
+  Registra el resultado de una llamada a un modelo.
+  """
+  def record_call_result(_request_id, _latency_ms, _outcome) do
+    # Actualiza estadísticas del modelo
+    :ok
+  end
+
+  @doc """
+  Obtiene todos los estados de modelos.
+  """
+  def all_states() do
+    # Devuelve todos los estados de modelos
+    []
   end
 end

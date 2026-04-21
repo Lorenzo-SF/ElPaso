@@ -1,12 +1,24 @@
-defmodule ElPaso.HTTP.Server do
+defmodule ElPaso.HTTP do
   @moduledoc """
-  Servidor HTTP para las APIs REST del proyecto.
+  Módulo HTTP del sistema.
   
-  Este módulo implementa el servidor HTTP usando Plug y Cowboy para exponer
-  los endpoints necesarios del proxy de inferencia.
+  Este módulo implementa el servidor HTTP para las APIs REST del proyecto.
   """
 
   use Plug.Router
+
+  def child_spec(_opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, []},
+      type: :supervisor,
+      restart: :permanent
+    }
+  end
+
+  def start_link(_args) do
+    Plug.Router.start(__MODULE__, [])
+  end
 
   plug :match
   plug :dispatch

@@ -10,6 +10,7 @@ defmodule ElPaso.Context.Schemas.Session do
     field :model_id, :string
     field :status, :string
     field :created_at, :utc_datetime
+    field :updated_at, :utc_datetime
 
     timestamps()
   end

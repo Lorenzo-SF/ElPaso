@@ -22,7 +22,7 @@ defmodule ElPaso.Application do
       ElPaso.Context.SummarizationSupervisor,
       
       # Servidor HTTP para las APIs REST
-      ElPaso.HTTP.Server,
+      ElPaso.HTTP,
       
       # Supervisor para el manejo de errores y eventos
       ElPaso.Event.Supervisor
