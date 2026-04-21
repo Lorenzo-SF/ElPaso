@@ -1,96 +1,24 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
 
-# ───────────────────────────────────────────────────────────────────────────
-# Elixir/Mix Build Artifacts
-# ───────────────────────────────────────────────────────────────────────────
-_build/
-deps/
-*.beam
-*.plt
-*.plt.hash
-*.coverdata
-*.gcov
-cover/
-doc/
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
 
-# ───────────────────────────────────────────────────────────────────────────
-# Elixir Language Server (ELS)
-# ───────────────────────────────────────────────────────────────────────────
-.elixir_ls/
+# The directory Mix downloads your dependencies sources to.
+/deps/
 
-# ───────────────────────────────────────────────────────────────────────────
-# Erlang Crash Dumps
-# ───────────────────────────────────────────────────────────────────────────
+# Where third-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Temporary files, for example, from tests.
+/tmp/
+
+# If the VM crashes, it generates a dump, let's ignore it too.
 erl_crash.dump
-*.dump
 
-# ───────────────────────────────────────────────────────────────────────────
-# OS Generated Files
-# ───────────────────────────────────────────────────────────────────────────
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
 
-# ───────────────────────────────────────────────────────────────────────────
-# IDE/Editor
-# ───────────────────────────────────────────────────────────────────────────
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-*.sublime-project
-*.sublime-workspace
+# Ignore package tarball (built via "mix hex.build").
+elpaso-*.tar
 
-# ───────────────────────────────────────────────────────────────────────────
-# Test Coverage Reports
-# ───────────────────────────────────────────────────────────────────────────
-coveralls.json
-
-# ───────────────────────────────────────────────────────────────────────────
-# Dialyzer PLTs (reconstruibles)
-# ───────────────────────────────────────────────────────────────────────────
-priv/plts/
-_build/plts/
-
-# ───────────────────────────────────────────────────────────────────────────
-# Logs
-# ───────────────────────────────────────────────────────────────────────────
-*.log
-logs/
-
-# ───────────────────────────────────────────────────────────────────────────
-# Environment & Config (NO subir configs personales)
-# ───────────────────────────────────────────────────────────────────────────
-.env
-.env.*
-*.local.exs
-config/*.local.exs
-
-# ───────────────────────────────────────────────────────────────────────────
-# Recursos - Proyectos Base (son repositorios separados)
-# ───────────────────────────────────────────────────────────────────────────
-Recursos/base/alaja/.git/
-Recursos/base/arrea/.git/
-Recursos/base/visillo/.git/
-
-# ───────────────────────────────────────────────────────────────────────────
-# Benchmarks (opcional, pueden ser pesados)
-# ───────────────────────────────────────────────────────────────────────────
-# benchmarks/results/
-
-# ───────────────────────────────────────────────────────────────────────────
-# Temporary Files
-# ───────────────────────────────────────────────────────────────────────────
-tmp/
-temp/
-*.tmp
-
-# ───────────────────────────────────────────────────────────────────────────
-# Hex API Key (NUNCA subir esto)
-# ───────────────────────────────────────────────────────────────────────────
-.hex/
