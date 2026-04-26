@@ -62,7 +62,7 @@ config :elpaso, :models,
     }
   }
 
-# Configuración de la base de datos para producción
+# Configuración de la base de datos para producción (runtime)
 config :elpaso, ElPaso.Repo,
   hostname: System.get_env("DB_HOST") || "localhost",
   username: System.get_env("DB_USER") || "postgres",

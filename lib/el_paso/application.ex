@@ -8,10 +8,32 @@ defmodule ElPaso.Application do
   end
 
   @moduledoc """
-  La aplicación principal del proyecto ElPaso.
+  ElPaso Application - OTP supervision tree for the multi-model LLM proxy.
 
-  Esta aplicación gestiona el arranque de todos los componentes necesarios para 
-  el proxy de inferencia multi-modelo.
+  This application manages the startup of all components required for the multi-model inference proxy.
+
+  ## Supervision Tree
+
+  The main supervision tree includes:
+
+  - **ModelManager** - Supervises model lifecycle (start/stop/health)
+  - **SessionSupervisor** - Manages session state in ETS and PostgreSQL
+  - **SummarizationSupervisor** - Handles background summarization jobs
+  - **Telemetry.Store** - Collects metrics and events
+  - **HTTP Server** - REST API endpoints (Plug.Cowboy)
+  - **Event.Supervisor** - Error handling and logging
+  - **AutoTuner** - Adaptive routing optimization
+
+  ## Cluster Support
+
+  When cluster mode is enabled, additional components are added:
+
+  - **Cluster.Supervisor** - For gossip-based discovery (libcluster)
+  - **NodeRegistry** - For static node registration
+
+  ## Configuration
+
+  The application reads configuration from `~/.config/elpaso/elpaso.conf` with fallback to environment variables.
   """
 
   use Application

@@ -3,8 +3,6 @@ defmodule ElPaso.HTTP.AnthropicProxy do
   Convierte requests y respuestas entre formato Anthropic y formato interno de ElPaso.
   """
 
-  alias ElPaso.Config.Loader
-
   # Struct temporal para request interno - definido primero
   defmodule InternalRequest do
     defstruct [
@@ -125,15 +123,9 @@ defmodule ElPaso.HTTP.AnthropicProxy do
     "event: message_stop\ndata: #{Jason.encode!(%{"type" => "message_stop"})}\n\n"
   end
 
-  defp map_anthropic_model(model_name) do
-    case Loader.get() do
-      %{integrations: %{claude_code: %{model_mapping: mapping}}} when is_map(mapping) ->
-        Map.get(mapping, model_name, "auto")
-
-      _ ->
-        # Default: usar "auto" si no hay mapeo configurado
-        "auto"
-    end
+  defp map_anthropic_model(_model_name) do
+    # Default fallback - no mapping configured
+    "auto"
   end
 
   defp map_finish_reason(nil), do: "end_turn"

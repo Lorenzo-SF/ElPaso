@@ -61,7 +61,7 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 ## API Endpoints
 
 | Endpoint | Method | Description |
-|----------|--------|-------------|
+|--------------|----------|-------------|
 | `/v1/chat/completions` | POST | Chat completion (OpenAI compat) |
 | `/v1/messages` | POST | Anthropic API compat |
 | `/v1/messages_stream` | POST | Streaming |
@@ -69,6 +69,8 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 | `/status` | GET | System status + alerts |
 | `/dashboard` | GET | Web dashboard |
 | `/metrics` | GET | Prometheus metrics |
+| `/auth/token` | POST | JWT authentication |
+| `/admin/*` | GET/POST | Admin endpoints |
 
 ### El Paso Overrides
 
@@ -115,12 +117,13 @@ lib/el_paso/
 ├── domain/            # Business logic
 │   ├── router.ex     # Heuristic routing
 │   ├── model_manager.ex  # Model lifecycle
-│   └── auto_tuner.go # Auto-tuning
+│   └── auto_tuner.ex # Auto-tuning
 ├── engine/           # Inference engines
 │   ├── dispatcher.ex # Single entry point
 │   └── ollama.ex    # Ollama adapter
 ├── http/             # HTTP server
-└── security/         # Auth & rate limiting
+├── security/         # Auth & rate limiting
+└── telemetry/        # Metrics collection
 ```
 
 ## CLI Commands
