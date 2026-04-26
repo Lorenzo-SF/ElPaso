@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Elpaso do
   mix elpaso router stats
   mix elpaso router tune [--revert-auto]
   mix elpaso bench
-  mix elpaso context export
+  mix elasto context export
   mix elpaso config reload
   mix elpaso cluster status
   """
@@ -17,6 +17,6 @@ defmodule Mix.Tasks.Elpaso do
   @shortdoc "Comandos de diagnóstico y ajuste fino"
 
   def run(args) do
-    ElPaso.CLI.run(args)
+    ElPaso.CLI.main(args)
   end
 end

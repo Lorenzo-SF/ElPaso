@@ -32,10 +32,10 @@ defmodule ElPaso.Config do
     def get do
       inference_url = System.get_env("ELPASO_INFERENCE_URL")
       inference_api_key = System.get_env("ELPASO_INFERENCE_API_KEY")
-      
+
       # Detectar si estamos en modo producción
       is_prod = Application.get_env(:elpaso, :env) == :prod
-      
+
       if is_prod and (!inference_url or !inference_api_key) do
         raise """
         ⚠️ CONFIGURACIÓN REQUERIDA
@@ -59,8 +59,8 @@ defmodule ElPaso.Config do
 
       # En modo no producción, usar valores por defecto para permitir arranque
       if (!inference_url or !inference_api_key) and not is_prod do
-        inference_url = "http://localhost:8081/v1"
-        inference_api_key = "sk-local-test"
+        _inference_url = "http://localhost:8081/v1"
+        _inference_api_key = "sk-local-test"
       end
 
       %{

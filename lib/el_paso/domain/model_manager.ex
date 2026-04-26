@@ -1,43 +1,47 @@
 defmodule ElPaso.Domain.ModelManager do
   @moduledoc """
-  Supervisor para la gestión de modelos del sistema.
+  Gestión de modelos y motores de inferencia.
   """
 
-  use Supervisor
+  use GenServer
 
-  def start_link(args \\ []) do
-    Supervisor.start_link(__MODULE__, args, name: __MODULE__)
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  @impl Supervisor
-  def init(_args) do
-    children = [
-      # Aquí se pueden añadir procesos de gestión de modelos
-    ]
-
-    opts = [strategy: :one_for_one, name: ElPaso.Domain.ModelManager]
-    Supervisor.init(children, opts)
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [opts]},
+      type: :worker,
+      restart: :permanent,
+      shutdown: 500
+    }
   end
 
-  @doc """
-  Realiza inferencia usando un modelo específico.
-  """
-  def infer(_model_id, _request) do
-    # Implementación temporal
-    {:ok, "response"}
+  @impl GenServer
+  def init(_opts) do
+    {:ok, %{}}
   end
 
-  @doc """
-  Devuelve el estado de todos los modelos.
-  """
   def all_states do
     []
   end
 
-  @doc """
-  Registra el resultado de una llamada al modelo.
-  """
+  def infer(_model_id, _request) do
+    {:error, :not_implemented}
+  end
+
   def record_call_result(_request_id, _latency_ms, _outcome) do
     :ok
+  end
+
+  def load_models do
+    # For now just return empty list - will be implemented later
+    []
+  end
+
+  def models do
+    load_models()
   end
 end

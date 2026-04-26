@@ -10,10 +10,6 @@ config :logger, :console,
 config :elpaso, ecto_repos: [ElPaso.Repo]
 
 # Configuración de la aplicación
-config :elpaso,
-  # Puerto por defecto para el servidor HTTP
-  http_port: 4000,
-  # URL base del servidor de inferencia local
-  inference_server_url: "http://localhost:8081/v1",
-  # API key para el servidor local
-  inference_api_key: "sk-local"
+# WARNING: All model configurations should be done via database, not config.exs.
+# ElPaso does not include any pre-configured models or engines.
+# Use CLI commands to register models and engines.
