@@ -47,12 +47,12 @@ defmodule ElPaso.CLI do
     Usage: elpaso <command> [options]
 
     Available commands:
-      mix elpaso router stats    # Router statistics
-      mix elpaso router tune    # Router auto-tuning
-      mix elpaso bench          # Benchmark
-      mix elpaso context       # Context management
-      mix elpaso config         # Reload configuration
-      mix elpaso cluster       # Cluster status
+      elpaso router stats    # Router statistics
+      elpaso router tune    # Router auto-tuning
+      elpaso bench          # Benchmark
+      elpaso context       # Context management
+      elpaso config         # Reload configuration
+      elpaso cluster       # Cluster status
     """)
   end
 

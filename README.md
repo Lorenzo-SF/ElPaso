@@ -46,10 +46,14 @@ mix deps.get
 # 2. Compile
 mix compile
 
-# 3. Run server
+# 3. Set required environment variables
+export ELPASO_INFERENCE_URL="http://localhost:8081/v1"
+export ELPASO_INFERENCE_API_KEY="sk-local-test"
+
+# 4. Run server
 mix run --no-halt
 
-# 4. Test
+# 5. Test
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -88,12 +92,19 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 ## Configuration
 
-Edit `config/runtime.exs` or use environment variables:
+El Paso requires specific environment variables to start. Edit `config/runtime.exs` or use environment variables:
 
-```elixir
-config :elpaso,
-  api_key: System.get_env("ELPASO_API_KEY"),
-  port: System.get_env("ELPASO_PORT", "8080") |> String.to_integer()
+```bash
+export ELPASO_INFERENCE_URL="https://api.openai.com/v1"  # URL of your inference server
+export ELPASO_INFERENCE_API_KEY="sk-..."                  # API key for authentication
+```
+
+For development/testing:
+```bash
+export ELPASO_INFERENCE_URL="http://localhost:8081/v1"
+export ELPASO_INFERENCE_API_KEY="sk-local-test"
+export ELPASO_AUTH_ENABLED="false"
+export ELPASO_PORT="4001"
 ```
 
 ### Available Models
@@ -151,7 +162,10 @@ mix elPaso cluster
 ## Development
 
 ```bash
-# Run tests
+# Run tests (with environment variables)
+export ELPASO_INFERENCE_URL="http://localhost:8081/v1"
+export ELPASO_INFERENCE_API_KEY="sk-local-test"
+export ELPASO_AUTH_ENABLED="false"
 mix test
 
 # Run with IEx

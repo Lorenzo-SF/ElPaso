@@ -26,13 +26,17 @@ defmodule ElPaso.Config do
 
     @doc """
     Devuelve la configuración actual del sistema.
-    Falla si no hay configuración mínima requerida.
+    En modo de desarrollo o test, devuelve valores por defecto si no hay configuración válida.
+    En producción, falla si no hay configuración mínima requerida.
     """
     def get do
       inference_url = System.get_env("ELPASO_INFERENCE_URL")
       inference_api_key = System.get_env("ELPASO_INFERENCE_API_KEY")
-
-      unless inference_url && inference_api_key do
+      
+      # Detectar si estamos en modo producción
+      is_prod = Application.get_env(:elpaso, :env) == :prod
+      
+      if is_prod and (!inference_url or !inference_api_key) do
         raise """
         ⚠️ CONFIGURACIÓN REQUERIDA
 
@@ -51,6 +55,12 @@ defmodule ElPaso.Config do
 
         Para más opciones: mix elpaso config --wizard
         """
+      end
+
+      # En modo no producción, usar valores por defecto para permitir arranque
+      if (!inference_url or !inference_api_key) and not is_prod do
+        inference_url = "http://localhost:8081/v1"
+        inference_api_key = "sk-local-test"
       end
 
       %{
