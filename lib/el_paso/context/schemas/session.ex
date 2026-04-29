@@ -4,14 +4,16 @@ defmodule ElPaso.Context.Schemas.Session do
   """
 
   use Ecto.Schema
+  import Ecto.Changeset
 
   schema "sessions" do
-    field(:user_id, :string)
-    field(:model_id, :string)
-    field(:status, :string)
-    field(:context_mode, :string)
-    field(:created_at, :utc_datetime)
-    field(:last_active_at, :utc_datetime)
+    belongs_to(:user, ElPaso.Models.User)
+    belongs_to(:profile, ElPaso.Models.Profile)
+
+    field(:status, :string, default: "active")
+    field(:context_mode, :string, default: "transparent")
+    field(:token_budget, :integer, default: 32768)
+    field(:current_token_count, :integer, default: 0)
 
     timestamps()
   end
@@ -21,7 +23,7 @@ defmodule ElPaso.Context.Schemas.Session do
   """
   def changeset(session, attrs) do
     session
-    |> Ecto.Changeset.cast(attrs, [:user_id, :model_id, :status, :context_mode])
-    |> Ecto.Changeset.validate_required([:user_id, :model_id])
+    |> cast(attrs, [:user_id, :profile_id, :status, :context_mode, :token_budget, :current_token_count])
+    |> validate_required([:user_id])
   end
 end

@@ -4,15 +4,16 @@ defmodule ElPaso.Context.Schemas.Message do
   """
 
   use Ecto.Schema
+  import Ecto.Changeset
 
   schema "messages" do
-    field(:session_id, :string)
+    belongs_to(:session, ElPaso.Context.Schemas.Session)
+
     field(:role, :string)
     field(:content, :string)
     field(:model_id, :string)
-    field(:token_estimate, :integer)
-    field(:embedding, Pgvector.Ecto.Vector)
-    field(:created_at, :utc_datetime)
+    field(:token_estimate, :integer, default: 0)
+    field(:vector_embedding, {:array, :float})
     field(:sequence_number, :integer)
 
     timestamps()
@@ -23,14 +24,9 @@ defmodule ElPaso.Context.Schemas.Message do
   """
   def changeset(message, attrs) do
     message
-    |> Ecto.Changeset.cast(attrs, [
-      :session_id,
-      :role,
-      :content,
-      :model_id,
-      :token_estimate,
-      :embedding
+    |> cast(attrs, [
+      :session_id, :role, :content, :model_id, :token_estimate, :vector_embedding, :sequence_number
     ])
-    |> Ecto.Changeset.validate_required([:session_id, :role, :content])
+    |> validate_required([:session_id, :role, :content, :sequence_number])
   end
 end

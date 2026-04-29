@@ -1,0 +1,32 @@
+hay algunas cosas en ElPaso que creo que o no me explique bien o no se definieron bien o no se han implementado bien. Necesito que analices el proyecto completo, para entender bien como funciona y que partes no me explican bien. A continuacion te indico una explicacion "por encima" de lo que es
+
+
+La idea es que ElPaso sea un cli, desde el que podemos crear/editar/eliminar:
+- modelos
+- engines
+- personalidades
+- perfiles (conjunto de modelo + engine + personalidad)
+
+de tal manera, que una vez configuramos varios perfiles diferentes con lo que ello conlleva (varios modelos, engines y personalidades) para que luego, con otro comando del cli, se arranquen todos los endpoints necesarios para que ElPaso arranque el proxy y sea el unico punto de entrada para poder disponer de los diferentes perfiles configurados. Supongamos que quisieramos configurar una app del estilo a:
+- opencode
+- openclaw
+- vscode
+- zed editor
+- otros
+
+Solo haria falta configurar un endpoint pero luego, en funcion de el prompt que se envie o incluso si en la peticion se indicase explicitamente, ElPaso haria el switch a los diferentes modelos. Segun las capacidades del hardware, podria configurarse a ElPaso para controlar varias "sesiones", donde cada sesion es una especie de "sala" donde se han ido usando diferentes perfiles, en una misma conversacion, donde el stateles context, token cache y demas herramientas que gestiona ElPaso, permitirian diferenciar sesiones y en cada sesion, poder compartir conocimiento y contexto para todos los perfiles y asi, aunque se haga el switch entre modelos, siempre se tendria el conocimiento y contexto de lo que se está realizando.
+
+Para detectar que perfil usar, habria 2 opciones. Una, indicarlo expresamente de alguna manera en la peticion (lo cual, elpaso deberia ser capaz de detectarlo y usarlo directamente, osea, que hacerlo explicitamente tiene prioridad sobre cualquier otro mecanismo) y dos, definiendo personalidades para a traves de embedings, euristicas y otros mecanismos que tiene ElPaso, detectar a traves del prompt que tipo de perfil asignar y cargar en esa peticion
+
+Esto, tambien podria ser explotable desde el cli de ElPaso, permitiendo sacar estadisticas de una sesion en particular, benchmarks, etc. Toda la configuracion relativa a sesiones, personalidades, modelos, engines, benchmarks, y otros aspectos, deben almacenarse en la base de datos de ElPaso. Lo unico que podria configurarse desde un archivo en ~/.config/elpaso/elpaso.conf seria configuracion menos "importante" como la ip, el puerto, apikey, entorno, log level, etc. El resto, iria a la db.
+
+Por ultimo, como al final cuando esté ElPaso acabado, como opcion se va a añadir Batamanta y se va a crear un empaquetado para que no haga falta tener erlang ni elixir instalados, hay que idear una manera de que el cli sea autonomo y sea capaz de crear su propia db de datos. Esto solo haria falta hasta que la db sea creada y accesible. Como requerimiento, se puede poner que hace falta un contenedor docker o una db instalada, cuya configuracion debe ponerse en el archivo de config mencionado antes. Una vez indicado en ese config si la db es "docker" o "local", el cli debe ser capaz de crear la db de datos necesaria para el funcionamiento de ElPaso.
+
+
+
+Ahora, analiza todo el proyecto para entender, comprender y aprender lo que hay montado, para que tambien sepas lo que se pretende y puedas, no solo chequear si lo anterior se cumple o no, sino tambien buscar correcciones y mejoras para que el proyecto no solo compile y funcione, si no que esté perfectamente implementado, siguiendo todas las buenas pracitcas recomendadas, patrones de software, arquitectura otp, etc y sea un proyecto de alta calidad.
+
+
+NOTA: Los proyectos que usa ElPaso, referenciados en local, estan en
+zaguan: ~/proyectos/zaguan
+batamanta: ~/proyectos/batamanta

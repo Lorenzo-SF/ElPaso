@@ -16,6 +16,7 @@ defmodule ElPaso.Application do
 
   The main supervision tree includes:
 
+  - **ElPaso.Repo** - Ecto repository for PostgreSQL persistence
   - **ModelManager** - Supervises model lifecycle (start/stop/health)
   - **SessionSupervisor** - Manages session state in ETS and PostgreSQL
   - **SummarizationSupervisor** - Handles background summarization jobs
@@ -23,6 +24,7 @@ defmodule ElPaso.Application do
   - **HTTP Server** - REST API endpoints (Plug.Cowboy)
   - **Event.Supervisor** - Error handling and logging
   - **AutoTuner** - Adaptive routing optimization
+  - **Engine.Registry** - Central registry of inference engines
 
   ## Cluster Support
 
@@ -48,6 +50,12 @@ defmodule ElPaso.Application do
 
     # Children base
     children = [
+      # Ecto Repo supervisor - conexión a PostgreSQL
+      {ElPaso.Repo, []},
+
+      # Registro central de engines disponibles
+      ElPaso.Engine.Registry,
+
       # Supervisor de la gestión de motores de inferencia
       ElPaso.Domain.ModelManager,
 
