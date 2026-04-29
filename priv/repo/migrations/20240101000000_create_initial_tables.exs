@@ -18,7 +18,7 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :created_at, :utc_datetime, null: false
       add :updated_at, :utc_datetime, null: false
 
-      index [:name], unique: true
+      create index [:name], unique: true
     end
 
     # ============================================
@@ -45,8 +45,8 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :created_at, :utc_datetime, null: false
       add :updated_at, :utc_datetime, null: false
 
-      index [:name], unique: true
-      index [:engine_id]
+      create index [:name], unique: true
+      create index [:engine_id]
     end
 
     # ============================================
@@ -62,7 +62,7 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :created_at, :utc_datetime, null: false
       add :updated_at, :utc_datetime, null: false
 
-      index [:name], unique: true
+      create index [:name], unique: true
     end
 
     # ============================================
@@ -80,10 +80,10 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :created_at, :utc_datetime, null: false
       add :updated_at, :utc_datetime, null: false
 
-      index [:name], unique: true
-      index [:model_id]
-      index [:engine_id]
-      index [:personality_id]
+      create index [:name], unique: true
+      create index [:model_id]
+      create index [:engine_id]
+      create index [:personality_id]
     end
 
     # ============================================
@@ -99,8 +99,8 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :created_at, :utc_datetime, null: false
       add :updated_at, :utc_datetime, null: false
 
-      index [:username], unique: true
-      index [:api_key_hash]
+      create index [:username], unique: true
+      create index [:api_key_hash]
     end
 
     # ============================================
@@ -117,9 +117,9 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :created_at, :utc_datetime, null: false
       add :updated_at, :utc_datetime, null: false
 
-      index [:user_id]
-      index [:profile_id]
-      index [:status]
+      create index [:user_id]
+      create index [:profile_id]
+      create index [:status]
     end
 
     # ============================================
@@ -136,8 +136,8 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :sequence_number, :integer, null: false
       add :created_at, :utc_datetime, null: false
 
-      index [:session_id]
-      index [:role]
+      create index [:session_id]
+      create index [:role]
     end
 
     # ============================================
@@ -157,12 +157,12 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :decision_latency_us, :integer
       add :created_at, :utc_datetime, null: false
 
-      index [:session_id]
-      index [:request_id], unique: true
-      index [:selected_model]
-      index [:outcome]
-      index [:features], using: :gin
-      index [:scores], using: :gin
+      create index [:session_id]
+      create index [:request_id], unique: true
+      create index [:selected_model]
+      create index [:outcome]
+      create index [:features], using: :gin
+      create index [:scores], using: :gin
     end
 
     # ============================================
@@ -177,7 +177,7 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :generated_by_model, :string
       add :generated_at, :utc_datetime, null: false
 
-      index [:session_id]
+      create index [:session_id]
     end
 
     # ============================================
@@ -193,9 +193,9 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :cost_usd, :decimal, default: "0.00"
       add :created_at, :utc_datetime, null: false
 
-      index [:user_id]
-      index [:model_id]
-      index [:date]
+      create index [:user_id]
+      create index [:model_id]
+      create index [:date]
     end
 
     # ============================================
@@ -213,8 +213,8 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
       add :config, :map, default: "{}"
       add :created_at, :utc_datetime, null: false
 
-      index [:model_id]
-      index [:engine_id]
+      create index [:model_id]
+      create index [:engine_id]
     end
 
     # ============================================

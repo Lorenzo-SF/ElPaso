@@ -29,6 +29,7 @@ defmodule ElPaso.Domain.ProfileManager do
     case Repo.get_by(Profile, name: name) do
       nil ->
         {:error, "Profile no encontrado"}
+
       profile ->
         Repo.delete(profile)
     end

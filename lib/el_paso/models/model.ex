@@ -33,9 +33,21 @@ defmodule ElPaso.Models.Model do
   def changeset(model, attrs) do
     model
     |> cast(attrs, [
-      :name, :engine_id, :url, :api_key, :config, :active, :max_tokens,
-      :temperature, :top_p, :description, :task_affinity, :complexity_ceiling,
-      :cold_start_estimate_ms, :ram_mb, :vram_mb
+      :name,
+      :engine_id,
+      :url,
+      :api_key,
+      :config,
+      :active,
+      :max_tokens,
+      :temperature,
+      :top_p,
+      :description,
+      :task_affinity,
+      :complexity_ceiling,
+      :cold_start_estimate_ms,
+      :ram_mb,
+      :vram_mb
     ])
     |> validate_required([:name])
     |> unique_constraint(:name)

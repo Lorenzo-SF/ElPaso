@@ -388,6 +388,7 @@ defmodule ElPaso.CLI do
       ["model" | rest] -> handle_model(rest)
       ["engine" | rest] -> handle_engine(rest)
       ["personality" | rest] -> handle_personality(rest)
+      ["profile" | rest] -> handle_profile(rest)
       ["config" | rest] -> handle_config(rest)
       ["server" | rest] -> handle_server(rest)
       ["router" | rest] -> handle_router(rest)
@@ -402,25 +403,30 @@ defmodule ElPaso.CLI do
 
   defp handle_model(["list" | _]) do
     case ElPaso.Domain.ModelManager.list_models() do
+      [] ->
+        IO.puts("No hay modelos registrados")
+
       models ->
         IO.puts("┌─────────┬──────────┬────────────────────┬────────┐")
         IO.puts("│ Name    │ Engine  │ URL               │ Active│")
         IO.puts("├─────────┼──────────┼────────────────────┼────────┤")
+
         Enum.each(models, fn model ->
           IO.puts("│ #{model.name} │ #{model.engine_id} │ #{model.url} │ #{model.active} │")
         end)
+
         IO.puts("└─────────┴──────────┴────────────────────┴────────┘")
-      [] ->
-        IO.puts("No hay modelos registrados")
     end
   end
 
   defp handle_model(["delete" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.ModelManager.delete_model(name) do
         :ok ->
           IO.puts("✅ Modelo '#{name}' eliminado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al eliminar modelo: #{reason}")
       end
@@ -432,6 +438,7 @@ defmodule ElPaso.CLI do
 
   defp handle_model(["update" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       # Parse options from command line arguments
       attrs = %{
@@ -440,13 +447,14 @@ defmodule ElPaso.CLI do
         temperature: get_opt(rest, :temperature) |> parse_float(),
         top_p: get_opt(rest, :top_p) |> parse_float()
       }
-      
+
       # Filter out nil values
       attrs = Enum.filter(attrs, fn {_, val} -> val != nil end) |> Map.new()
-      
+
       case ElPaso.Domain.ModelManager.update_model(name, attrs) do
-        {:ok, model} ->
+        {:ok, _model} ->
           IO.puts("✅ Modelo '#{name}' actualizado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al actualizar modelo: #{reason}")
       end
@@ -458,10 +466,12 @@ defmodule ElPaso.CLI do
 
   defp handle_model(["show" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.ModelManager.get_model(name) do
         nil ->
           IO.puts("❌ Modelo no encontrado")
+
         model ->
           IO.puts("Modelo: #{model.name}")
           IO.puts("  Engine: #{model.engine_id}")
@@ -477,10 +487,12 @@ defmodule ElPaso.CLI do
 
   defp handle_model(["start" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.ModelManager.start_model(name) do
-        {:ok, model} ->
+        {:ok, _model} ->
           IO.puts("✅ Modelo '#{name}' iniciado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al iniciar modelo: #{reason}")
       end
@@ -492,10 +504,12 @@ defmodule ElPaso.CLI do
 
   defp handle_model(["stop" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.ModelManager.stop_model(name) do
-        {:ok, model} ->
+        {:ok, _model} ->
           IO.puts("✅ Modelo '#{name}' detenido exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al detener modelo: #{reason}")
       end
@@ -510,7 +524,7 @@ defmodule ElPaso.CLI do
     name = get_opt(rest, :name)
     engine_id = get_opt(rest, :engine)
     url = get_opt(rest, :url)
-    
+
     if name && engine_id && url do
       attrs = %{
         name: name,
@@ -521,10 +535,11 @@ defmodule ElPaso.CLI do
         temperature: get_opt(rest, :temperature) |> parse_float(),
         top_p: get_opt(rest, :top_p) |> parse_float()
       }
-      
+
       case ElPaso.Domain.ModelManager.create_model(attrs) do
-        {:ok, model} ->
+        {:ok, _model} ->
           IO.puts("✅ Modelo '#{name}' creado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al crear modelo: #{reason}")
       end
@@ -544,25 +559,32 @@ defmodule ElPaso.CLI do
 
   defp handle_engine(["list" | _]) do
     case ElPaso.Domain.EngineManager.list_engines() do
+      [] ->
+        IO.puts("No hay motores registrados")
+
       engines ->
         IO.puts("┌───────────┬─────────┬─────────────────────┬────────┐")
         IO.puts("│ Name     │ Adapter │ Base URL           │ Active│")
         IO.puts("├───────────┼─────────┼─────────────────────┼────────┤")
+
         Enum.each(engines, fn engine ->
-          IO.puts("│ #{engine.name} │ #{engine.adapter} │ #{engine.base_url} │ #{engine.active} │")
+          IO.puts(
+            "│ #{engine.name} │ #{engine.adapter} │ #{engine.base_url} │ #{engine.active} │"
+          )
         end)
+
         IO.puts("└───────────┴─────────┴─────────────────────┴────────┘")
-      [] ->
-        IO.puts("No hay motores registrados")
     end
   end
 
   defp handle_engine(["delete" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.EngineManager.delete_engine(name) do
         :ok ->
           IO.puts("✅ Motor '#{name}' eliminado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al eliminar motor: #{reason}")
       end
@@ -573,19 +595,21 @@ defmodule ElPaso.CLI do
 
   defp handle_engine(["update" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       # Parse options from command line arguments
       attrs = %{
         active: get_opt(rest, :active),
         timeout: get_opt(rest, :timeout) |> parse_int()
       }
-      
+
       # Filter out nil values
       attrs = Enum.filter(attrs, fn {_, val} -> val != nil end) |> Map.new()
-      
+
       case ElPaso.Domain.EngineManager.update_engine(name, attrs) do
-        {:ok, engine} ->
+        {:ok, _engine} ->
           IO.puts("✅ Motor '#{name}' actualizado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al actualizar motor: #{reason}")
       end
@@ -596,10 +620,12 @@ defmodule ElPaso.CLI do
 
   defp handle_engine(["show" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.EngineManager.list_engines() |> Enum.find(&(&1.name == name)) do
         nil ->
           IO.puts("❌ Motor no encontrado")
+
         engine ->
           IO.puts("Motor: #{engine.name}")
           IO.puts("  Adapter: #{engine.adapter}")
@@ -616,7 +642,7 @@ defmodule ElPaso.CLI do
     name = get_opt(rest, :name)
     adapter = get_opt(rest, :adapter)
     base_url = get_opt(rest, :base_url)
-    
+
     if name && adapter && base_url do
       attrs = %{
         name: name,
@@ -625,25 +651,31 @@ defmodule ElPaso.CLI do
         active: get_opt(rest, :active) || true,
         timeout: get_opt(rest, :timeout) |> parse_int()
       }
-      
+
       case ElPaso.Domain.EngineManager.create_engine(attrs) do
-        {:ok, engine} ->
+        {:ok, _engine} ->
           IO.puts("✅ Motor '#{name}' creado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al crear motor: #{reason}")
       end
     else
       IO.puts("❌ Error: Faltan parámetros requeridos")
-      IO.puts("Uso: elpaso engine add --name <name> --adapter <adapter> --base-url <url> [opciones]")
+
+      IO.puts(
+        "Uso: elpaso engine add --name <name> --adapter <adapter> --base-url <url> [opciones]"
+      )
     end
   end
 
   defp handle_engine(["test" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.EngineManager.test_engine(name) do
         :ok ->
           IO.puts("✅ Motor '#{name}' conectividad verificada exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al verificar conectividad: #{reason}")
       end
@@ -665,6 +697,7 @@ defmodule ElPaso.CLI do
 
   defp get_opt(args, key) do
     key_str = Atom.to_string(key)
+
     Enum.find_value(args, fn arg ->
       case String.split(arg, "=", parts: 2) do
         [^key_str, v] -> v
@@ -778,196 +811,24 @@ defmodule ElPaso.CLI do
     IO.puts("Usa 'elpaso cluster --help' para ver ayuda del comando cluster.")
   end
 
-  # ==================== PERSONALITY ====================
-
-  def main(["personality", "--help"]) do
-    IO.puts("""
-    ELPASO PERSONALITY
-
-    Gestión de personalidades/roles para modelos.
-
-    COMANDOS:
-
-      elpaso personality add          Añadir una personality
-      elpaso personality list       Listar todas las personalidades
-      elpaso personality delete     Eliminar una personality
-      elpaso personality show      Mostrar detalles de una personality
-      elpaso personality use       Asignar una personality a un modelo
-
-    USO:
-
-      elpaso personality add --name <nombre> --description <desc> --system-prompt <prompt>
-      elpaso personality list
-      elpaso personality delete --name <nombre>
-      elpaso personality show --name <nombre>
-      elpaso personality use --model <modelo> --personality <nombre>
-
-    OPCIONES:
-
-      --name <nombre>       Nombre único (REQUERIDO para delete/show/use)
-      --description <desc> Descripción (opcional)
-      --system-prompt <prompt>  System prompt de la personality (REQUERIDO para add)
-      --model <modelo>     Nombre del modelo (REQUERIDO para use)
-
-    PERSONALITIES INCUIDAS:
-
-      coder        Revisión de código, stack-migrator
-      architect   Diseño de sistemas, project-planning
-      advisor     Consejos, análisis
-      writer      Generación de texto
-
-    EJEMPLOS:
-
-      # Listar personalidades
-      elpaso personality list
-
-      # Añadir personality personalizada
-      elpaso personality add \\
-        --name mi-coder \\
-        --description "Experto en Elixir" \\
-        --system-prompt "Eres un experto en Elixir y Phoenix..."
-
-      # Ver details
-      elpaso personality show --name coder
-
-      # Asignar personality a modelo
-      elpaso personality use --model gemma --personality coder
-
-      # Eliminar personality
-      elpaso personality delete --name mi-coder
-    """)
-  end
-
-  # ==================== PROFILE ====================
-
-  def main(["profile", "--help"]) do
-    IO.puts("""
-    ELPASO PROFILE
-
-    Gestión de perfiles (conjuntos modelo+engine+personalidad).
-
-    COMANDOS:
-
-      elpaso profile add          Añadir un profile
-      elpaso profile list       Listar todos los profiles
-      elpaso profile delete     Eliminar un profile
-      elpaso profile show      Mostrar detalles de un profile
-
-    USO:
-
-      elpaso profile add --name <nombre> --model <modelo> --engine <motor> --personality <personalidad>
-      elpaso profile list
-      elpaso profile delete --name <nombre>
-      elpaso profile show --name <nombre>
-
-    OPCIONES:
-
-      --name <nombre>       Nombre único (REQUERIDO)
-      --model <modelo>     Nombre del modelo (REQUERIDO)
-      --engine <motor>      Nombre del motor (REQUERIDO)
-      --personality <personalidad>  Nombre de la personalidad (REQUERIDO)
-
-    EJEMPLOS:
-
-      # Añadir profile
-      elpaso profile add \\
-        --name mi-perfil \\
-        --model gemma \\
-        --engine openai \\
-        --personality coder
-
-      # Listar profiles
-      elpaso profile list
-
-      # Ver details
-      elpaso profile show --name mi-perfil
-
-      # Eliminar profile
-      elpaso profile delete --name mi-perfil
-    """)
-  end
-
-  # ==================== SERVER ====================
-
-  def main(["server", "--help"]) do
-    IO.puts("""
-    ELPASO SERVER
-
-    Gestionar el servidor HTTP de ElPaso.
-
-    COMANDOS:
-
-      elpaso server start       Iniciar el servidor
-      elpaso server stop      Parar el servidor
-      elpaso server restart  Reiniciar el servidor
-      elpaso server status   Ver estado del servidor
-      elpaso server log    Ver logs en tiempo real
-
-    USO:
-
-      elpaso server start [--port <puerto>] [--bind <host>]
-      elpaso server stop
-      elpaso server restart
-      elpaso server status
-      elpaso server log [--lines <n>]
-
-    OPCIONES:
-
-      --port <puerto>   Puerto HTTP (default: 8080)
-      --bind <host>     Host de bindeo (default: 0.0.0.0)
-      --lines <n>       Líneas de log (default: 100)
-
-    EJEMPLOS:
-
-      # Iniciar servidor en puerto default
-      elpaso server start
-
-      # Iniciar en puerto custom
-      elpaso server start --port 9000
-
-      # Ver estado actual
-      elpaso server status
-
-      # Ver logs
-      elpaso server log
-
-      # Parar servidor
-      elpaso server stop
-    """)
-  end
-
   # ==================== PERSONALITY HANDLERS ====================
 
-  defp handle_personality(["list" | _]) do
-    case ElPaso.Domain.PersonalityManager.list_personalities() do
-      personalities ->
-        IO.puts("┌─────────┬─────────────────────┐")
-        IO.puts("│ Name    │ System Prompt     │")
-        IO.puts("├─────────┼─────────────────────┤")
-        Enum.each(personalities, fn personality ->
-          IO.puts("│ #{personality.name} │ #{String.slice(personality.system_prompt, 0, 20)}... │")
-        end)
-        IO.puts("└─────────┴─────────────────────┘")
-      [] ->
-        IO.puts("No hay personalidades registradas")
-    end
-  end
-
- defp handle_personality(["add" | rest]) do
+  defp handle_personality(["add" | rest]) do
     name = get_opt(rest, :name)
     description = get_opt(rest, :description)
     system_prompt = get_opt(rest, :system_prompt)
-    
+
     if name && system_prompt do
       attrs = %{
         name: name,
         description: description,
         system_prompt: system_prompt
       }
-      
+
       case ElPaso.Domain.PersonalityManager.create_personality(attrs) do
-        {:ok, personality} ->
+        {:ok, _personality} ->
           IO.puts("✅ Personalidad '#{name}' creada exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al crear personalidad: #{reason}")
       end
@@ -979,26 +840,42 @@ defmodule ElPaso.CLI do
 
   defp handle_personality(["list" | _]) do
     personalities = ElPaso.Domain.PersonalityManager.list_personalities()
-    
+
     if Enum.empty?(personalities) do
       IO.puts("No hay personalidades registradas")
     else
-      IO.puts("┌────────────┬─────────────────────────────────────┬──────────────────────────────────┐")
-      IO.puts("│ Nombre     │ Descripción                         │ System Prompt                    │")
-      IO.puts("├────────────┼─────────────────────────────────────┼──────────────────────────────────┤")
+      IO.puts(
+        "┌────────────┬─────────────────────────────────────┬──────────────────────────────────┐"
+      )
+
+      IO.puts(
+        "│ Nombre     │ Descripción                         │ System Prompt                    │"
+      )
+
+      IO.puts(
+        "├────────────┼─────────────────────────────────────┼──────────────────────────────────┤"
+      )
+
       Enum.each(personalities, fn p ->
-        IO.puts("│ #{p.name} │ #{p.description || "N/A"} │ #{String.slice(p.system_prompt, 0, 30)}... │")
+        IO.puts(
+          "│ #{p.name} │ #{p.description || "N/A"} │ #{String.slice(p.system_prompt, 0, 30)}... │"
+        )
       end)
-      IO.puts("└────────────┴─────────────────────────────────────┴──────────────────────────────────┘")
+
+      IO.puts(
+        "└────────────┴─────────────────────────────────────┴──────────────────────────────────┘"
+      )
     end
   end
 
   defp handle_personality(["delete" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.PersonalityManager.delete_personality(name) do
         {:ok, _} ->
           IO.puts("✅ Personalidad '#{name}' eliminada exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al eliminar personalidad: #{reason}")
       end
@@ -1009,10 +886,12 @@ defmodule ElPaso.CLI do
 
   defp handle_personality(["show" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.PersonalityManager.get_personality(name) do
         nil ->
           IO.puts("❌ Personalidad no encontrada")
+
         personality ->
           IO.puts("Personalidad: #{personality.name}")
           IO.puts("  Descripción: #{personality.description || "N/A"}")
@@ -1026,7 +905,7 @@ defmodule ElPaso.CLI do
   defp handle_personality(["use" | rest]) do
     model_name = get_opt(rest, :model)
     personality_name = get_opt(rest, :personality)
-    
+
     if model_name && personality_name do
       # This would be implemented in the future to assign personality to model
       IO.puts("✅ Personalidad '#{personality_name}' asignada al modelo '#{model_name}'")
@@ -1040,7 +919,7 @@ defmodule ElPaso.CLI do
     IO.puts("Usa 'elpaso personality --help' para ver ayuda.")
   end
 
-defp handle_personality(args) do
+  defp handle_personality(args) do
     handle_personality(["list" | args])
   end
 
@@ -1051,13 +930,13 @@ defp handle_personality(args) do
     model_name = get_opt(rest, :model)
     engine_name = get_opt(rest, :engine)
     personality_name = get_opt(rest, :personality)
-    
+
     if name && model_name && engine_name && personality_name do
       # Get the IDs from the database
       model = ElPaso.Domain.ModelManager.get_model(model_name)
       engine = ElPaso.Domain.EngineManager.get_engine(engine_name)
       personality = ElPaso.Domain.PersonalityManager.get_personality(personality_name)
-      
+
       if model && engine && personality do
         attrs = %{
           name: name,
@@ -1065,10 +944,11 @@ defp handle_personality(args) do
           engine_id: engine.id,
           personality_id: personality.id
         }
-        
+
         case ElPaso.Domain.ProfileManager.create_profile(attrs) do
-          {:ok, profile} ->
+          {:ok, _profile} ->
             IO.puts("✅ Profile '#{name}' creado exitosamente")
+
           {:error, reason} ->
             IO.puts("❌ Error al crear profile: #{reason}")
         end
@@ -1077,32 +957,39 @@ defp handle_personality(args) do
       end
     else
       IO.puts("❌ Error: Faltan parámetros requeridos")
-      IO.puts("Uso: elpaso profile add --name <nombre> --model <modelo> --engine <motor> --personality <personalidad>")
+
+      IO.puts(
+        "Uso: elpaso profile add --name <nombre> --model <modelo> --engine <motor> --personality <personalidad>"
+      )
     end
   end
 
   defp handle_profile(["list" | _]) do
     profiles = ElPaso.Domain.ProfileManager.list_profiles()
-    
+
     if Enum.empty?(profiles) do
       IO.puts("No hay profiles registrados")
     else
       IO.puts("┌────────────┬────────────┬────────────┬────────────┐")
       IO.puts("│ Nombre     │ Modelo     │ Motor      │ Personalidad │")
       IO.puts("├────────────┼────────────┼────────────┼────────────┤")
+
       Enum.each(profiles, fn p ->
         IO.puts("│ #{p.name} │ #{p.model.name} │ #{p.engine.name} │ #{p.personality.name} │")
       end)
+
       IO.puts("└────────────┴────────────┴────────────┴────────────┘")
     end
   end
 
   defp handle_profile(["delete" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.ProfileManager.delete_profile(name) do
         {:ok, _} ->
           IO.puts("✅ Profile '#{name}' eliminado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al eliminar profile: #{reason}")
       end
@@ -1113,10 +1000,12 @@ defp handle_personality(args) do
 
   defp handle_profile(["show" | rest]) do
     name = get_opt(rest, :name)
+
     if name do
       case ElPaso.Domain.ProfileManager.get_profile(name) do
         nil ->
           IO.puts("❌ Profile no encontrado")
+
         profile ->
           IO.puts("Profile: #{profile.name}")
           IO.puts("  Modelo: #{profile.model.name}")
@@ -1174,7 +1063,7 @@ defp handle_personality(args) do
   end
 
   defp handle_server(args) do
-    handle_server(args)
+    handle_server(["status" | args])
   end
 
   # ==================== HELPERS ====================
@@ -1183,13 +1072,10 @@ defp handle_personality(args) do
     Enum.reduce(args, [], fn
       "--" <> key, acc ->
         [String.to_atom(key) | acc]
+
       arg, acc ->
         [arg | acc]
     end)
     |> Enum.reverse()
-  end
-
-  def main(_args) do
-    IO.puts("Comando desconocido. Usa 'elpaso --help' para ver los comandos disponibles.")
   end
 end

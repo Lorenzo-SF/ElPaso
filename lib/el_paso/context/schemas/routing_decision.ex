@@ -28,8 +28,16 @@ defmodule ElPaso.Context.Schemas.RoutingDecision do
   def changeset(decision, attrs) do
     decision
     |> cast(attrs, [
-      :session_id, :request_id, :selected_model, :runner_up, :features, :scores,
-      :reason, :outcome, :latency_ms, :decision_latency_us
+      :session_id,
+      :request_id,
+      :selected_model,
+      :runner_up,
+      :features,
+      :scores,
+      :reason,
+      :outcome,
+      :latency_ms,
+      :decision_latency_us
     ])
     |> validate_required([:session_id, :request_id, :selected_model])
   end

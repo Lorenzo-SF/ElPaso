@@ -29,6 +29,7 @@ defmodule ElPaso.Domain.EngineManager do
     case Repo.get_by(Engine, name: name) do
       nil ->
         {:error, "Motor no encontrado"}
+
       engine ->
         Repo.delete(engine)
     end
@@ -41,6 +42,7 @@ defmodule ElPaso.Domain.EngineManager do
     case Repo.get_by(Engine, name: name) do
       nil ->
         {:error, "Motor no encontrado"}
+
       engine ->
         engine
         |> Engine.changeset(attrs)
@@ -55,7 +57,8 @@ defmodule ElPaso.Domain.EngineManager do
     case Repo.get_by(Engine, name: name) do
       nil ->
         {:error, "Motor no encontrado"}
-      engine ->
+
+      _engine ->
         # In a real implementation, this would make an actual HTTP request to test connectivity
         # For now, we'll just return success
         :ok

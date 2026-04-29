@@ -36,6 +36,7 @@ defmodule ElPaso.Domain.PersonalityManager do
     case Repo.get_by(Personality, name: name) do
       nil ->
         {:error, "Personalidad no encontrada"}
+
       personality ->
         Repo.delete(personality)
     end
@@ -48,6 +49,7 @@ defmodule ElPaso.Domain.PersonalityManager do
     case Repo.get_by(Personality, name: name) do
       nil ->
         {:error, "Personalidad no encontrada"}
+
       personality ->
         personality
         |> Personality.changeset(attrs)

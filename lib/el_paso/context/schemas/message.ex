@@ -25,7 +25,13 @@ defmodule ElPaso.Context.Schemas.Message do
   def changeset(message, attrs) do
     message
     |> cast(attrs, [
-      :session_id, :role, :content, :model_id, :token_estimate, :vector_embedding, :sequence_number
+      :session_id,
+      :role,
+      :content,
+      :model_id,
+      :token_estimate,
+      :vector_embedding,
+      :sequence_number
     ])
     |> validate_required([:session_id, :role, :content, :sequence_number])
   end

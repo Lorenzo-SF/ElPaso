@@ -22,7 +22,16 @@ defmodule ElPaso.Models.Engine do
   @doc false
   def changeset(engine, attrs) do
     engine
-    |> cast(attrs, [:name, :adapter, :base_url, :api_key, :config, :active, :health_status, :last_health_check])
+    |> cast(attrs, [
+      :name,
+      :adapter,
+      :base_url,
+      :api_key,
+      :config,
+      :active,
+      :health_status,
+      :last_health_check
+    ])
     |> validate_required([:name, :adapter, :base_url])
     |> unique_constraint(:name)
   end

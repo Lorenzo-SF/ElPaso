@@ -43,16 +43,17 @@ defmodule Mix.Tasks.Elpaso.Model do
     name = get_opt(args, :name)
     engine = get_opt(args, :engine)
     url = get_opt(args, :url)
-    
+
     if name && engine && url do
       # Connect to the database and create model
       case ElPaso.Domain.ModelManager.create_model(%{
-        name: name,
-        engine_id: engine,
-        url: url
-      }) do
-        {:ok, model} ->
+             name: name,
+             engine_id: engine,
+             url: url
+           }) do
+        {:ok, _model} ->
           IO.puts("✅ Modelo '#{name}' creado exitosamente")
+
         {:error, reason} ->
           IO.puts("❌ Error al crear modelo: #{reason}")
       end
@@ -63,16 +64,19 @@ defmodule Mix.Tasks.Elpaso.Model do
 
   defp list_models() do
     case ElPaso.Domain.ModelManager.list_models() do
+      [] ->
+        IO.puts("No hay modelos registrados")
+
       models ->
         IO.puts("┌─────────┬──────────┬────────────────────┬────────┐")
         IO.puts("│ Name    │ Engine  │ URL               │ Active│")
         IO.puts("├─────────┼──────────┼────────────────────┼────────┤")
+
         Enum.each(models, fn model ->
           IO.puts("│ #{model.name} │ #{model.engine_id} │ #{model.url} │ #{model.active} │")
         end)
+
         IO.puts("└─────────┴──────────┴────────────────────┴────────┘")
-      [] ->
-        IO.puts("No hay modelos registrados")
     end
   end
 
@@ -80,6 +84,7 @@ defmodule Mix.Tasks.Elpaso.Model do
     case ElPaso.Domain.ModelManager.delete_model(name) do
       :ok ->
         IO.puts("✅ Modelo '#{name}' eliminado exitosamente")
+
       {:error, reason} ->
         IO.puts("❌ Error al eliminar modelo: #{reason}")
     end
@@ -89,6 +94,7 @@ defmodule Mix.Tasks.Elpaso.Model do
     case ElPaso.Domain.ModelManager.start_model(name) do
       :ok ->
         IO.puts("✅ Modelo '#{name}' iniciado exitosamente")
+
       {:error, reason} ->
         IO.puts("❌ Error al iniciar modelo: #{reason}")
     end
@@ -98,6 +104,7 @@ defmodule Mix.Tasks.Elpaso.Model do
     case ElPaso.Domain.ModelManager.stop_model(name) do
       :ok ->
         IO.puts("✅ Modelo '#{name}' detenido exitosamente")
+
       {:error, reason} ->
         IO.puts("❌ Error al detener modelo: #{reason}")
     end
@@ -105,6 +112,7 @@ defmodule Mix.Tasks.Elpaso.Model do
 
   defp get_opt(args, key) do
     key_str = Atom.to_string(key)
+
     Enum.find_value(args, fn arg ->
       case String.split(arg, "=", parts: 2) do
         [^key_str, v] -> v

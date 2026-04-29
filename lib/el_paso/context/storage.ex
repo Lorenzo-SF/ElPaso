@@ -6,9 +6,10 @@ defmodule ElPaso.Context.Storage do
   y ETS (caché de acceso rápido). Es puramente de acceso a datos: no tiene lógica de negocio.
   """
 
+  import Ecto.Query
   alias ElPaso.Repo
   alias ElPaso.Context.Schemas.{Session, Message, RoutingDecision, ConversationSummary}
-  alias ElPaso.Models.{User, ApiUsage, Benchmark, AutoTuneRun}
+  alias ElPaso.Models.{User, ApiUsage, AutoTuneRun}
 
   @doc """
   Crea una nueva sesión.
@@ -31,7 +32,7 @@ defmodule ElPaso.Context.Storage do
   """
   def get_session_by_user_and_profile(user_id, profile_id) do
     Session
-    |> where(user_id: ^user_id, profile_id: ^profile_id)
+    |> where([s], s.user_id == ^user_id and s.profile_id == ^profile_id)
     |> order_by(desc: :updated_at)
     |> limit(1)
     |> Repo.one()
@@ -58,7 +59,7 @@ defmodule ElPaso.Context.Storage do
   """
   def list_sessions_by_user(user_id) do
     Session
-    |> where(user_id: ^user_id)
+    |> where([s], s.user_id == ^user_id)
     |> order_by(desc: :updated_at)
     |> Repo.all()
   end
@@ -68,7 +69,7 @@ defmodule ElPaso.Context.Storage do
   """
   def get_all_messages(session_id) do
     Message
-    |> where(session_id: ^session_id)
+    |> where([m], m.session_id == ^session_id)
     |> order_by(asc: :sequence_number)
     |> Repo.all()
   end
@@ -124,7 +125,7 @@ defmodule ElPaso.Context.Storage do
       end
 
     query =
-      if with_outcome = Keyword.get(opts, :with_outcome) do
+      if Keyword.get(opts, :with_outcome) do
         from(r in query, where: r.outcome != "pending")
       else
         query
@@ -196,8 +197,11 @@ defmodule ElPaso.Context.Storage do
   def upsert_api_usage(attrs) do
     %ApiUsage{}
     |> ApiUsage.changeset(attrs)
-    |> Repo.insert(on_conflict: [:cost_usd], conflict_target: [:user_id, :model_id, :date],
-      replace: [:cost_usd, :input_tokens, :output_tokens])
+    |> Repo.insert(
+      on_conflict: [:cost_usd],
+      conflict_target: [:user_id, :model_id, :date],
+      replace: [:cost_usd, :input_tokens, :output_tokens]
+    )
   end
 
   @doc """
@@ -260,14 +264,14 @@ defmodule ElPaso.Context.Storage do
 
     query =
       if user_id do
-        from(q in query, where: q.user_id == ^user_id)
+        from(a in query, where: a.user_id == ^user_id)
       else
         query
       end
 
     query =
       if model_id do
-        from(q in query, where: q.model_id == ^model_id)
+        from(a in query, where: a.model_id == ^model_id)
       else
         query
       end
@@ -281,16 +285,17 @@ defmodule ElPaso.Context.Storage do
       end)
 
     %{
-      users: Enum.map(results, fn usage ->
-        %{
-          user_id: usage.user_id,
-          username: usage.user.username,
-          model_id: usage.model_id,
-          cost: Decimal.to_float(usage.cost_usd),
-          input_tokens: usage.input_tokens,
-          output_tokens: usage.output_tokens
-        }
-      end),
+      users:
+        Enum.map(results, fn usage ->
+          %{
+            user_id: usage.user_id,
+            username: usage.user.username,
+            model_id: usage.model_id,
+            cost: Decimal.to_float(usage.cost_usd),
+            input_tokens: usage.input_tokens,
+            output_tokens: usage.output_tokens
+          }
+        end),
       total_cost: total_cost
     }
   end

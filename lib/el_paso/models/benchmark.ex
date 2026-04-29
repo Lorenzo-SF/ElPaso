@@ -23,7 +23,16 @@ defmodule ElPaso.Models.Benchmark do
   @doc false
   def changeset(benchmark, attrs) do
     benchmark
-    |> cast(attrs, [:name, :model_id, :engine_id, :prompt, :latency_ms, :tokens_per_sec, :quality_score, :config])
+    |> cast(attrs, [
+      :name,
+      :model_id,
+      :engine_id,
+      :prompt,
+      :latency_ms,
+      :tokens_per_sec,
+      :quality_score,
+      :config
+    ])
     |> validate_required([:name])
   end
 end

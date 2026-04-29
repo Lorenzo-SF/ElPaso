@@ -23,7 +23,14 @@ defmodule ElPaso.Context.Schemas.Session do
   """
   def changeset(session, attrs) do
     session
-    |> cast(attrs, [:user_id, :profile_id, :status, :context_mode, :token_budget, :current_token_count])
+    |> cast(attrs, [
+      :user_id,
+      :profile_id,
+      :status,
+      :context_mode,
+      :token_budget,
+      :current_token_count
+    ])
     |> validate_required([:user_id])
   end
 end

@@ -6,7 +6,6 @@ defmodule ElPaso.Domain.ModelManager do
   use GenServer
   alias ElPaso.Repo
   alias ElPaso.Models.{Model, Engine}
-  alias ElPaso.Context.Storage
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -36,11 +35,6 @@ defmodule ElPaso.Domain.ModelManager do
     GenServer.call(__MODULE__, :all_states)
   end
 
-  @impl GenServer
-  def handle_call(:all_states, _from, state) do
-    {:reply, Enum.map(state.models, &model_to_state/1), state}
-  end
-
   @doc """
   Ejecuta inferencia en un modelo.
   """
@@ -49,7 +43,11 @@ defmodule ElPaso.Domain.ModelManager do
   end
 
   @impl GenServer
-  def handle_call({:infer, model_id, request}, _from, state) do
+  def handle_call(:all_states, _from, state) do
+    {:reply, Enum.map(state.models, &model_to_state/1), state}
+  end
+
+  def handle_call({:infer, model_id, _request}, _from, state) do
     # Find the model
     model = Enum.find(state.models, &(&1.name == model_id))
 
@@ -108,6 +106,7 @@ defmodule ElPaso.Domain.ModelManager do
     case Repo.get_by(Model, name: name) do
       nil ->
         {:error, "Modelo no encontrado"}
+
       model ->
         Repo.delete(model)
     end
@@ -120,6 +119,7 @@ defmodule ElPaso.Domain.ModelManager do
     case Repo.get_by(Model, name: name) do
       nil ->
         {:error, "Modelo no encontrado"}
+
       model ->
         model
         |> Model.changeset(attrs)
@@ -134,6 +134,7 @@ defmodule ElPaso.Domain.ModelManager do
     case Repo.get_by(Model, name: name) do
       nil ->
         {:error, "Modelo no encontrado"}
+
       model ->
         model
         |> Model.changeset(%{active: true})
@@ -148,6 +149,7 @@ defmodule ElPaso.Domain.ModelManager do
     case Repo.get_by(Model, name: name) do
       nil ->
         {:error, "Modelo no encontrado"}
+
       model ->
         model
         |> Model.changeset(%{active: false})

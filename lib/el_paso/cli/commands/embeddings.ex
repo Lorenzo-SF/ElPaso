@@ -12,11 +12,7 @@ defmodule ElPaso.CLI.Commands.Embeddings do
   """
   def rebuild(_opts \\ []) do
     case EmbeddingClient.ping() do
-      {:error, reason} ->
-        print("Error: El modelo de embeddings no está disponible: #{reason}")
-        {:error, :model_unavailable}
-
-      _ ->
+      {:ok, _} ->
         print("Reconstruyendo embeddings...")
         print("Procesando mensajes sin embedding...")
         print("Reconstrucción completada.")

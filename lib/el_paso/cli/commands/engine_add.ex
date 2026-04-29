@@ -4,7 +4,9 @@ defmodule ElPaso.CLI.Commands.EngineAdd do
   """
 
   def run(args) do
-    IO.puts("Usage: elpaso engine add --name <name> --adapter <adapter> --base-url <url> [--api-key <key>] [--description <desc>] [--active true|false]")
+    IO.puts(
+      "Usage: elpaso engine add --name <name> --adapter <adapter> --base-url <url> [--api-key <key>] [--description <desc>] [--active true|false]"
+    )
 
     if Enum.member?(args, "--help") or Enum.member?(args, "-h") do
       IO.puts("""

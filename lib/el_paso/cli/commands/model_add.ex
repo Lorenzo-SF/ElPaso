@@ -4,7 +4,9 @@ defmodule ElPaso.CLI.Commands.ModelAdd do
   """
 
   def run(args) do
-    IO.puts("Usage: elpaso model add --name <name> --engine <engine> --url <url> [--api-key <key>] [--description <desc>] [--active true|false] [--max-tokens <num>]")
+    IO.puts(
+      "Usage: elpaso model add --name <name> --engine <engine> --url <url> [--api-key <key>] [--description <desc>] [--active true|false] [--max-tokens <num>]"
+    )
 
     if Enum.member?(args, "--help") or Enum.member?(args, "-h") do
       IO.puts("""

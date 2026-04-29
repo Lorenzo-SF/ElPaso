@@ -25,8 +25,13 @@ defmodule ElPaso.Context.Schemas.ConversationSummary do
   def changeset(summary, attrs) do
     summary
     |> cast(attrs, [
-      :session_id, :content, :covers_until_message_id, :token_estimate,
-      :generated_by_model, :generated_at, :archived_at
+      :session_id,
+      :content,
+      :covers_until_message_id,
+      :token_estimate,
+      :generated_by_model,
+      :generated_at,
+      :archived_at
     ])
     |> validate_required([:session_id, :content])
   end

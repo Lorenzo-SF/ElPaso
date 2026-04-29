@@ -9,13 +9,13 @@ defmodule ElPaso.PipelineTest do
   describe "process_request/4" do
     test "debe procesar un request exitoso" do
       # Este test es más conceptual ya que necesitamos tener datos de prueba
-      
+
       # En una implementación real, se probaría:
       # - Enrutamiento correcto
       # - Ejecución de inferencia
       # - Registro de decisiones
       # - Actualización de estadísticas
-      
+
       assert true == true
     end
   end
@@ -26,7 +26,7 @@ defmodule ElPaso.PipelineTest do
       # - Conexión con motores reales
       # - Manejo de errores
       # - Respuestas correctas
-      
+
       assert true == true
     end
   end
