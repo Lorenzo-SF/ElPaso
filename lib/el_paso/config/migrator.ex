@@ -45,7 +45,7 @@ defmodule ElPaso.Config.Migrator do
   defp apply_migration(config, from, to) do
     case {from, to} do
       {"1.0", "1.1"} ->
-        migrate_1_0_to_1_1(config)
+        {:ok, migrate_1_0_to_1_1(config)}
 
       _ ->
         {:error, :unknown_migration}

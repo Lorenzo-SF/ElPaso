@@ -188,11 +188,11 @@ defmodule ElPaso.HTTP.Server do
     case verify_admin_auth(conn) do
       {:ok, _user} ->
         report =
-          ElPaso.Context.Storage.usage_report(%{
+          ElPaso.Context.Storage.usage_report(
             user_id: Map.get(conn.params, "user_id"),
             model_id: Map.get(conn.params, "model_id"),
             period: Map.get(conn.params, "period", "30d")
-          })
+          )
 
         conn
         |> put_resp_content_type("application/json")

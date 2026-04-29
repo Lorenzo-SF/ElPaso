@@ -6,9 +6,10 @@ defmodule ElPaso.Models.Model do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key {:id, :binary_id, autogenerate: true}
   schema "models" do
     field(:name, :string)
-    belongs_to(:engine, ElPaso.Models.Engine)
+    belongs_to(:engine, ElPaso.Models.Engine, type: :binary_id)
 
     field(:url, :string)
     field(:api_key, :string)
@@ -26,8 +27,29 @@ defmodule ElPaso.Models.Model do
     field(:ram_mb, :integer)
     field(:vram_mb, :integer)
 
-    timestamps()
+    timestamps(inserted_at: :created_at)
   end
+
+  @type t :: %__MODULE__{
+          id: integer() | nil,
+          name: String.t(),
+          engine_id: integer() | nil,
+          url: String.t() | nil,
+          api_key: String.t() | nil,
+          config: map(),
+          active: boolean(),
+          max_tokens: integer(),
+          temperature: float(),
+          top_p: float(),
+          description: String.t() | nil,
+          task_affinity: map(),
+          complexity_ceiling: float(),
+          cold_start_estimate_ms: integer(),
+          ram_mb: integer() | nil,
+          vram_mb: integer() | nil,
+          created_at: NaiveDateTime.t() | nil,
+          updated_at: NaiveDateTime.t() | nil
+        }
 
   @doc false
   def changeset(model, attrs) do

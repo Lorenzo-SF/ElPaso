@@ -1,14 +1,15 @@
 defmodule ElPaso.Models.AutoTuneRun do
   @moduledoc """
-  Schema para la tabla de auto_tune_runs (registros de auto-tune).
+  Schema para la tabla de auto_tune_runs (InitialSetup).
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key false
   schema "auto_tune_runs" do
-    field(:applied, :integer, default: 0)
-    field(:changes, :map, default: %{})
+    field(:applied, :integer)
+    field(:changes, :map)
 
     timestamps()
   end

@@ -46,9 +46,10 @@ defmodule ElPaso.Context.Summarization do
         # Guardar el resumen en la base de datos
         Storage.create_summary(%{
           session_id: session_id,
-          content: response.content,
-          token_count: response.token_count,
-          generated_at: DateTime.utc_now()
+          summary: response.response,
+          summary_tokens: String.length(response.response || ""),
+          window_start: DateTime.utc_now() |> DateTime.truncate(:second),
+          window_end: DateTime.utc_now() |> DateTime.truncate(:second)
         })
 
         {:ok, response}

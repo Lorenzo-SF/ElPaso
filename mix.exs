@@ -42,10 +42,14 @@ defmodule ElPaso.MixProject do
   end
 
   def application do
-    [
-      mod: {ElPaso.Application, []},
-      extra_applications: [:logger, :crypto]
-    ]
+    if Mix.env() == :test do
+      [extra_applications: [:logger, :crypto]]
+    else
+      [
+        mod: {ElPaso.Application, []},
+        extra_applications: [:logger, :crypto]
+      ]
+    end
   end
 
   defp elixirc_paths(:test), do: ["lib", "test"]

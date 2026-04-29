@@ -110,6 +110,7 @@ defmodule ElPaso.ModelDownloader do
         Finch.build(:get, url)
         |> Finch.stream(
           ElPasoFinch,
+          {File.open!(temp_path, [:write, :binary]), 0},
           fn
             {:status, status}, acc when status == 200 ->
               {:cont, acc}
@@ -131,8 +132,7 @@ defmodule ElPaso.ModelDownloader do
               end
 
               {:cont, {file, new_downloaded}}
-          end,
-          {File.open!(temp_path, [:write, :binary]), 0}
+          end
         )
 
       case result do

@@ -1,23 +1,28 @@
 defmodule ElPaso.Context.Schemas.RoutingDecision do
   @moduledoc """
-  Schema para la tabla de decisiones de enrutamiento.
+  Schema para la tabla de decisiones de enrutamiento (InitialSetup).
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key false
   schema "routing_decisions" do
-    belongs_to(:session, ElPaso.Context.Schemas.Session)
-
     field(:request_id, :string)
+    field(:session_id, :string)
+    field(:model_id, :string)
+    field(:task_type, :string)
     field(:selected_model, :string)
     field(:runner_up, :string)
-    field(:features, :map, default: %{})
-    field(:scores, :map, default: %{})
+    field(:token_estimate, :integer)
+    field(:complexity_score, :float)
+    field(:language, :string)
+    field(:scores, :map)
     field(:reason, :string)
-    field(:outcome, :string, default: "pending")
+    field(:outcome, :string)
     field(:latency_ms, :integer)
     field(:decision_latency_us, :integer)
+    field(:decided_at, :utc_datetime)
 
     timestamps()
   end
@@ -28,17 +33,22 @@ defmodule ElPaso.Context.Schemas.RoutingDecision do
   def changeset(decision, attrs) do
     decision
     |> cast(attrs, [
-      :session_id,
       :request_id,
+      :session_id,
+      :model_id,
+      :task_type,
       :selected_model,
       :runner_up,
-      :features,
+      :token_estimate,
+      :complexity_score,
+      :language,
       :scores,
       :reason,
       :outcome,
       :latency_ms,
-      :decision_latency_us
+      :decision_latency_us,
+      :decided_at
     ])
-    |> validate_required([:session_id, :request_id, :selected_model])
+    |> validate_required([:request_id, :session_id, :model_id, :task_type, :selected_model])
   end
 end

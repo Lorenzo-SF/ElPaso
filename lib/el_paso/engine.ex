@@ -16,7 +16,7 @@ defmodule ElPaso.Engine do
   Ejecuta inferencia y devuelve la respuesta completa.
   """
   @callback infer(
-              prompt :: ElPaso.Context.BuiltPrompt.t(),
+              prompt :: ElPaso.Context.Builder.BuiltPrompt.t(),
               params :: map(),
               config :: map()
             ) :: {:ok, ElPaso.Engine.Response.t()} | {:error, reason :: term()}
@@ -25,7 +25,7 @@ defmodule ElPaso.Engine do
   Ejecuta inferencia en streaming, llamando callback por cada chunk.
   """
   @callback stream(
-              prompt :: ElPaso.Context.BuiltPrompt.t(),
+              prompt :: ElPaso.Context.Builder.BuiltPrompt.t(),
               params :: map(),
               config :: map(),
               chunk_callback :: (ElPaso.Engine.Chunk.t() -> :ok)
@@ -35,7 +35,7 @@ defmodule ElPaso.Engine do
   Adapta el PrefixBlock al formato que este engine espera.
   """
   @callback prepare_prefix(
-              prefix :: ElPaso.Context.PrefixBlock.t(),
+              prefix :: ElPaso.Context.PrefixManager.PrefixBlock.t(),
               config :: map()
             ) :: term()
 

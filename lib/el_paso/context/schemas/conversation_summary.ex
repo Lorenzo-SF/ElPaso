@@ -1,20 +1,18 @@
 defmodule ElPaso.Context.Schemas.ConversationSummary do
   @moduledoc """
-  Schema para la tabla de resúmenes de conversaciones.
+  Schema para la tabla de resúmenes de conversaciones (InitialSetup).
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key false
   schema "conversation_summaries" do
-    belongs_to(:session, ElPaso.Context.Schemas.Session)
-
-    field(:content, :string)
-    field(:covers_until_message_id, :string)
-    field(:token_estimate, :integer, default: 0)
-    field(:generated_by_model, :string)
-    field(:generated_at, :utc_datetime)
-    field(:archived_at, :utc_datetime)
+    field(:session_id, :string)
+    field(:summary, :string)
+    field(:summary_tokens, :integer)
+    field(:window_start, :utc_datetime)
+    field(:window_end, :utc_datetime)
 
     timestamps()
   end
@@ -26,13 +24,11 @@ defmodule ElPaso.Context.Schemas.ConversationSummary do
     summary
     |> cast(attrs, [
       :session_id,
-      :content,
-      :covers_until_message_id,
-      :token_estimate,
-      :generated_by_model,
-      :generated_at,
-      :archived_at
+      :summary,
+      :summary_tokens,
+      :window_start,
+      :window_end
     ])
-    |> validate_required([:session_id, :content])
+    |> validate_required([:session_id, :summary])
   end
 end

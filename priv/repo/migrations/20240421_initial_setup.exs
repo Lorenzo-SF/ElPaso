@@ -80,6 +80,7 @@ defmodule ElPaso.Repo.Migrations.InitialSetup do
       
       # Resultado (para análisis)
       add :outcome, :string  # "success" | "retry" | "error" | "timeout"
+      add :latency_ms, :integer
       add :decision_latency_us, :integer
       
       # Timestamps
@@ -103,7 +104,7 @@ defmodule ElPaso.Repo.Migrations.InitialSetup do
     # Tabla: auto_tune_runs (V2.2)
     # ==============================================================
     create table(:auto_tune_runs, primary_key: false) do
-      add :applied_count, :integer, null: false
+      add :applied, :integer, null: false
       add :changes, :map  # [%{model_id, task_type, previous_affinity, new_affinity}]
       add :trigger, :string, default: "scheduled"  # "scheduled" | "manual"
       
@@ -132,6 +133,7 @@ defmodule ElPaso.Repo.Migrations.InitialSetup do
     create index(:api_usage, [:user_id, :date])
     create index(:api_usage, [:model_id, :date])
     create index(:api_usage, [:date])
+    create unique_index(:api_usage, [:user_id, :model_id, :date])
 
     # ==============================================================
     # Tabla: model_pricing (V3.0)

@@ -17,7 +17,7 @@ defmodule ElPaso.Domain.Router.Cluster do
   Los estados remotos tienen timeout de 500ms para no bloquear el routing.
   Los nodos que no responden son excluidos.
   """
-  @spec all_model_states_global() :: [ModelManager.all_states_result()]
+  @spec all_model_states_global() :: [ElPaso.Domain.Router.ModelState.t()]
   def all_model_states_global do
     # Estados locales
     local = ModelManager.all_states()

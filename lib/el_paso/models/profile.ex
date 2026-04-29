@@ -6,6 +6,7 @@ defmodule ElPaso.Models.Profile do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key {:id, :binary_id, autogenerate: true}
   schema "profiles" do
     field(:name, :string)
     belongs_to(:model, ElPaso.Models.Model)
@@ -18,7 +19,7 @@ defmodule ElPaso.Models.Profile do
     field(:active, :boolean, default: true)
     field(:description, :string)
 
-    timestamps()
+    timestamps(inserted_at: :created_at)
   end
 
   @doc false

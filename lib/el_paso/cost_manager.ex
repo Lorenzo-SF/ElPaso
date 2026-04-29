@@ -31,7 +31,7 @@ defmodule ElPaso.CostManager do
     })
 
     # Verificar budget después de registrar uso
-    check_budget(user_id)
+    _budget_status = check_budget(user_id)
 
     :ok
   end
@@ -120,16 +120,28 @@ defmodule ElPaso.CostManager do
     # Precios por defecto (aproximados)
     cond do
       String.contains?(model_id, "opus") ->
-        %{input_price_per_1k: Decimal.new(15.0), output_price_per_1k: Decimal.new(75.0)}
+        %{
+          input_price_per_1k: Decimal.from_float(15.0),
+          output_price_per_1k: Decimal.from_float(75.0)
+        }
 
       String.contains?(model_id, "sonnet") ->
-        %{input_price_per_1k: Decimal.new(3.0), output_price_per_1k: Decimal.new(15.0)}
+        %{
+          input_price_per_1k: Decimal.from_float(3.0),
+          output_price_per_1k: Decimal.from_float(15.0)
+        }
 
       String.contains?(model_id, "haiku") ->
-        %{input_price_per_1k: Decimal.new(0.25), output_price_per_1k: Decimal.new(1.25)}
+        %{
+          input_price_per_1k: Decimal.from_float(0.25),
+          output_price_per_1k: Decimal.from_float(1.25)
+        }
 
       true ->
-        %{input_price_per_1k: Decimal.new(1.0), output_price_per_1k: Decimal.new(5.0)}
+        %{
+          input_price_per_1k: Decimal.from_float(1.0),
+          output_price_per_1k: Decimal.from_float(5.0)
+        }
     end
   end
 end

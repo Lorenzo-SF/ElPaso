@@ -233,7 +233,7 @@ defmodule ElPaso.Config do
             Map.put(acc, section, %{})
 
           String.contains?(line, "=") ->
-            [key | value] = String.split(line, "=", parts: 2)
+            [key, value] = String.split(line, "=", parts: 2)
             key = String.trim(key)
             value = String.trim(value)
 

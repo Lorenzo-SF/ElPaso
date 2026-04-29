@@ -1,19 +1,17 @@
 defmodule ElPaso.Context.Schemas.Session do
   @moduledoc """
-  Schema para la tabla de sesiones.
+  Schema para la tabla de sesiones (InitialSetup).
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key {:session_id, :string, autogenerate: false}
   schema "sessions" do
-    belongs_to(:user, ElPaso.Models.User)
-    belongs_to(:profile, ElPaso.Models.Profile)
-
-    field(:status, :string, default: "active")
+    field(:user_id, :string)
+    field(:model_id, :string)
     field(:context_mode, :string, default: "transparent")
-    field(:token_budget, :integer, default: 32768)
-    field(:current_token_count, :integer, default: 0)
+    field(:status, :string, default: "active")
 
     timestamps()
   end
@@ -24,13 +22,11 @@ defmodule ElPaso.Context.Schemas.Session do
   def changeset(session, attrs) do
     session
     |> cast(attrs, [
+      :session_id,
       :user_id,
-      :profile_id,
-      :status,
+      :model_id,
       :context_mode,
-      :token_budget,
-      :current_token_count
+      :status
     ])
-    |> validate_required([:user_id])
   end
 end

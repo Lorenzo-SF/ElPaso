@@ -70,7 +70,7 @@ defmodule ElPaso.Context.Storage do
   def get_all_messages(session_id) do
     Message
     |> where([m], m.session_id == ^session_id)
-    |> order_by(asc: :sequence_number)
+    |> order_by(asc: :inserted_at)
     |> Repo.all()
   end
 
@@ -89,7 +89,7 @@ defmodule ElPaso.Context.Storage do
   def get_latest_summary(session_id) do
     from(cs in ConversationSummary,
       where: cs.session_id == ^session_id,
-      order_by: [desc: cs.generated_at],
+      order_by: [desc: cs.inserted_at],
       limit: 1
     )
     |> Repo.one()
@@ -114,12 +114,13 @@ defmodule ElPaso.Context.Storage do
   def query_routing_decisions(opts) do
     query =
       from(r in RoutingDecision,
-        order_by: [desc: r.created_at]
+        order_by: [desc: r.inserted_at]
       )
 
     query =
       if since = Keyword.get(opts, :since) do
-        from(r in query, where: r.created_at >= ^since)
+        since_dt = DateTime.new!(since, ~T[00:00:00])
+        from(r in query, where: r.decided_at >= ^since_dt)
       else
         query
       end
@@ -166,7 +167,7 @@ defmodule ElPaso.Context.Storage do
   def query_auto_tune_runs(opts \\ %{}) do
     limit = Map.get(opts, :limit, 10)
 
-    from(a in AutoTuneRun, order_by: [desc: a.created_at], limit: ^limit)
+    from(a in AutoTuneRun, order_by: [desc: a.inserted_at], limit: ^limit)
     |> Repo.all()
   end
 
@@ -174,7 +175,7 @@ defmodule ElPaso.Context.Storage do
   Obtener el último auto-tune run para hacer revert.
   """
   def get_last_auto_tune_run do
-    from(a in AutoTuneRun, order_by: [desc: a.created_at], limit: 1)
+    from(a in AutoTuneRun, order_by: [desc: a.inserted_at], limit: 1)
     |> Repo.one()
   end
 
@@ -198,10 +199,13 @@ defmodule ElPaso.Context.Storage do
     %ApiUsage{}
     |> ApiUsage.changeset(attrs)
     |> Repo.insert(
-      on_conflict: [:cost_usd],
-      conflict_target: [:user_id, :model_id, :date],
-      replace: [:cost_usd, :input_tokens, :output_tokens]
+      on_conflict: {:replace, [:cost_usd, :input_tokens, :output_tokens]},
+      conflict_target: [:user_id, :model_id, :date]
     )
+    |> case do
+      {:ok, _} -> :ok
+      error -> error
+    end
   end
 
   @doc """
@@ -256,10 +260,7 @@ defmodule ElPaso.Context.Storage do
 
     query =
       from(a in ApiUsage,
-        where: a.date >= ^from_date,
-        join: u in User,
-        on: a.user_id == u.id,
-        preload: [:user]
+        where: a.date >= ^from_date
       )
 
     query =
@@ -289,7 +290,7 @@ defmodule ElPaso.Context.Storage do
         Enum.map(results, fn usage ->
           %{
             user_id: usage.user_id,
-            username: usage.user.username,
+            username: usage.user_id,
             model_id: usage.model_id,
             cost: Decimal.to_float(usage.cost_usd),
             input_tokens: usage.input_tokens,

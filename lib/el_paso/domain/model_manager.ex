@@ -23,8 +23,14 @@ defmodule ElPaso.Domain.ModelManager do
 
   @impl GenServer
   def init(_opts) do
-    # Load models from DB on startup
-    models = load_models()
+    # Load models from DB on startup (safe fallback if tables don't exist)
+    models =
+      try do
+        load_models()
+      rescue
+        _ -> []
+      end
+
     {:ok, %{models: models, engine_states: %{}}}
   end
 

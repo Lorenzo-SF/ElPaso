@@ -58,7 +58,7 @@ defmodule ElPaso.Storage.S3Adapter do
         # Upload with streaming
         result =
           local_path
-          |> File.stream!([], 65_536)
+          |> File.stream!(65_536)
           |> ExAws.S3.upload(bucket, key)
           |> ExAws.request()
 

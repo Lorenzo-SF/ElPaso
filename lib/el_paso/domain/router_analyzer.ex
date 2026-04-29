@@ -98,7 +98,7 @@ defmodule ElPaso.Domain.RouterAnalyzer do
 
       {first, last} ->
         # Crear ventanas de 7 días
-        date_range = Date.range(first.decided_at, last.decided_at)
+        date_range = Date.range(DateTime.to_date(first.decided_at), DateTime.to_date(last.decided_at))
         weeks = Enum.chunk_every(date_range, 7)
 
         Enum.map(weeks, fn week_range ->
@@ -111,7 +111,7 @@ defmodule ElPaso.Domain.RouterAnalyzer do
   end
 
   defp success_rate(decisions) do
-    return_count = Enum.count(decisions, fn d -> d.outcome == :retry end)
+    return_count = Enum.count(decisions, fn d -> d.outcome == "retry" end)
     total = length(decisions)
 
     if total == 0 do

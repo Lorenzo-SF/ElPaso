@@ -35,6 +35,20 @@ defmodule ElPaso.Context.Manager do
       :last_active_at,
       :semantic_retrieval_enabled
     ]
+
+    @type t :: %__MODULE__{
+            session_id: String.t(),
+            context_mode: String.t(),
+            window: integer() | nil,
+            window_token_count: integer() | nil,
+            last_summary_id: String.t() | nil,
+            last_summary_tokens: integer() | nil,
+            last_model_id: String.t() | nil,
+            summarization_in_progress: boolean() | nil,
+            created_at: DateTime.t() | nil,
+            last_active_at: DateTime.t() | nil,
+            semantic_retrieval_enabled: boolean() | nil
+          }
   end
 
   def start_link(args) do
@@ -72,7 +86,8 @@ defmodule ElPaso.Context.Manager do
 
       {:error, :not_found} ->
         # Si no existe en ETS ni en PostgreSQL, crear nueva sesión
-        {:ok, new_session_id} = Storage.create_session(user_id: user_id)
+        {:ok, session} = Storage.create_session(%{session_id: final_session_id, user_id: user_id})
+        new_session_id = session.session_id
 
         session_state = %SessionState{
           session_id: new_session_id,
@@ -138,7 +153,7 @@ defmodule ElPaso.Context.Manager do
           last_summary_tokens: 0,
           last_model_id: nil,
           summarization_in_progress: false,
-          created_at: session.created_at,
+          created_at: session.inserted_at,
           last_active_at: session.updated_at,
           semantic_retrieval_enabled: false
         }

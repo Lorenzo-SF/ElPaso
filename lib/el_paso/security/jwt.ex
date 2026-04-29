@@ -88,7 +88,7 @@ defmodule ElPaso.Security.JWT do
     - "Bearer <token>"
     - "<token>" (legacy)
   """
-  @spec extract_from_conn(%{headers: map()}) :: String.t() | nil
+  @spec extract_from_conn(Plug.Conn.t()) :: String.t() | nil
   def extract_from_conn(conn) do
     # Intentar obtener del header Authorization
     case get_req_header(conn, "authorization") do

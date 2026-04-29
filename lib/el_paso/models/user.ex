@@ -6,6 +6,7 @@ defmodule ElPaso.Models.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key {:id, :binary_id, autogenerate: true}
   schema "users" do
     field(:username, :string)
     field(:api_key_hash, :string)
@@ -13,7 +14,7 @@ defmodule ElPaso.Models.User do
     field(:budget_daily, :decimal, default: 100.00)
     field(:active, :boolean, default: true)
 
-    timestamps()
+    timestamps(inserted_at: :created_at)
   end
 
   @doc false

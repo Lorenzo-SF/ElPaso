@@ -1,20 +1,18 @@
 defmodule ElPaso.Context.Schemas.Message do
   @moduledoc """
-  Schema para la tabla de mensajes.
+  Schema para la tabla de mensajes (InitialSetup).
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
+  @primary_key false
   schema "messages" do
-    belongs_to(:session, ElPaso.Context.Schemas.Session)
-
+    field(:session_id, :string)
     field(:role, :string)
     field(:content, :string)
     field(:model_id, :string)
-    field(:token_estimate, :integer, default: 0)
-    field(:vector_embedding, {:array, :float})
-    field(:sequence_number, :integer)
+    field(:tokens, :integer)
 
     timestamps()
   end
@@ -29,10 +27,8 @@ defmodule ElPaso.Context.Schemas.Message do
       :role,
       :content,
       :model_id,
-      :token_estimate,
-      :vector_embedding,
-      :sequence_number
+      :tokens
     ])
-    |> validate_required([:session_id, :role, :content, :sequence_number])
+    |> validate_required([:session_id, :role, :content])
   end
 end
