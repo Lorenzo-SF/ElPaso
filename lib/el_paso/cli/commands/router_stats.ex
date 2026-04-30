@@ -1,5 +1,5 @@
 defmodule ElPaso.CLI.Commands.RouterStats do
-  alias Zaguan.Drawer.Components.{Header, Table}
+  alias Zaguan.Drawer.Components.{Header, Separator, Table}
   alias ElPaso.Domain.RouterStats
 
   def run(opts) do
@@ -8,7 +8,8 @@ defmodule ElPaso.CLI.Commands.RouterStats do
 
     Header.print("Routing Stats", subtitle: "#{period_label(since)}")
 
-    # Tabla resumen global
+    Separator.print("Resumen global")
+
     Table.print(
       headers: ["Métrica", "Valor"],
       rows: [
@@ -21,7 +22,8 @@ defmodule ElPaso.CLI.Commands.RouterStats do
       table_border: :rounded
     )
 
-    # Tabla por modelo
+    Separator.print("Por modelo")
+
     model_rows =
       report.by_model
       |> Enum.map(fn {model, s} ->

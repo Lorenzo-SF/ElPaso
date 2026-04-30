@@ -1,8 +1,7 @@
 import Config
 
 # Configura el logger (default: info, se sobreescribe por entorno)
-config :logger, :console,
-  format: "$time [$level] $message\n"
+config :logger, :console, format: "$time [$level] $message\n"
 
 # Configuración de Ecto
 config :elpaso, ecto_repos: [ElPaso.Repo]

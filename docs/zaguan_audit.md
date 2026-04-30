@@ -2,28 +2,35 @@
 
 ## Resumen Ejecutivo
 
-ElPaso utiliza Zaguan como dependencia pero **no aprovecha sus componentes de tabla** en la mayoría de los comandos CLI. En su lugar, pinta tablas manualmente con `IO.puts` y caracteres Unicode hardcodeados, lo que provoca desalineación cuando el contenido varía en longitud.
+ElPaso utiliza Zaguan como dependencia. Tras esta auditoría y corrección, la mayoría de las salidas CLI aprovechan los componentes visuales de Zaguan (`Table`, `Header`, `Separator`, `Box`). Quedan algunos mensajes simples de éxito/error que no requieren formato tabular.
 
 ---
 
 ## Hallazgos
 
-### 1. `lib/el_paso/cli.ex` — Tablas manuales (CORREGIDAS ✅)
+### 1. `lib/el_paso/cli.ex` — Uso extensivo de Zaguan (CORREGIDO Y MEJORADO ✅)
 
-**Estado:** Corregido. Las 7 tablas manuales originales han sido reemplazadas por `Zaguan.Drawer.Components.Table.print/2`. Adicionalmente se aplicaron mejoras de consistencia:
+**Estado:** Corregido y mejorado. Todas las tablas manuales han sido reemplazadas por `Zaguan.Drawer.Components.Table.print/2`, y se han añadido `Header`, `Separator`, y `Box` en múltiples comandos para una experiencia CLI consistente.
 
-| Función | Estado | Descripción |
-|---------|--------|-------------|
-| `handle_model(["list" \| _])` | ✅ Corregido | Usa `Table.print` con headers auto-calculados |
-| `handle_engine(["list" \| _])` | ✅ Corregido | Usa `Table.print` con headers auto-calculados |
-| `handle_router(["stats" \| rest])` | ✅ Corregido | Usa `Table.print` con headers auto-calculados |
-| `handle_context(["list" \| rest])` | ✅ Corregido | Usa `Table.print` con headers auto-calculados |
-| `handle_cluster(["nodes" \| _])` | ✅ Corregido | Usa `Table.print` con headers auto-calculados |
-| `handle_personality(["list" \| _])` | ✅ Corregido | Usa `Table.print` con headers auto-calculados |
-| `handle_profile(["list" \| _])` | ✅ Corregido | Usa `Table.print` con headers auto-calculados |
-| `handle_router(["rules" \| _])` | ✅ Mejorado | Usa `Table.print` con columnas tabulares |
-| `handle_db(["status" \| _])` | ✅ Mejorado | Usa `Table.print` para listado de migraciones |
-| `handle_server(["start" \| _])` | ✅ Mejorado | Usa `Header.print` en lugar de box manual |
+| Función | Componentes Zaguan | Descripción |
+|---------|-------------------|-------------|
+| `handle_model(["list" \| _])` | `Table` | Listado con headers auto-calculados |
+| `handle_model(["show" \| _])` | `Header` + `Table` | Detalle como tabla Campo-Valor |
+| `handle_engine(["list" \| _])` | `Table` | Listado con headers auto-calculados |
+| `handle_engine(["show" \| _])` | `Header` + `Table` | Detalle como tabla Campo-Valor |
+| `handle_router(["stats" \| rest])` | `Table` | Decisiones de routing tabuladas |
+| `handle_router(["rules" \| _])` | `Table` | Reglas como tabla tabular |
+| `handle_context(["list" \| rest])` | `Table` | Sesiones en tabla |
+| `handle_context(["show" \| rest])` | `Header` + `Table` + `Separator` | Metadatos + mensajes tabulados |
+| `handle_cluster(["nodes" \| _])` | `Table` | Nodos en tabla |
+| `handle_cluster(["status" \| _])` | `Header` + `Table` | Estado del cluster tabulado |
+| `handle_personality(["list" \| _])` | `Table` | Listado con headers auto-calculados |
+| `handle_personality(["show" \| _])` | `Header` + `Table` | Detalle como tabla Campo-Valor |
+| `handle_profile(["list" \| _])` | `Table` | Listado con headers auto-calculados |
+| `handle_profile(["show" \| _])` | `Header` + `Table` | Detalle como tabla Campo-Valor |
+| `handle_config(["show" \| _])` | `Header` + `Separator` + `Table` | Config por secciones tabuladas |
+| `handle_db(["status" \| _])` | `Table` | Migraciones como tabla |
+| `handle_server(["start" \| _])` | `Header` + `Separator` + `Table` | Endpoints, engines, modelos tabulados |
 
 **Cambio aplicado (patrón):**
 ```elixir
@@ -43,21 +50,21 @@ Table.print(
 )
 ```
 
-### 2. `lib/el_paso/cli/commands/router_stats.ex` — USO CORRECTO de Zaguan
+### 2. `lib/el_paso/cli/commands/router_stats.ex` — USO CORRECTO de Zaguan (MEJORADO ✅)
 
-Este archivo **sí usa Zaguan correctamente**:
+Este archivo ya usaba Zaguan correctamente. Se añadió `Separator` entre las tablas para mejor legibilidad visual:
 
 ```elixir
-alias Zaguan.Drawer.Components.{Header, Table}
+alias Zaguan.Drawer.Components.{Header, Separator, Table}
 
-Table.print(
-  headers: ["Métrica", "Valor"],
-  rows: [...],
-  headers_color: :cyan,
-  table_border: :rounded
-)
+Header.print("Routing Stats", subtitle: "#{period_label(since)}")
+Separator.print("Resumen global")
+# ... tabla 1 ...
+Separator.print("Por modelo")
+# ... tabla 2 ...
 ```
 
+✅ Separadores contextuales entre secciones
 ✅ Calcula anchos automáticamente
 ✅ Alinea correctamente
 ✅ Usa bordes redondeados de Zaguan
@@ -103,30 +110,31 @@ Table.print(
 )
 ```
 
-### Archivos a modificar
+### Archivos modificados
 
 1. **`lib/el_paso/cli.ex`**:
-   - `handle_model(["list" \| _])`
-   - `handle_engine(["list" \| _])`
-   - `handle_router(["stats" \| rest])`
-   - `handle_context(["list" \| rest])`
-   - `handle_cluster(["nodes" \| _])`
-   - `handle_personality(["list" \| _])`
-   - `handle_profile(["list" \| _])`
-   - `handle_router(["rules" \| _])` — convertido a tabla Zaguan
-   - `handle_db(["status" \| _])` — convertido a tabla Zaguan
-   - `handle_server(["start" \| _])` — box manual reemplazado por `Header.print`
+   - Todos los comandos `list` usan `Table`
+   - Todos los comandos `show` usan `Header` + `Table` (Campo-Valor)
+   - `handle_config(["show"])` usa `Header` + `Separator` + `Table` por sección
+   - `handle_context(["show"])` usa `Header` + `Separator` + `Table` para metadatos y mensajes
+   - `handle_cluster(["status"])` usa `Header` + `Table`
+   - `handle_server(["start"])` usa `Header` + `Separator` + `Table` para endpoints, engines y modelos
+   - `handle_router(["rules"])` usa `Table`
+   - `handle_db(["status"])` usa `Table`
 
 2. **`lib/el_paso/cli/commands/router_stats.ex`**:
-   - ✅ Ya usa Zaguan correctamente — no requiere cambios
+   - Añadido `Separator` entre tablas de resumen y por-modelo
 
 3. **`lib/el_paso/config/wizard.ex`**:
-   - Comentarios actualizados: Zaguan no expone widgets de prompt CLI simple (solo TUI).
+   - Comentarios actualizados sobre limitaciones de componentes TUI en CLI simple
 
 4. **Mix tasks**:
    - `lib/mix/tasks/elpaso/model.ex` — `list_models/0`
    - `lib/mix/tasks/elpaso/engine.ex` — `list_engines/0`
    - `lib/mix/tasks/elpaso/personality.ex` — `list_personalities/0`
+
+5. **`mix.exs`**:
+   - Zaguan ahora es dependencia en todos los entornos (incluido `:test`)
 
 ---
 
@@ -202,11 +210,18 @@ zaguan show table --headers "X;Y" --rows "a;b" --padding 4
 
 ## Conclusión
 
-El bug de las tablas descuadradas en ElPaso **no era un bug de Zaguan**, sino un **uso incorrecto de Zaguan** en ElPaso. ElPaso pintaba tablas manualmente con anchos fijos en lugar de usar `Zaguan.Drawer.Components.Table`, que calcula anchos automáticamente y alinea correctamente.
+El bug de las tablas descuadradas en ElPaso **no era un bug de Zaguan**, sino un **uso incorrecto de Zaguan** en ElPaso. Tras esta revisión completa, ElPaso aprovecha activamente múltiples componentes de Zaguan:
 
-**Todos los problemas han sido corregidos.** Las tablas manuales en `lib/el_paso/cli.ex` y en los Mix tasks han sido reemplazadas por `Zaguan.Drawer.Components.Table.print/2`, y el box manual de `handle_server` ahora usa `Zaguan.Drawer.Components.Header.print/2`, garantizando:
+**Componentes utilizados:**
+- `Zaguan.Drawer.Components.Table` — Todas las listas y tablas (list, show, status, stats, rules, config)
+- `Zaguan.Drawer.Components.Header` — Títulos de sección en show, server start, cluster status, router stats
+- `Zaguan.Drawer.Components.Separator` — División visual entre secciones (config, context, server, router stats)
+- `Zaguan.Drawer.Components.Json` — Output JSON con syntax highlighting (router stats --format json)
+
+**Beneficios obtenidos:**
 - ✅ Cálculo automático de anchos de columna
 - ✅ Alineación correcta independientemente del contenido
 - ✅ Bordes consistentes y cuadrados
 - ✅ Compatibilidad con caracteres especiales y contenido variable
-- ✅ Uso consistente de Zaguan en toda la superficie CLI
+- ✅ Jerarquía visual clara con headers y separadores
+- ✅ Experiencia CLI profesional y coherente en todos los comandos

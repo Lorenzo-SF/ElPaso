@@ -63,10 +63,11 @@ defmodule Mix.Tasks.Elpaso.Personality do
       personalities ->
         alias Zaguan.Drawer.Components.Table
 
-        rows = Enum.map(personalities, fn personality ->
-          prompt = String.slice(personality.system_prompt, 0, 30) <> "..."
-          [personality.name, prompt]
-        end)
+        rows =
+          Enum.map(personalities, fn personality ->
+            prompt = String.slice(personality.system_prompt, 0, 30) <> "..."
+            [personality.name, prompt]
+          end)
 
         Table.print(
           headers: ["Name", "System Prompt"],

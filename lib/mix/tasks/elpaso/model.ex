@@ -80,9 +80,10 @@ defmodule Mix.Tasks.Elpaso.Model do
       models ->
         alias Zaguan.Drawer.Components.Table
 
-        rows = Enum.map(models, fn model ->
-          [model.name, model.engine_id, model.url, to_string(model.active)]
-        end)
+        rows =
+          Enum.map(models, fn model ->
+            [model.name, model.engine_id, model.url, to_string(model.active)]
+          end)
 
         Table.print(
           headers: ["Name", "Engine", "URL", "Active"],

@@ -3,7 +3,7 @@ defmodule ElPaso.CLI do
   CLI principal para elpaso.
   """
 
-  alias Zaguan.Drawer.Components.{Header, Table}
+  alias Zaguan.Drawer.Components.{Header, Separator, Table}
 
   def main([]) do
     IO.puts("""
@@ -537,16 +537,17 @@ defmodule ElPaso.CLI do
     if status == [] do
       IO.puts("No hay migraciones")
     else
-      rows = Enum.map(status, fn {state, version, name} ->
-        state_str =
-          case state do
-            :up -> "✅ Aplicada"
-            :down -> "⬜ Pendiente"
-            :missing -> "❌ Faltante"
-          end
+      rows =
+        Enum.map(status, fn {state, version, name} ->
+          state_str =
+            case state do
+              :up -> "✅ Aplicada"
+              :down -> "⬜ Pendiente"
+              :missing -> "❌ Faltante"
+            end
 
-        [to_string(version), name, state_str]
-      end)
+          [to_string(version), name, state_str]
+        end)
 
       Table.print(
         headers: ["Versión", "Nombre", "Estado"],
@@ -570,9 +571,10 @@ defmodule ElPaso.CLI do
         IO.puts("No hay modelos registrados")
 
       models ->
-        rows = Enum.map(models, fn m ->
-          [m.name, m.engine_id, m.url, to_string(m.active)]
-        end)
+        rows =
+          Enum.map(models, fn m ->
+            [m.name, m.engine_id, m.url, to_string(m.active)]
+          end)
 
         Table.print(
           headers: ["Name", "Engine", "URL", "Active"],
@@ -637,11 +639,21 @@ defmodule ElPaso.CLI do
           IO.puts("❌ Modelo no encontrado")
 
         model ->
-          IO.puts("Modelo: #{model.name}")
-          IO.puts("  Engine: #{model.engine_id}")
-          IO.puts("  URL: #{model.url}")
-          IO.puts("  Active: #{model.active}")
-          IO.puts("  Max tokens: #{model.max_tokens || 4096}")
+          Header.print(model.name, subtitle: "Modelo")
+
+          Table.print(
+            headers: ["Campo", "Valor"],
+            rows: [
+              ["Engine", model.engine_id],
+              ["URL", model.url],
+              ["Active", to_string(model.active)],
+              ["Max tokens", to_string(model.max_tokens || 4096)],
+              ["Temperature", to_string(model.temperature || 0.7)],
+              ["Top-p", to_string(model.top_p || 1.0)]
+            ],
+            table_border: :rounded,
+            headers_color: :cyan
+          )
       end
     else
       IO.puts("❌ Error: Falta --name")
@@ -729,9 +741,10 @@ defmodule ElPaso.CLI do
         IO.puts("No hay motores registrados")
 
       engines ->
-        rows = Enum.map(engines, fn e ->
-          [e.name, e.adapter, e.base_url, to_string(e.active)]
-        end)
+        rows =
+          Enum.map(engines, fn e ->
+            [e.name, e.adapter, e.base_url, to_string(e.active)]
+          end)
 
         Table.print(
           headers: ["Name", "Adapter", "Base URL", "Active"],
@@ -792,10 +805,19 @@ defmodule ElPaso.CLI do
           IO.puts("❌ Motor no encontrado")
 
         engine ->
-          IO.puts("Motor: #{engine.name}")
-          IO.puts("  Adapter: #{engine.adapter}")
-          IO.puts("  Base URL: #{engine.base_url}")
-          IO.puts("  Active: #{engine.active}")
+          Header.print(engine.name, subtitle: "Motor")
+
+          Table.print(
+            headers: ["Campo", "Valor"],
+            rows: [
+              ["Adapter", engine.adapter],
+              ["Base URL", engine.base_url],
+              ["Active", to_string(engine.active)],
+              ["Timeout", to_string(engine.timeout || 60000)]
+            ],
+            table_border: :rounded,
+            headers_color: :cyan
+          )
       end
     else
       IO.puts("❌ Error: Falta --name")
@@ -917,15 +939,22 @@ defmodule ElPaso.CLI do
     if config == %{} do
       IO.puts("ℹ️  No hay configuración. Ejecuta: elpaso init")
     else
-      IO.puts("Configuración (~/.config/elpaso/elpaso.conf):")
+      Header.print("~/.config/elpaso/elpaso.conf", subtitle: "Configuración")
 
       Enum.each(config, fn {section, values} ->
-        IO.puts("")
-        IO.puts("[#{section}]")
+        Separator.print(section, char: "═")
 
-        Enum.each(values, fn {key, value} ->
-          IO.puts("  #{key} = #{value}")
-        end)
+        rows =
+          Enum.map(values, fn {key, value} ->
+            [to_string(key), to_string(value)]
+          end)
+
+        Table.print(
+          headers: ["Clave", "Valor"],
+          rows: rows,
+          table_border: :rounded,
+          headers_color: :cyan
+        )
       end)
     end
   end
@@ -977,10 +1006,11 @@ defmodule ElPaso.CLI do
       if decisions == [] do
         IO.puts("ℹ️  No hay decisiones de routing registradas")
       else
-        rows = Enum.map(decisions, fn d ->
-          lat = if d.decision_latency_us, do: "#{d.decision_latency_us}µs", else: "N/A"
-          [d.request_id, d.selected_model, d.reason, lat]
-        end)
+        rows =
+          Enum.map(decisions, fn d ->
+            lat = if d.decision_latency_us, do: "#{d.decision_latency_us}µs", else: "N/A"
+            [d.request_id, d.selected_model, d.reason, lat]
+          end)
 
         Table.print(
           headers: ["Request ID", "Modelo", "Razón", "Latencia"],
@@ -1012,9 +1042,15 @@ defmodule ElPaso.CLI do
       if states == [] do
         IO.puts("ℹ️  No hay reglas de routing activas")
       else
-        rows = Enum.map(states, fn s ->
-          [s.model_id, to_string(s.status), to_string(s.current_queue_depth), "#{s.avg_latency_ms}ms"]
-        end)
+        rows =
+          Enum.map(states, fn s ->
+            [
+              s.model_id,
+              to_string(s.status),
+              to_string(s.current_queue_depth),
+              "#{s.avg_latency_ms}ms"
+            ]
+          end)
 
         Table.print(
           headers: ["Modelo", "Estado", "Cola", "Latencia media"],
@@ -1094,11 +1130,12 @@ defmodule ElPaso.CLI do
     if sessions == [] do
       IO.puts("No hay sesiones registradas")
     else
-      rows = Enum.map(sessions, fn s ->
-        user = s.user_id || "anon"
-        created = s.created_at || "N/A"
-        [s.id, user, to_string(created)]
-      end)
+      rows =
+        Enum.map(sessions, fn s ->
+          user = s.user_id || "anon"
+          created = s.created_at || "N/A"
+          [s.id, user, to_string(created)]
+        end)
 
       Table.print(
         headers: ["ID", "Usuario", "Creada"],
@@ -1118,17 +1155,36 @@ defmodule ElPaso.CLI do
           IO.puts("❌ Sesión no encontrada: #{id}")
 
         session ->
-          IO.puts("Sesión: #{session.id}")
-          IO.puts("  Usuario: #{session.user_id || "anon"}")
-          IO.puts("  Creada: #{session.created_at}")
-          IO.puts("  Actualizada: #{session.updated_at}")
+          Header.print(session.id, subtitle: "Sesión")
+
+          Table.print(
+            headers: ["Campo", "Valor"],
+            rows: [
+              ["Usuario", session.user_id || "anon"],
+              ["Creada", to_string(session.created_at)],
+              ["Actualizada", to_string(session.updated_at)]
+            ],
+            table_border: :rounded,
+            headers_color: :cyan
+          )
 
           messages = ElPaso.Context.Storage.get_all_messages(session.id)
-          IO.puts("  Mensajes: #{length(messages)}")
+          Separator.print("Mensajes (#{length(messages)})")
 
-          Enum.each(messages, fn m ->
-            IO.puts("    [#{m.role}] #{String.slice(m.content, 0, 60)}...")
-          end)
+          if messages != [] do
+            msg_rows =
+              Enum.map(messages, fn m ->
+                preview = String.slice(m.content, 0, 50) <> "..."
+                [m.role, preview]
+              end)
+
+            Table.print(
+              headers: ["Rol", "Contenido"],
+              rows: msg_rows,
+              table_border: :rounded,
+              headers_color: :yellow
+            )
+          end
       end
     else
       IO.puts("❌ Falta ID de sesión")
@@ -1165,9 +1221,22 @@ defmodule ElPaso.CLI do
       if nodes == [] do
         IO.puts("🔴 Sin nodos en el cluster")
       else
-        IO.puts("🟢 Cluster activo")
-        IO.puts("  Nodos: #{length(nodes)}")
-        Enum.each(nodes, fn n -> IO.puts("    • #{n}") end)
+        Header.print("Cluster ElPaso", subtitle: "#{length(nodes)} nodo(s)")
+
+        rows =
+          Enum.map(nodes, fn n ->
+            status =
+              if Node.ping(String.to_atom(n)) == :pong, do: "🟢 Conectado", else: "🔴 Desconectado"
+
+            [to_string(n), status]
+          end)
+
+        Table.print(
+          headers: ["Nodo", "Estado"],
+          rows: rows,
+          table_border: :rounded,
+          headers_color: :cyan
+        )
       end
     rescue
       _ ->
@@ -1182,10 +1251,11 @@ defmodule ElPaso.CLI do
       if nodes == [] do
         IO.puts("No hay nodos registrados")
       else
-        rows = Enum.map(nodes, fn n ->
-          alive = if Node.ping(String.to_atom(n)) == :pong, do: "🟢 vivo", else: "🔴 caído"
-          [to_string(n), alive]
-        end)
+        rows =
+          Enum.map(nodes, fn n ->
+            alive = if Node.ping(String.to_atom(n)) == :pong, do: "🟢 vivo", else: "🔴 caído"
+            [to_string(n), alive]
+          end)
 
         Table.print(
           headers: ["Nodo", "Estado"],
@@ -1257,11 +1327,12 @@ defmodule ElPaso.CLI do
     if Enum.empty?(personalities) do
       IO.puts("No hay personalidades registradas")
     else
-      rows = Enum.map(personalities, fn p ->
-        desc = p.description || "N/A"
-        prompt = String.slice(p.system_prompt, 0, 30) <> "..."
-        [p.name, desc, prompt]
-      end)
+      rows =
+        Enum.map(personalities, fn p ->
+          desc = p.description || "N/A"
+          prompt = String.slice(p.system_prompt, 0, 30) <> "..."
+          [p.name, desc, prompt]
+        end)
 
       Table.print(
         headers: ["Nombre", "Descripción", "System Prompt"],
@@ -1297,9 +1368,17 @@ defmodule ElPaso.CLI do
           IO.puts("❌ Personalidad no encontrada")
 
         personality ->
-          IO.puts("Personalidad: #{personality.name}")
-          IO.puts("  Descripción: #{personality.description || "N/A"}")
-          IO.puts("  System Prompt: #{personality.system_prompt}")
+          Header.print(personality.name, subtitle: "Personalidad")
+
+          Table.print(
+            headers: ["Campo", "Valor"],
+            rows: [
+              ["Descripción", personality.description || "N/A"],
+              ["System Prompt", personality.system_prompt]
+            ],
+            table_border: :rounded,
+            headers_color: :cyan
+          )
       end
     else
       IO.puts("❌ Error: Falta --name")
@@ -1374,9 +1453,10 @@ defmodule ElPaso.CLI do
     if Enum.empty?(profiles) do
       IO.puts("No hay profiles registrados")
     else
-      rows = Enum.map(profiles, fn p ->
-        [p.name, p.model.name, p.engine.name, p.personality.name]
-      end)
+      rows =
+        Enum.map(profiles, fn p ->
+          [p.name, p.model.name, p.engine.name, p.personality.name]
+        end)
 
       Table.print(
         headers: ["Nombre", "Modelo", "Motor", "Personalidad"],
@@ -1412,10 +1492,18 @@ defmodule ElPaso.CLI do
           IO.puts("❌ Profile no encontrado")
 
         profile ->
-          IO.puts("Profile: #{profile.name}")
-          IO.puts("  Modelo: #{profile.model.name}")
-          IO.puts("  Motor: #{profile.engine.name}")
-          IO.puts("  Personalidad: #{profile.personality.name}")
+          Header.print(profile.name, subtitle: "Profile")
+
+          Table.print(
+            headers: ["Campo", "Valor"],
+            rows: [
+              ["Modelo", profile.model.name],
+              ["Motor", profile.engine.name],
+              ["Personalidad", profile.personality.name]
+            ],
+            table_border: :rounded,
+            headers_color: :cyan
+          )
       end
     else
       IO.puts("❌ Error: Falta --name")
@@ -1455,34 +1543,55 @@ defmodule ElPaso.CLI do
       {:ok, _} ->
         IO.puts("[init] ✅ Aplicación OTP lista")
         IO.puts("")
-        IO.puts("Endpoint HTTP:    http://0.0.0.0:#{port}")
-        IO.puts("Dashboard:        http://0.0.0.0:#{port}/dashboard")
-        IO.puts("Métricas:         http://0.0.0.0:#{port}/metrics")
-        IO.puts("API Anthropic:    POST http://0.0.0.0:#{port}/v1/messages")
-        IO.puts("")
+
+        Separator.print("Endpoints")
+
+        Table.print(
+          headers: ["Servicio", "URL"],
+          rows: [
+            ["HTTP", "http://0.0.0.0:#{port}"],
+            ["Dashboard", "http://0.0.0.0:#{port}/dashboard"],
+            ["Métricas", "http://0.0.0.0:#{port}/metrics"],
+            ["API", "POST http://0.0.0.0:#{port}/v1/messages"]
+          ],
+          table_border: :rounded,
+          headers_color: :cyan
+        )
 
         try do
           engines = ElPaso.Domain.EngineManager.list_engines()
           models = ElPaso.Domain.ModelManager.list_models()
 
           if engines != [] do
-            IO.puts("Engines registrados:")
+            Separator.print("Engines registrados")
 
-            Enum.each(engines, fn e ->
-              IO.puts("  • #{e.name} (#{e.adapter}) → #{e.base_url}")
+            engine_rows = Enum.map(engines, fn e ->
+              [e.name, e.adapter, e.base_url]
             end)
+
+            Table.print(
+              headers: ["Nombre", "Adapter", "Base URL"],
+              rows: engine_rows,
+              table_border: :rounded,
+              headers_color: :yellow
+            )
           else
             IO.puts("⚠️  No hay engines registrados. Usa: elpaso engine add ...")
           end
 
-          IO.puts("")
-
           if models != [] do
-            IO.puts("Modelos registrados:")
+            Separator.print("Modelos registrados")
 
-            Enum.each(models, fn m ->
-              IO.puts("  • #{m.name} → #{m.url}")
+            model_rows = Enum.map(models, fn m ->
+              [m.name, m.engine_id, m.url]
             end)
+
+            Table.print(
+              headers: ["Nombre", "Engine", "URL"],
+              rows: model_rows,
+              table_border: :rounded,
+              headers_color: :yellow
+            )
           else
             IO.puts("⚠️  No hay modelos registrados. Usa: elpaso model add ...")
           end
@@ -1490,9 +1599,7 @@ defmodule ElPaso.CLI do
           _ -> :ok
         end
 
-        IO.puts("")
-        IO.puts("Presiona Ctrl+C para detener")
-        IO.puts("")
+        Separator.print("Servidor activo — Ctrl+C para detener")
 
         receive do
         after

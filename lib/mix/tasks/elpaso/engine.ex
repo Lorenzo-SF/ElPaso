@@ -65,9 +65,10 @@ defmodule Mix.Tasks.Elpaso.Engine do
       engines ->
         alias Zaguan.Drawer.Components.Table
 
-        rows = Enum.map(engines, fn engine ->
-          [engine.name, engine.adapter, engine.base_url, to_string(engine.active)]
-        end)
+        rows =
+          Enum.map(engines, fn engine ->
+            [engine.name, engine.adapter, engine.base_url, to_string(engine.active)]
+          end)
 
         Table.print(
           headers: ["Name", "Adapter", "Base URL", "Active"],
