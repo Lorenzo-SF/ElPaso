@@ -305,11 +305,11 @@ defmodule ElPaso.Engine.HTTPClient do
     end
   end
 
-  defp stream_request(method, url, headers, body, _timeout, chunk_callback) do
+  defp stream_request(method, url, headers, body, timeout, chunk_callback) do
     encoded_body = Jason.encode!(body)
     request = Finch.build(method, url, headers, encoded_body)
 
-    case Finch.stream(request, @finch, chunk_callback) do
+    case Finch.stream(request, @finch, timeout || @default_timeout, chunk_callback) do
       :ok ->
         :ok
 

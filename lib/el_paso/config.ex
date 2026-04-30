@@ -274,7 +274,7 @@ defmodule ElPaso.Config do
       File.write!(@config_file, ini_content)
     end
 
-    defp config_to_ini(config, prefix \\ []) do
+    defp config_to_ini(config, prefix) do
       config
       |> flatten_keys(prefix)
       |> Enum.map(fn {key, value} -> "#{key} = #{value}" end)
@@ -294,8 +294,6 @@ defmodule ElPaso.Config do
     end
 
     defp flatten_keys(_value, _prefix), do: []
-
-    defp config_to_ini(_value, []), do: []
 
     defp parse_ini(contents) do
       lines = String.split(contents, "\n")
