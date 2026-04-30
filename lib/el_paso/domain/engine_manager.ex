@@ -69,8 +69,11 @@ defmodule ElPaso.Domain.EngineManager do
         health_url = health_url(adapter, base_url)
 
         case :httpc.request(:get, {health_url, []}, [], []) do
-          {:ok, {{_version, status, _reason}, _headers, _body}} when status >= 200 and status < 400 ->
-            latency_ms = System.convert_time_unit(System.monotonic_time() - start, :native, :millisecond)
+          {:ok, {{_version, status, _reason}, _headers, _body}}
+          when status >= 200 and status < 400 ->
+            latency_ms =
+              System.convert_time_unit(System.monotonic_time() - start, :native, :millisecond)
+
             {:ok, latency_ms}
 
           {:ok, {{_version, status, _reason}, _headers, _body}} ->

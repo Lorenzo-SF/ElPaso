@@ -170,17 +170,80 @@ defmodule ElPaso.Config do
     end
 
     @doc """
-    Obtiene la affinity para una combinación.
+    Obtiene la affinity para una combinación (model_id, task_type).
+
+    Busca en ETS :affinity_table, fallback a archivo de config, luego 0.5.
     """
-    def get_affinity(_model_id, _task_type) do
-      0.5
+    def get_affinity(model_id, task_type) do
+      key = {model_id, task_type}
+
+      case :ets.lookup(:affinity_table, key) do
+        [{^key, affinity}] ->
+          affinity
+
+        [] ->
+          # Fallback: buscar en archivo de configuración
+          config = load_config_file()
+
+          task_str = if is_atom(task_type), do: Atom.to_string(task_type), else: task_type
+          get_in(config, ["routing", "affinities", model_id, task_str]) || 0.5
+      end
     end
 
     @doc """
-    Actualiza la affinity para una combinación.
+    Actualiza la affinity para una combinación y persiste en ETS.
+
+    Para persistencia durable, los cambios se guardan en el archivo de config.
     """
-    def update_affinity(_model_id, _task_type, _affinity) do
+    def update_affinity(model_id, task_type, affinity) do
+      # Guardar en ETS (en memoria, rápido)
+      :ets.insert(:affinity_table, {{model_id, task_type}, affinity})
+
+      # Persistir en archivo de configuración
+      config = load_config_file()
+
+      task_str = if is_atom(task_type), do: Atom.to_string(task_type), else: task_type
+
+      # Ensure nested structure exists
+      routing = Map.get(config, :routing, %{})
+      affinities = Map.get(routing, "affinities", %{})
+      model_affinities = Map.get(affinities, model_id, %{})
+      updated_model_affinities = Map.put(model_affinities, task_str, affinity)
+      updated_affinities = Map.put(affinities, model_id, updated_model_affinities)
+      updated_routing = Map.put(routing, "affinities", updated_affinities)
+      updated_config = Map.put(config, :routing, updated_routing)
+
+      save_config_file(updated_config)
+
       :ok
+    end
+
+    # Inicializar ETS table para affinities (llamado desde application start)
+    def init_affinity_table do
+      case :ets.info(:affinity_table) do
+        :undefined ->
+          table = :ets.new(:affinity_table, [:named_table, :public, read_concurrency: true])
+          # Cargar affinities persistidas desde archivo
+          config = load_config_file()
+          load_affinities_from_config(config)
+          table
+
+        _ ->
+          :affinity_table
+      end
+    end
+
+    defp load_affinities_from_config(config) do
+      case get_in(config, ["routing", "affinities"]) do
+        nil -> :ok
+        affinities when is_map(affinities) ->
+          Enum.each(affinities, fn {model_id, task_affinities} ->
+            Enum.each(task_affinities, fn {task_type, affinity} ->
+              :ets.insert(:affinity_table, {{model_id, task_type}, affinity})
+            end)
+          end)
+        _ -> :ok
+      end
     end
 
     @doc """
@@ -207,32 +270,48 @@ defmodule ElPaso.Config do
       dir = Path.dirname(@config_file)
       File.mkdir_p!(dir)
 
-      ini_content =
-        config
-        |> Enum.map(fn {section, values} ->
-          "[#{section}]" <>
-            Enum.map_join(values, "\n", fn {key, value} -> "#{key} = #{value}" end) <> "\n"
-        end)
-        |> Enum.join("\n")
-
+      ini_content = config_to_ini(config, [])
       File.write!(@config_file, ini_content)
     end
+
+    defp config_to_ini(config, prefix \\ []) do
+      config
+      |> flatten_keys(prefix)
+      |> Enum.map(fn {key, value} -> "#{key} = #{value}" end)
+      |> Enum.join("\n")
+    end
+
+    defp flatten_keys(map, prefix) when is_map(map) do
+      map
+      |> Enum.flat_map(fn {key, value} ->
+        new_prefix = prefix ++ [key]
+        flatten_keys(value, new_prefix)
+      end)
+    end
+
+    defp flatten_keys(value, prefix) when is_binary(value) or is_number(value) do
+      [{Enum.join(prefix, "."), value}]
+    end
+
+    defp flatten_keys(_value, _prefix), do: []
+
+    defp config_to_ini(_value, []), do: []
 
     defp parse_ini(contents) do
       lines = String.split(contents, "\n")
       sections = %{}
-
-      current_section = ref(nil)
+      current_section = nil
 
       lines
       |> Enum.filter(&(&1 != "" and not String.starts_with?(&1, "#")))
-      |> Enum.reduce(sections, fn line, acc ->
+      |> Enum.reduce({sections, current_section}, fn line, {acc, _current_section} ->
         cond do
           String.starts_with?(line, "[") and String.ends_with?(line, "]") ->
             section = String.trim(line, "[]")
-            Map.put(acc, section, %{})
+            new_acc = Map.put(acc, section, %{})
+            {new_acc, section}
 
-          String.contains?(line, "=") ->
+          String.contains?(line, "=") and current_section != nil ->
             [key, value] = String.split(line, "=", parts: 2)
             key = String.trim(key)
             value = String.trim(value)
@@ -244,14 +323,16 @@ defmodule ElPaso.Config do
                 _ -> value
               end
 
-            Map.update(acc, current_section, %{key => parsed_value}, fn section_map ->
+            updated_acc = Map.update(acc, current_section, %{key => parsed_value}, fn section_map ->
               Map.put(section_map, key, parsed_value)
             end)
+            {updated_acc, current_section}
 
           true ->
-            acc
+            {acc, current_section}
         end
       end)
+      |> elem(0)
     end
 
     defp parse_bool(nil, default), do: default

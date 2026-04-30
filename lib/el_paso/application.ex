@@ -45,10 +45,16 @@ defmodule ElPaso.Application do
     # Inicializar ModelDownloader Registry
     ModelDownloaderRegistry.init()
 
+    # Inicializar affinity table ETS
+    ElPaso.Config.Loader.init_affinity_table()
+
     # Children base
     base_children = [
       # Ecto Repo supervisor - conexión a PostgreSQL
       {ElPaso.Repo, []},
+
+      # Finch para HTTP client (motor de inferencia)
+      {Finch, name: ElPaso.Finch},
 
       # Supervisor de la gestión de motores de inferencia
       ElPaso.Domain.ModelManager,

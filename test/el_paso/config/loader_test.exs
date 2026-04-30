@@ -3,9 +3,14 @@ defmodule ElPaso.Config.LoaderTest do
   Tests para ElPaso.Config.Loader.
   """
 
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias ElPaso.Config.Loader
+
+  setup do
+    Loader.init_affinity_table()
+    :ok
+  end
 
   describe "get/0" do
     test "devuelve un mapa con configuración" do

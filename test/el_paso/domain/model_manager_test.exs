@@ -112,9 +112,5 @@ defmodule ElPaso.Domain.ModelManagerTest do
     end
   end
 
-  describe "record_call_result/3" do
-    test "registra resultado sin errores" do
-      assert :ok = ModelManager.record_call_result("req-1", 100, "success")
-    end
-  end
+
 end

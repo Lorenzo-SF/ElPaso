@@ -101,7 +101,7 @@ defmodule ElPaso.Domain.EngineManagerTest do
           base_url: "http://localhost:11434"
         })
 
-      assert :ok = EngineManager.test_engine("e5")
+      assert {:ok, _latency} = EngineManager.test_engine("e5")
     end
 
     test "falla si el engine no existe" do

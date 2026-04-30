@@ -3,48 +3,112 @@ defmodule ElPaso.Domain.Router do
   Router de modelos para tomar decisiones sobre qué modelo usar para una solicitud.
 
   Este módulo implementa la lógica de enrutamiento basada en:
-  - Tipo de solicitud
-  - Contexto de la conversación
-  - Disponibilidad de modelos
-  - Costos y rendimiento
+  - Task affinity (configuración por tipo de tarea)
+  - Disponibilidad de modelos activos
+  - Rendimiento histórico
   """
 
   alias ElPaso.Domain.ModelManager
   alias ElPaso.Context.Storage
 
   @doc """
-  Selecciona el modelo adecuado para una solicitud basada en el contexto.
+  Selecciona el modelo óptimo para una solicitud basada en task affinity.
 
-  ## Parámetros
+  Selección por affinity score: weighted_score = task_affinity * complexity_ceiling.
 
-  - `messages` - Lista de mensajes para procesar
-  - `options` - Opciones adicionales para la selección
-
-  ## Ejemplo
-
-      iex> Router.select_model(messages, %{})
+  Si no hay task_affinity configurado, selecciona el primer modelo activo disponible.
   """
   @spec select_model(list(), map()) :: {:ok, map()} | {:error, any()}
-  def select_model(_messages, _options) do
-    # Esta implementación es simplificada - en producción se usaría:
-    # - Análisis de contexto del mensaje
-    # - Feature vector processing
-    # - Model availability checking
-    # - Cost/benefit analysis
+  def select_model(messages, _options) do
+    # Detect task type from message content
+    task_type = detect_task_type(messages)
 
-    # Para este ejemplo, seleccionamos el primer modelo activo
-    case ModelManager.list_models() |> Enum.find(& &1.active) do
-      nil ->
-        {:error, :no_active_model}
+    # Get all active models
+    active_models =
+      ModelManager.list_models()
+      |> Enum.filter(& &1.active)
 
-      model ->
-        {:ok,
-         %{
-           model_name: model.name,
-           engine_id: model.engine_id,
-           decision_reason: "Selección por defecto",
-           timestamp: DateTime.utc_now()
-         }}
+    if active_models == [] do
+      {:error, :no_active_model}
+    else
+      # Score each model by affinity for the detected task type
+      scored =
+        Enum.map(active_models, fn model ->
+          affinity = get_task_affinity(model, task_type)
+          ceiling = model.complexity_ceiling || 1.0
+          score = affinity * ceiling
+
+          {score, model}
+        end)
+        |> Enum.sort_by(fn {score, _} -> score end, :desc)
+
+      {best_score, best_model} = List.first(scored)
+
+      {:ok,
+       %{
+         model_name: best_model.name,
+         engine_id: best_model.engine_id,
+         decision_reason: "affinity:#{task_type}",
+         task_type: task_type,
+         score: best_score,
+         timestamp: DateTime.utc_now()
+       }}
+    end
+  end
+
+  # Get affinity for a specific task type from model's task_affinity config
+  defp get_task_affinity(model, task_type) do
+    case model.task_affinity do
+      %{^task_type => affinity} when is_number(affinity) ->
+        affinity
+
+      %{default: default_affinity} when is_number(default_affinity) ->
+        default_affinity
+
+      _ ->
+        # Default affinity when not configured: 0.5
+        0.5
+    end
+  end
+
+  # Detect task type from message content
+  defp detect_task_type(messages) do
+    # Simple heuristic based on message content
+    content =
+      messages
+      |> Enum.map(fn
+        %{"content" => c} -> c
+        %{content: c} -> c
+        _ -> ""
+      end)
+      |> Enum.join(" ")
+      |> String.downcase()
+
+    cond do
+      String.contains?(content, [
+        "write code",
+        "function",
+        "implement",
+        "algorithm",
+        "fibonacci",
+        "sort"
+      ]) ->
+        :code
+
+      String.contains?(content, ["translate", "traduce", "translation"]) ->
+        :translation
+
+      String.contains?(content, ["summarize", "resumen", "summary"]) ->
+        :summarization
+
+      String.contains?(content, ["analyze", "analysis", "compar", "advantage", "vs "]) ->
+        :reasoning
+
+      String.contains?(content, ["what is", "explain", "describe", "definition"]) ->
+        :question_answer
+
+      true ->
+        :unknown
     end
   end
 

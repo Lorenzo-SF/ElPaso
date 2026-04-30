@@ -2,258 +2,221 @@ defmodule ElPaso.Engine.Adapter do
   @moduledoc """
   Adaptadores para diferentes motores de inferencia.
 
-  Este módulo proporciona interfaces para conectar con distintos proveedores
+  Este módulo proporciona la interfaz para conectar con distintos proveedores
   de modelos de lenguaje como OpenAI, Anthropic, Ollama y llama.cpp.
-  """
 
-  alias ElPaso.Models.Model
-  alias ElPaso.Models.Engine
+  Cada función recibe:
+  - `messages`: lista de mensajes [{role, content}]
+  - `model`: schema del modelo (Engine.t)
+  - `engine`: schema del engine (Engine.t)
+  - `_routing_decision`: información de routing (para métricas/futuro)
+  """
+  alias ElPaso.Engine.HTTPClient
+
+  # ---------------------------------------------------------------------------
+  # OpenAI / OpenAI-compatible API
+  # ---------------------------------------------------------------------------
 
   @doc """
-  Ejecuta una llamada a OpenAI API.
-
-  ## Parámetros
-
-  - `messages` - Lista de mensajes para procesar
-  - `model` - Modelo a usar
-  - `engine` - Engine de inferencia
-  - `routing_decision` - Decisión de enrutamiento
-
-  ## Ejemplo
-
-      iex> Adapter.openai(messages, model, engine, _routing_decision)
+  Ejecuta una llamada a OpenAI API o compatible (groq, together, etc.).
   """
-  @spec openai(list(), Model.t(), Engine.t(), map()) :: {:ok, any()} | {:error, any()}
+  @spec openai([map()], ElPaso.Models.Model.t(), ElPaso.Models.Engine.t(), map()) ::
+          {:ok, map()} | {:error, map()}
   def openai(messages, model, engine, _routing_decision) do
-    # Implementación real usando Finch para hacer llamadas HTTP a OpenAI
-    # Esta es una implementación simplificada - en producción se usaría Finch
+    opts = build_opts(model, engine)
 
-    # Simulación de llamada a API
-    IO.puts("Ejecutando OpenAI con modelo: #{model.name}")
-
-    {:ok,
-     %{
-       model: model.name,
-       engine: engine.name,
-       messages: messages,
-       response: "Respuesta simulada desde OpenAI"
-     }}
+    HTTPClient.openai_compatible(
+      model.url || engine.base_url,
+      model.name,
+      messages,
+      opts
+    )
   end
+
+  @doc """
+  Ejecuta una llamada streaming a OpenAI API o compatible.
+  """
+  @spec stream_openai([map()], ElPaso.Models.Model.t(), ElPaso.Models.Engine.t(), map(), (map() ->
+                                                                                            :ok)) ::
+          :ok | {:error, map()}
+  def stream_openai(messages, model, engine, _routing_decision, callback) do
+    opts = build_opts(model, engine)
+
+    HTTPClient.stream_openai(
+      model.url || engine.base_url,
+      model.name,
+      messages,
+      opts,
+      callback
+    )
+  end
+
+  # ---------------------------------------------------------------------------
+  # Anthropic
+  # ---------------------------------------------------------------------------
 
   @doc """
   Ejecuta una llamada a Anthropic API.
-
-  ## Parámetros
-
-  - `messages` - Lista de mensajes para procesar
-  - `model` - Modelo a usar
-  - `engine` - Engine de inferencia
-  - `routing_decision` - Decisión de enrutamiento
-
-  ## Ejemplo
-
-      iex> Adapter.anthropic(messages, model, engine, _routing_decision)
   """
-  @spec anthropic(list(), Model.t(), Engine.t(), map()) :: {:ok, any()} | {:error, any()}
+  @spec anthropic([map()], ElPaso.Models.Model.t(), ElPaso.Models.Engine.t(), map()) ::
+          {:ok, map()} | {:error, map()}
   def anthropic(messages, model, engine, _routing_decision) do
-    # Implementación real usando Finch para hacer llamadas HTTP a Anthropic
-    # Esta es una implementación simplificada - en producción se usaría Finch
+    opts = build_opts(model, engine)
 
-    # Simulación de llamada a API
-    IO.puts("Ejecutando Anthropic con modelo: #{model.name}")
-
-    {:ok,
-     %{
-       model: model.name,
-       engine: engine.name,
-       messages: messages,
-       response: "Respuesta simulada desde Anthropic"
-     }}
+    HTTPClient.anthropic(
+      model.url || engine.base_url,
+      model.name,
+      messages,
+      opts
+    )
   end
 
+  # ---------------------------------------------------------------------------
+  # Ollama
+  # ---------------------------------------------------------------------------
+
   @doc """
-  Ejecuta una llamada a Ollama.
-
-  ## Parámetros
-
-  - `messages` - Lista de mensajes para procesar
-  - `model` - Modelo a usar
-  - `engine` - Engine de inferencia
-  - `routing_decision` - Decisión de enrutamiento
-
-  ## Ejemplo
-
-      iex> Adapter.ollama(messages, model, engine, _routing_decision)
+  Ejecuta una llamada a Ollama (local o remoto).
   """
-  @spec ollama(list(), Model.t(), Engine.t(), map()) :: {:ok, any()} | {:error, any()}
+  @spec ollama([map()], ElPaso.Models.Model.t(), ElPaso.Models.Engine.t(), map()) ::
+          {:ok, map()} | {:error, map()}
   def ollama(messages, model, engine, _routing_decision) do
-    # Implementación real usando Finch para hacer llamadas HTTP a Ollama
-    # Esta es una implementación simplificada - en producción se usaría Finch
+    opts = build_opts(model, engine)
 
-    # Simulación de llamada a API
-    IO.puts("Ejecutando Ollama con modelo: #{model.name}")
-
-    {:ok,
-     %{
-       model: model.name,
-       engine: engine.name,
-       messages: messages,
-       response: "Respuesta simulada desde Ollama"
-     }}
+    HTTPClient.ollama(
+      model.url || engine.base_url,
+      model.name,
+      messages,
+      opts
+    )
   end
 
   @doc """
-  Ejecuta una llamada a llama.cpp.
-
-  ## Parámetros
-
-  - `messages` - Lista de mensajes para procesar
-  - `model` - Modelo a usar
-  - `engine` - Engine de inferencia
-  - `routing_decision` - Decisión de enrutamiento
-
-  ## Ejemplo
-
-      iex> Adapter.llama_cpp(messages, model, engine, _routing_decision)
+  Ejecuta streaming via Ollama.
   """
-  @spec llama_cpp(list(), Model.t(), Engine.t(), map()) :: {:ok, any()} | {:error, any()}
+  @spec stream_ollama([map()], ElPaso.Models.Model.t(), ElPaso.Models.Engine.t(), map(), (map() ->
+                                                                                            :ok)) ::
+          :ok | {:error, map()}
+  def stream_ollama(messages, model, engine, _routing_decision, callback) do
+    opts = build_opts(model, engine)
+
+    HTTPClient.stream_ollama(
+      model.url || engine.base_url,
+      model.name,
+      messages,
+      opts,
+      callback
+    )
+  end
+
+  # ---------------------------------------------------------------------------
+  # llama.cpp
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Ejecuta una llamada a servidor llama.cpp (compatible OpenAI).
+  """
+  @spec llama_cpp([map()], ElPaso.Models.Model.t(), ElPaso.Models.Engine.t(), map()) ::
+          {:ok, map()} | {:error, map()}
   def llama_cpp(messages, model, engine, _routing_decision) do
-    # Implementación real para llamadas a servidor local llama.cpp
-    # Esta es una implementación simplificada - en producción se usaría Finch
+    opts = build_opts(model, engine)
 
-    # Simulación de llamada a API local
-    IO.puts("Ejecutando llama.cpp con modelo: #{model.name}")
-
-    {:ok,
-     %{
-       model: model.name,
-       engine: engine.name,
-       messages: messages,
-       response: "Respuesta simulada desde llama.cpp"
-     }}
+    HTTPClient.llama_cpp(
+      model.url || engine.base_url,
+      model.name,
+      messages,
+      opts
+    )
   end
 
   @doc """
-  Ejecuta una llamada streaming a OpenAI API.
-
-  ## Parámetros
-
-  - `messages` - Lista de mensajes para procesar
-  - `model` - Modelo a usar
-  - `engine` - Engine de inferencia
-  - `routing_decision` - Decisión de enrutamiento
-
-  ## Ejemplo
-
-      iex> Adapter.stream_openai(messages, model, engine, _routing_decision)
+  Ejecuta streaming via llama.cpp (compatible OpenAI).
   """
-  @spec stream_openai(list(), Model.t(), Engine.t(), map()) :: {:ok, any()} | {:error, any()}
-  def stream_openai(messages, model, engine, _routing_decision) do
-    # Implementación real usando Finch para hacer llamadas HTTP streaming a OpenAI
-    # Esta es una implementación simplificada - en producción se usaría Finch
+  @spec stream_llama_cpp(
+          [map()],
+          ElPaso.Models.Model.t(),
+          ElPaso.Models.Engine.t(),
+          map(),
+          (map() -> :ok)
+        ) :: :ok | {:error, map()}
+  def stream_llama_cpp(messages, model, engine, _routing_decision, callback) do
+    opts = build_opts(model, engine)
 
-    # Simulación de llamada streaming
-    IO.puts("Ejecutando streaming OpenAI con modelo: #{model.name}")
+    HTTPClient.stream_openai(
+      model.url || engine.base_url,
+      model.name,
+      messages,
+      opts,
+      callback
+    )
+  end
 
-    {:ok,
-     %{
-       model: model.name,
-       engine: engine.name,
-       messages: messages,
-       response: "Respuesta simulada streaming desde OpenAI"
-     }}
+  # ---------------------------------------------------------------------------
+  # Dispatch principal — selecciona adapter según el tipo del engine
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Ejecuta inferencia dispatchando al adapter apropiado según el engine.
+
+  Usado por el pipeline de inferencia.
+  """
+  @spec infer([map()], ElPaso.Models.Model.t(), ElPaso.Models.Engine.t(), map()) ::
+          {:ok, map()} | {:error, map()}
+  def infer(messages, model, engine, routing_decision \\ %{}) do
+    case engine.adapter do
+      adapter when adapter in ["openai", "openai_compatible"] ->
+        openai(messages, model, engine, routing_decision)
+
+      "anthropic" ->
+        anthropic(messages, model, engine, routing_decision)
+
+      "ollama" ->
+        ollama(messages, model, engine, routing_decision)
+
+      "llama" ->
+        llama_cpp(messages, model, engine, routing_decision)
+
+      adapter ->
+        {:error, %{type: :unknown_adapter, adapter: adapter}}
+    end
   end
 
   @doc """
-  Ejecuta una llamada streaming a Anthropic API.
-
-  ## Parámetros
-
-  - `messages` - Lista de mensajes para procesar
-  - `model` - Modelo a usar
-  - `engine` - Engine de inferencia
-  - `routing_decision` - Decisión de enrutamiento
-
-  ## Ejemplo
-
-      iex> Adapter.stream_anthropic(messages, model, engine, _routing_decision)
+  Ejecuta inferencia con streaming, dispatchando al adapter apropiado.
   """
-  @spec stream_anthropic(list(), Model.t(), Engine.t(), map()) :: {:ok, any()} | {:error, any()}
-  def stream_anthropic(messages, model, engine, _routing_decision) do
-    # Implementación real usando Finch para hacer llamadas HTTP streaming a Anthropic
-    # Esta es una implementación simplificada - en producción se usaría Finch
+  @spec stream_infer([map()], ElPaso.Models.Model.t(), ElPaso.Models.Engine.t(), map(), (map() ->
+                                                                                           :ok)) ::
+          :ok | {:error, map()}
+  def stream_infer(messages, model, engine, routing_decision \\ %{}, callback) do
+    case engine.adapter do
+      adapter when adapter in ["openai", "openai_compatible"] ->
+        stream_openai(messages, model, engine, routing_decision, callback)
 
-    # Simulación de llamada streaming
-    IO.puts("Ejecutando streaming Anthropic con modelo: #{model.name}")
+      "anthropic" ->
+        {:error, %{type: :unsupported, message: "Anthropic streaming not yet implemented"}}
 
-    {:ok,
-     %{
-       model: model.name,
-       engine: engine.name,
-       messages: messages,
-       response: "Respuesta simulada streaming desde Anthropic"
-     }}
+      "ollama" ->
+        stream_ollama(messages, model, engine, routing_decision, callback)
+
+      "llama" ->
+        stream_llama_cpp(messages, model, engine, routing_decision, callback)
+
+      adapter ->
+        {:error, %{type: :unknown_adapter, adapter: adapter}}
+    end
   end
 
-  @doc """
-  Ejecuta una llamada streaming a Ollama.
+  # ---------------------------------------------------------------------------
+  # Helpers
+  # ---------------------------------------------------------------------------
 
-  ## Parámetros
-
-  - `messages` - Lista de mensajes para procesar
-  - `model` - Modelo a usar
-  - `engine` - Engine de inferencia
-  - `routing_decision` - Decisión de enrutamiento
-
-  ## Ejemplo
-
-      iex> Adapter.stream_ollama(messages, model, engine, _routing_decision)
-  """
-  @spec stream_ollama(list(), Model.t(), Engine.t(), map()) :: {:ok, any()} | {:error, any()}
-  def stream_ollama(messages, model, engine, _routing_decision) do
-    # Implementación real usando Finch para hacer llamadas HTTP streaming a Ollama
-    # Esta es una implementación simplificada - en producción se usaría Finch
-
-    # Simulación de llamada streaming
-    IO.puts("Ejecutando streaming Ollama con modelo: #{model.name}")
-
-    {:ok,
-     %{
-       model: model.name,
-       engine: engine.name,
-       messages: messages,
-       response: "Respuesta simulada streaming desde Ollama"
-     }}
-  end
-
-  @doc """
-  Ejecuta una llamada streaming a llama.cpp.
-
-  ## Parámetros
-
-  - `messages` - Lista de mensajes para procesar
-  - `model` - Modelo a usar
-  - `engine` - Engine de inferencia
-  - `routing_decision` - Decisión de enrutamiento
-
-  ## Ejemplo
-
-      iex> Adapter.stream_llama_cpp(messages, model, engine, _routing_decision)
-  """
-  @spec stream_llama_cpp(list(), Model.t(), Engine.t(), map()) :: {:ok, any()} | {:error, any()}
-  def stream_llama_cpp(messages, model, engine, _routing_decision) do
-    # Implementación real para llamadas streaming a servidor local llama.cpp
-    # Esta es una implementación simplificada - en producción se usaría Finch
-
-    # Simulación de llamada streaming
-    IO.puts("Ejecutando streaming llama.cpp con modelo: #{model.name}")
-
-    {:ok,
-     %{
-       model: model.name,
-       engine: engine.name,
-       messages: messages,
-       response: "Respuesta simulada streaming desde llama.cpp"
-     }}
+  defp build_opts(model, engine) do
+    [
+      api_key: model.api_key || engine.api_key || "",
+      temperature: model.temperature || 0.7,
+      max_tokens: model.max_tokens || 4096,
+      top_p: model.top_p || 1.0,
+      timeout: get_in(engine.config || %{}, [:timeout]) || 120_000
+    ]
   end
 end

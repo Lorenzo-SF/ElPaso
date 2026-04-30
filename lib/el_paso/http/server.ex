@@ -1,5 +1,6 @@
 defmodule ElPaso.HTTP.Server do
   use Plug.Router
+  require Logger
 
   import Plug.Conn
 
@@ -304,49 +305,124 @@ defmodule ElPaso.HTTP.Server do
 
   # V2.0: Ejecuta el pipeline para requests Anthropic
   defp run_anthropic_pipeline(internal_req, _conn) do
-    # Por ahora, devuelve una respuesta de ejemplo
-    # En producción, esto invocaría el pipeline completo
-    prompt = internal_req.messages |> List.first() |> Map.get("content", "")
-    estimated_tokens = div(String.length(prompt), 4)
+    # Seleccionar modelo via router o usar model_hint
+    model_name =
+      case internal_req.model_hint do
+        hint when hint in [nil, "", "auto"] ->
+          # Usar router para seleccionar el mejor modelo disponible
+          case ElPaso.Domain.Router.select_model(internal_req.messages, %{}) do
+            {:ok, %{model_name: name}} -> name
+            {:error, _} -> nil
+          end
 
-    {:ok,
-     %{
-       content: "Response to: #{prompt}",
-       finish_reason: :stop,
-       prompt_tokens: estimated_tokens,
-       completion_tokens: div(String.length(prompt), 4)
-     }}
+        name ->
+          name
+      end
+
+    if is_nil(model_name) do
+      {:error, %{type: :no_model, message: "No model available for inference"}}
+    else
+      # Ejecutar inferencia via ModelManager
+      request = %{
+        messages: internal_req.messages,
+        model_hint: model_name,
+        temperature: internal_req.temperature,
+        max_tokens: internal_req.max_tokens
+      }
+
+      case ElPaso.Domain.ModelManager.infer(model_name, request) do
+        {:ok, response} ->
+          {:ok, response}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
   end
 
   # V2.0: Ejecuta streaming para requests Anthropic
   defp run_anthropic_stream(internal_req, conn) do
-    # Enviar evento de inicio
-    start_event = ElPaso.HTTP.AnthropicProxy.stream_start_event(0)
-    chunk(conn, start_event)
+    # Seleccionar modelo
+    model_name =
+      case internal_req.model_hint do
+        hint when hint in [nil, "", "auto"] ->
+          case ElPaso.Domain.Router.select_model(internal_req.messages, %{}) do
+            {:ok, %{model_name: name}} -> name
+            {:error, _} -> nil
+          end
 
-    # Obtener prompt
-    prompt = internal_req.messages |> List.first() |> Map.get("content", "")
+        name ->
+          name
+      end
 
-    # Simular streaming
-    words = String.split(prompt, " ")
-    total_words = length(words)
-
-    Enum.each(words, fn word ->
-      delta_event =
+    if is_nil(model_name) do
+      error_event =
         ElPaso.HTTP.AnthropicProxy.to_anthropic_stream_chunk(
-          %{content: word <> " ", tokens: nil},
+          %{content: "Error: No model available"},
           :delta
         )
 
-      send_chunk_data(conn, delta_event)
-      Process.sleep(50)
-    end)
+      send_chunk_data(conn, error_event)
+      conn
+    else
+      # Enviar evento de inicio
+      start_event = ElPaso.HTTP.AnthropicProxy.stream_start_event(0)
+      send_chunk_data(conn, start_event)
 
-    # Enviar evento de fin
-    stop_event = ElPaso.HTTP.AnthropicProxy.stream_stop_event(total_words)
-    send_chunk_data(conn, stop_event)
+      # Streaming real via adapter
+      messages = internal_req.messages
+      model = ElPaso.Domain.ModelManager.get_model(model_name)
 
-    conn
+      if is_nil(model) do
+        send_chunk_data(
+          conn,
+          ElPaso.HTTP.AnthropicProxy.to_anthropic_stream_chunk(
+            %{content: "Model not found: #{model_name}"},
+            :delta
+          )
+        )
+      else
+        engine = ElPaso.Repo.get(ElPaso.Models.Engine, model.engine_id)
+
+        if is_nil(engine) do
+          send_chunk_data(
+            conn,
+            ElPaso.HTTP.AnthropicProxy.to_anthropic_stream_chunk(
+              %{content: "Engine not configured"},
+              :delta
+            )
+          )
+        else
+          # Usar streaming del adapter
+          callback = fn chunk ->
+            delta_event = ElPaso.HTTP.AnthropicProxy.to_anthropic_stream_chunk(chunk, :delta)
+            send_chunk_data(conn, delta_event)
+          end
+
+          case ElPaso.Engine.Adapter.stream_infer(messages, model, engine, %{}, callback) do
+            :ok ->
+              :ok
+
+            {:error, reason} ->
+              Logger.error("[Server] Stream error: #{inspect(reason)}")
+
+              send_chunk_data(
+                conn,
+                ElPaso.HTTP.AnthropicProxy.to_anthropic_stream_chunk(
+                  %{content: "Error: #{inspect(reason)}"},
+                  :delta
+                )
+              )
+          end
+        end
+      end
+
+      # Enviar evento de fin
+      stop_event = ElPaso.HTTP.AnthropicProxy.stream_stop_event(0)
+      send_chunk_data(conn, stop_event)
+
+      conn
+    end
   end
 
   # Helper para enviar chunks en streaming

@@ -1105,17 +1105,22 @@ defmodule ElPaso.CLI do
       analyses = ElPaso.Domain.RouterAnalyzer.analyze_trends(:last_30d)
 
       if Enum.empty?(analyses) do
-        Output.warning("No hay datos suficientes para análisis. Se necesitan routing_decisions en la DB.")
+        Output.warning(
+          "No hay datos suficientes para análisis. Se necesitan routing_decisions en la DB."
+        )
       else
         appliable =
           Enum.filter(analyses, fn a ->
             n = a.n_decisions
-            confidence = min(n / 500.0, 1.0) *
-              (case a.success_trend do
-                 :improving -> 0.9
-                 :degrading -> 1.0
-                 :stable -> 0.5
-               end)
+
+            confidence =
+              min(n / 500.0, 1.0) *
+                case a.success_trend do
+                  :improving -> 0.9
+                  :degrading -> 1.0
+                  :stable -> 0.5
+                end
+
             n >= 50 and confidence >= 0.85
           end)
 
@@ -1139,8 +1144,10 @@ defmodule ElPaso.CLI do
 
           rows =
             Enum.map(changes, fn c ->
-              [ "#{c.model_id}@#{c.task_type}",
-                "#{Float.round(c.previous_affinity, 2)} → #{Float.round(c.new_affinity, 2)}" ]
+              [
+                "#{c.model_id}@#{c.task_type}",
+                "#{Float.round(c.previous_affinity, 2)} → #{Float.round(c.new_affinity, 2)}"
+              ]
             end)
 
           Output.data_table(
@@ -1188,8 +1195,16 @@ defmodule ElPaso.CLI do
             :degrading -> "↓ Degradando"
             :stable -> "→ Estable"
           end
+
         alert = if a.alert, do: "⚠️", else: ""
-        ["#{a.model_id}@#{a.task_type}", "#{Float.round(a.overall_success_rate, 1)}%", trend, to_string(a.n_decisions), alert]
+
+        [
+          "#{a.model_id}@#{a.task_type}",
+          "#{Float.round(a.overall_success_rate, 1)}%",
+          trend,
+          to_string(a.n_decisions),
+          alert
+        ]
       end)
 
     Output.data_table(

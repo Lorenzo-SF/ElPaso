@@ -8,8 +8,10 @@ defmodule ElPaso.Domain.ModelManager do
   """
 
   use GenServer
+  require Logger
   alias ElPaso.Repo
   alias ElPaso.Models.{Model, Engine}
+  alias ElPaso.Engine.Adapter
 
   @circuit_opts [threshold: 5, timeout: 60_000]
 
@@ -49,6 +51,10 @@ defmodule ElPaso.Domain.ModelManager do
 
   @doc """
   Ejecuta inferencia en un modelo con protección de circuit breaker.
+
+  `request` es un mapa con:
+    - `:messages` — lista de mensajes [{role, content}]
+    - `:model_hint` — hint opcional de modelo
   """
   def infer(model_id, request) do
     GenServer.call(__MODULE__, {:infer, model_id, request})
@@ -59,8 +65,8 @@ defmodule ElPaso.Domain.ModelManager do
     {:reply, Enum.map(state.models, &model_to_state/1), state}
   end
 
-  def handle_call({:infer, model_id, _request}, _from, state) do
-    # Find the model
+  def handle_call({:infer, model_id, request}, _from, state) do
+    # Find the model by name
     model = Enum.find(state.models, &(&1.name == model_id))
 
     result =
@@ -75,7 +81,7 @@ defmodule ElPaso.Domain.ModelManager do
           # Protected call via Zaguan Circuit Breaker
           case Zaguan.Engine.CircuitBreaker.call(
                  model_id,
-                 fn -> do_infer(model) end,
+                 fn -> do_infer(model, request) end,
                  @circuit_opts
                ) do
             {:ok, response} ->
@@ -84,6 +90,11 @@ defmodule ElPaso.Domain.ModelManager do
 
             {:error, reason} ->
               Zaguan.Engine.CircuitBreaker.failure(model_id)
+
+              Logger.warning(
+                "[ModelManager] Inference failed for #{model_id}: #{inspect(reason)}"
+              )
+
               {:error, reason}
           end
       end
@@ -91,35 +102,45 @@ defmodule ElPaso.Domain.ModelManager do
     {:reply, result, state}
   end
 
-  # Internal: actual inference (no circuit breaker)
-  defp do_infer(%Model{name: name, engine_id: engine_id}) do
+  # Internal: actual HTTP inference via Engine.Adapter
+  defp do_infer(%Model{} = model, request) do
+    # Load engine
     engine =
-      case engine_id do
+      case model.engine_id do
         nil -> nil
-        _ -> Repo.get(Engine, engine_id)
+        _ -> Repo.get(Engine, model.engine_id)
       end
 
     case engine do
       nil ->
-        {:ok, %{content: "Response from #{name}", finish_reason: :stop}}
+        {:error, %{type: :no_engine, message: "Model has no engine configured"}}
 
-      _ ->
-        {:ok, %{content: "Response from #{name}", finish_reason: :stop}}
+      %Engine{active: false} ->
+        {:error, %{type: :engine_inactive, message: "Engine #{engine.name} is inactive"}}
+
+      %Engine{} = engine ->
+        # Extract messages from request (兼容 con formato {messages: [...]})
+        messages = extract_messages(request)
+
+        case Adapter.infer(messages, model, engine, %{}) do
+          {:ok, response} ->
+            {:ok, response}
+
+          {:error, reason} ->
+            Logger.error("[ModelManager] Adapter error: #{inspect(reason)}")
+            {:error, reason}
+        end
     end
   end
 
-  @doc """
-  Registra el resultado de una llamada.
-  """
-  def record_call_result(request_id, latency_ms, outcome) do
-    GenServer.cast(__MODULE__, {:record_result, request_id, latency_ms, outcome})
-  end
+  # Extract messages from various request formats
+  defp extract_messages(%{messages: messages}) when is_list(messages), do: messages
+  defp extract_messages(%{"messages" => messages}) when is_list(messages), do: messages
 
-  @impl GenServer
-  def handle_cast({:record_result, _request_id, _latency_ms, _outcome}, state) do
-    # Update model state with new metrics
-    {:noreply, state}
-  end
+  defp extract_messages(%{content: content}) when is_binary(content),
+    do: [%{"role" => "user", "content" => content}]
+
+  defp extract_messages(other) when is_map(other), do: Map.get(other, :messages, [])
 
   @doc """
   Crea un nuevo modelo.
@@ -220,8 +241,12 @@ defmodule ElPaso.Domain.ModelManager do
   # Lazy-starts it if not already running under Zaguan.Engine.CircuitBreaker.Registry.
   defp ensure_circuit_breaker(model_name) do
     case Registry.lookup(Zaguan.Engine.CircuitBreaker.Registry, model_name) do
-      [{_pid, _}] -> :ok
-      [] -> {:ok, _pid} = Zaguan.Engine.CircuitBreaker.start_link(name: model_name, threshold: 5, timeout: 60_000)
+      [{_pid, _}] ->
+        :ok
+
+      [] ->
+        {:ok, _pid} =
+          Zaguan.Engine.CircuitBreaker.start_link(name: model_name, threshold: 5, timeout: 60_000)
     end
   end
 

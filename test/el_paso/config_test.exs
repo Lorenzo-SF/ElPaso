@@ -3,9 +3,15 @@ defmodule ElPaso.ConfigTest do
   Tests para ElPaso.Config.
   """
 
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias ElPaso.Config
+  alias ElPaso.Config.Loader
+
+  setup do
+    Loader.init_affinity_table()
+    :ok
+  end
 
   describe "cluster_enabled?/0" do
     test "devuelve booleano" do
