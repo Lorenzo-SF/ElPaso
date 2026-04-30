@@ -63,23 +63,24 @@ defmodule Mix.Tasks.Elpaso.Engine do
         IO.puts("No hay motores registrados")
 
       engines ->
-        IO.puts("┌───────────┬─────────┬─────────────────────┬────────┐")
-        IO.puts("│ Name     │ Adapter │ Base URL           │ Active│")
-        IO.puts("├───────────┼─────────┼─────────────────────┼────────┤")
+        alias Zaguan.Drawer.Components.Table
 
-        Enum.each(engines, fn engine ->
-          IO.puts(
-            "│ #{engine.name} │ #{engine.adapter} │ #{engine.base_url} │ #{engine.active} │"
-          )
+        rows = Enum.map(engines, fn engine ->
+          [engine.name, engine.adapter, engine.base_url, to_string(engine.active)]
         end)
 
-        IO.puts("└───────────┴─────────┴─────────────────────┴────────┘")
+        Table.print(
+          headers: ["Name", "Adapter", "Base URL", "Active"],
+          rows: rows,
+          table_border: :rounded,
+          headers_color: :cyan
+        )
     end
   end
 
   defp remove_engine(name) do
     case ElPaso.Domain.EngineManager.delete_engine(name) do
-      :ok ->
+      {:ok, _} ->
         IO.puts("✅ Motor '#{name}' eliminado exitosamente")
 
       {:error, reason} ->

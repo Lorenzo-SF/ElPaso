@@ -13,7 +13,7 @@ defmodule ElPaso.Engine.Registry do
   end
 
   def init(_args) do
-    table = :ets.new(@table, [:named_table, :protected, read_concurrency: true])
+    table = :ets.new(@table, [:named_table, :public, read_concurrency: true])
     {:ok, %{table: table}}
   end
 
@@ -47,7 +47,12 @@ defmodule ElPaso.Engine.Registry do
   Desregistra un engine.
   """
   def unregister(name) do
-    :ets.delete(@table, name)
+    try do
+      :ets.delete(@table, name)
+    rescue
+      ArgumentError -> :ok
+    end
+
     :ok
   end
 end

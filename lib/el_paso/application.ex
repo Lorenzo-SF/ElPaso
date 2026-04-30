@@ -49,7 +49,7 @@ defmodule ElPaso.Application do
     ModelDownloaderRegistry.init()
 
     # Children base
-    children = [
+    base_children = [
       # Ecto Repo supervisor - conexión a PostgreSQL
       {ElPaso.Repo, []},
 
@@ -68,15 +68,24 @@ defmodule ElPaso.Application do
       # Servidor de telemetry para métricas
       ElPaso.Telemetry.Store,
 
-      # Servidor HTTP para las APIs REST (usando Plug.Cowboy)
-      {Plug.Cowboy, scheme: :http, plug: ElPaso.HTTP.Server, port: http_port()},
-
       # Supervisor para el manejo de errores y eventos
       ElPaso.Event.Supervisor,
 
       # AutoTuner para aprendizaje adaptativo
       ElPaso.Domain.AutoTuner
     ]
+
+    # Servidor HTTP solo si no estamos en modo CLI
+    http_children =
+      if Application.get_env(:elpaso, :cli_mode) do
+        []
+      else
+        [
+          {Plug.Cowboy, scheme: :http, plug: ElPaso.HTTP.Server, port: http_port()}
+        ]
+      end
+
+    children = base_children ++ http_children
 
     # Añadir cluster support si está habilitado
     final_children =

@@ -3,10 +3,25 @@ defmodule ElPaso.PipelineTest do
   Tests para ElPaso.Pipeline.
   """
 
-  use ExUnit.Case, async: true
+  use ElPaso.DataCase, async: true
 
   alias ElPaso.Pipeline
+  alias ElPaso.Domain.ModelManager
   alias ElPaso.Models.{Engine, Model}
+
+  setup do
+    {:ok, engine} =
+      ElPaso.Repo.insert(%Engine{
+        name: "pipeline-engine",
+        adapter: "ollama",
+        base_url: "http://localhost:11434"
+      })
+
+    {:ok, model} =
+      ModelManager.create_model(%{name: "llama2-test", engine_id: engine.id, active: true})
+
+    %{engine: engine, model: model}
+  end
 
   describe "execute_inference/6" do
     test "ejecuta inferencia con adapter openai" do
@@ -94,6 +109,35 @@ defmodule ElPaso.PipelineTest do
                )
 
       assert msg =~ "no soportado"
+    end
+  end
+
+  describe "process_request/4" do
+    test "procesa un request completo", %{engine: _engine, model: _model} do
+      assert {:ok, response} =
+               Pipeline.process_request(
+                 "req-6",
+                 "sess-6",
+                 [%{role: "user", content: "Hola"}],
+                 %{}
+               )
+
+      assert is_map(response)
+      assert response.model == "llama2-test"
+    end
+  end
+
+  describe "stream_request/4" do
+    test "procesa un request de streaming", %{engine: _engine, model: _model} do
+      assert {:ok, response} =
+               Pipeline.stream_request(
+                 "req-7",
+                 "sess-7",
+                 [%{role: "user", content: "Hola"}],
+                 %{}
+               )
+
+      assert is_map(response)
     end
   end
 end

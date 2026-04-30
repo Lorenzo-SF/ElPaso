@@ -9,7 +9,14 @@ defmodule ElPaso.EngineTest do
 
   describe "Response struct" do
     test "se puede crear" do
-      r = %Response{content: "hello", finish_reason: :stop, prompt_tokens: 10, completion_tokens: 5, latency_ms: 100}
+      r = %Response{
+        content: "hello",
+        finish_reason: :stop,
+        prompt_tokens: 10,
+        completion_tokens: 5,
+        latency_ms: 100
+      }
+
       assert r.content == "hello"
       assert r.finish_reason == :stop
     end

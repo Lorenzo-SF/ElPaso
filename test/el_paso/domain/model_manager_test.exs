@@ -3,13 +3,20 @@ defmodule ElPaso.Domain.ModelManagerTest do
   Tests para ElPaso.Domain.ModelManager.
   """
 
-  use ElPaso.DataCase, async: true
+  use ElPaso.DataCase, async: false
 
   alias ElPaso.Domain.ModelManager
   alias ElPaso.Models.{Model, Engine}
 
   setup do
-    {:ok, engine} = ElPaso.Repo.insert(%Engine{name: "test-engine", adapter: "ollama", base_url: "http://localhost:11434"})
+    {:ok, engine} =
+      ElPaso.Repo.insert(%Engine{
+        name: "mm-engine",
+        adapter: "ollama",
+        base_url: "http://localhost:11434"
+      })
+
+    start_supervised!({ModelManager, []})
     %{engine: engine}
   end
 
@@ -90,6 +97,24 @@ defmodule ElPaso.Domain.ModelManagerTest do
       assert ModelManager.models() == []
       {:ok, _model} = ModelManager.create_model(%{name: "m7", engine_id: engine.id})
       assert length(ModelManager.models()) == 1
+    end
+  end
+
+  describe "all_states/0" do
+    test "devuelve estados de modelos" do
+      assert is_list(ModelManager.all_states())
+    end
+  end
+
+  describe "infer/2" do
+    test "devuelve error si el modelo no existe" do
+      assert {:error, :model_not_found} = ModelManager.infer("nonexistent", %{prompt: "hi"})
+    end
+  end
+
+  describe "record_call_result/3" do
+    test "registra resultado sin errores" do
+      assert :ok = ModelManager.record_call_result("req-1", 100, "success")
     end
   end
 end

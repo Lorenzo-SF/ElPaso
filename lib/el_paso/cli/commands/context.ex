@@ -38,7 +38,7 @@ defmodule ElPaso.CLI.Commands.Context do
 
   # Renderizado en texto
   defp render_text(session) when is_map(session) do
-    IO.puts("\n=== Sesión #{session.id} ===")
+    IO.puts("\n=== Sesión #{session.session_id} ===")
     IO.puts("Usuario: #{session.user_id || "—"}")
     IO.puts("Modelo: #{session.model_id || "—"}")
     IO.puts("Estado: #{session.status || "—"}")
@@ -51,7 +51,7 @@ defmodule ElPaso.CLI.Commands.Context do
   # Renderizado en JSON
   defp render_json(session) when is_map(session) do
     data = %{
-      session_id: session.id,
+      session_id: session.session_id,
       user_id: session.user_id,
       model_id: session.model_id,
       status: session.status,

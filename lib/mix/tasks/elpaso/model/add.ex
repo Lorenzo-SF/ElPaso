@@ -1,33 +1,82 @@
 defmodule Mix.Tasks.Elpaso.Model.Add do
   @moduledoc """
-  Añade un nuevo modelo.
+  Añade un nuevo modelo a ElPaso.
 
-  mix elpaso model add <name> --engine <engine> --url <url>
+  Uso:
+      mix elpaso.model.add <nombre> --engine <engine_nombre> --url <url> [opciones]
+
+  Opciones:
+      --engine      Nombre del engine asociado (requerido)
+      --url         URL del modelo (requerido)
+      --max-tokens  Límite de tokens (default: 4096)
+      --temp        Temperatura de sampling (default: 0.7)
+      --description Descripción del modelo
+
+  Ejemplo:
+      mix elpaso.model.add local-thinker --engine llama-local --url http://localhost:8081/v1 --max-tokens 128000 --temp 0.4 --description "Razonamiento"
   """
 
   use Mix.Task
 
+  alias ElPaso.Repo
+  alias ElPaso.Models.{Engine, Model}
+
+  @impl Mix.Task
   def run(args) do
-    case parse_args(args) do
-      %{name: name, engine: engine, url: url} ->
-        IO.puts("Adding model #{name} with engine #{engine} at #{url}")
+    Mix.Task.run("app.start")
 
-        # In this simplified version, just display the info
-        IO.puts("✅ Model #{name} added successfully!")
-
-      _ ->
-        IO.puts("Usage: mix elpaso model add <name> --engine <engine> --url <url>")
-    end
-  end
-
-  defp parse_args(args) do
-    Enum.reduce(args, %{name: nil, engine: nil, url: nil}, fn arg, acc ->
-      case String.split(arg, "=", parts: 2) do
-        ["--name", name] -> Map.put(acc, :name, name)
-        ["--engine", engine] -> Map.put(acc, :engine, engine)
-        ["--url", url] -> Map.put(acc, :url, url)
-        _ -> acc
+    {name, switches} =
+      case args do
+        [n | rest] -> {n, rest}
+        _ -> {nil, args}
       end
-    end)
+
+    {opts, _, _} =
+      OptionParser.parse(switches,
+        strict: [
+          engine: :string,
+          url: :string,
+          max_tokens: :integer,
+          temp: :float,
+          description: :string
+        ]
+      )
+
+    if is_nil(name) or is_nil(opts[:engine]) or is_nil(opts[:url]) do
+      IO.puts(:stderr, "Uso: mix elpaso.model.add <nombre> --engine <engine> --url <url>")
+      System.halt(1)
+    end
+
+    engine = Repo.get_by(Engine, name: opts[:engine])
+
+    if is_nil(engine) do
+      IO.puts(
+        :stderr,
+        "❌ Engine '#{opts[:engine]}' no existe. Regístralo primero con: mix elpaso engine add"
+      )
+
+      System.halt(1)
+    end
+
+    case Repo.get_by(Model, name: name) do
+      nil ->
+        %Model{}
+        |> Model.changeset(%{
+          name: name,
+          engine_id: engine.id,
+          url: opts[:url],
+          api_key: engine.api_key,
+          active: true,
+          max_tokens: opts[:max_tokens] || 4096,
+          temperature: opts[:temp] || 0.7,
+          description: opts[:description]
+        })
+        |> Repo.insert!()
+
+        IO.puts("✅ Model '#{name}' registrado (engine: #{engine.name}).")
+
+      existing ->
+        IO.puts("ℹ️  Model '#{existing.name}' ya existe.")
+    end
   end
 end

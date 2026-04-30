@@ -434,9 +434,15 @@ defmodule ElPaso.Config do
   Obtiene el puerto HTTP.
   """
   def http_port do
-    case System.get_env("ELPASO_PORT") do
-      nil -> 8080
-      port -> String.to_integer(port)
+    case Application.get_env(:elpaso, :http_port) do
+      nil ->
+        case System.get_env("ELPASO_PORT") do
+          nil -> 8080
+          port -> String.to_integer(port)
+        end
+
+      port when is_integer(port) ->
+        port
     end
   end
 end

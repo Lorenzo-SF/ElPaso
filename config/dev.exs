@@ -6,6 +6,12 @@ config :elpaso,
   inference_server_url: "http://localhost:8081/v1",
   inference_api_key: "sk-local"
 
+# Logger en desarrollo: debug + metadata
+config :logger, :console,
+  level: :debug,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
 # Configuración de la base de datos para desarrollo
 # Muy importante: localhost, no la IP del contenedor
 config :elpaso, ElPaso.Repo,

@@ -98,7 +98,9 @@ defmodule ElPaso.Domain.RouterAnalyzer do
 
       {first, last} ->
         # Crear ventanas de 7 días
-        date_range = Date.range(DateTime.to_date(first.decided_at), DateTime.to_date(last.decided_at))
+        date_range =
+          Date.range(DateTime.to_date(first.decided_at), DateTime.to_date(last.decided_at))
+
         weeks = Enum.chunk_every(date_range, 7)
 
         Enum.map(weeks, fn week_range ->

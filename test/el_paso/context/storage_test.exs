@@ -66,7 +66,15 @@ defmodule ElPaso.Context.StorageTest do
   describe "create_summary/1 and get_latest_summary/1" do
     test "crea y obtiene resumen" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
-      {:ok, _} = Storage.create_summary(%{session_id: "s1", summary: "resumen", window_start: now, window_end: now})
+
+      {:ok, _} =
+        Storage.create_summary(%{
+          session_id: "s1",
+          summary: "resumen",
+          window_start: now,
+          window_end: now
+        })
+
       assert Storage.get_latest_summary("s1").summary == "resumen"
     end
   end
@@ -74,7 +82,17 @@ defmodule ElPaso.Context.StorageTest do
   describe "save_routing_decision/1 and update_routing_outcome/3" do
     test "guarda y actualiza decisión" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
-      {:ok, d} = Storage.save_routing_decision(%{request_id: "r1", session_id: "s1", model_id: "gpt-4", task_type: "code", selected_model: "gpt-4", decided_at: now})
+
+      {:ok, d} =
+        Storage.save_routing_decision(%{
+          request_id: "r1",
+          session_id: "s1",
+          model_id: "gpt-4",
+          task_type: "code",
+          selected_model: "gpt-4",
+          decided_at: now
+        })
+
       assert d.request_id == "r1"
       assert {1, _} = Storage.update_routing_outcome("r1", "success", 150)
     end
@@ -83,8 +101,25 @@ defmodule ElPaso.Context.StorageTest do
   describe "query_routing_decisions/1" do
     test "filtra decisiones", %{user: user} do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
-      {:ok, _} = Storage.save_routing_decision(%{request_id: "r2", session_id: "s1", model_id: "gpt-4", task_type: "code", selected_model: "gpt-4", decided_at: now, outcome: "success"})
-      assert length(Storage.query_routing_decisions(since: Date.add(Date.utc_today(), -1), with_outcome: true)) >= 1
+
+      {:ok, _} =
+        Storage.save_routing_decision(%{
+          request_id: "r2",
+          session_id: "s1",
+          model_id: "gpt-4",
+          task_type: "code",
+          selected_model: "gpt-4",
+          decided_at: now,
+          outcome: "success"
+        })
+
+      assert length(
+               Storage.query_routing_decisions(
+                 since: Date.add(Date.utc_today(), -1),
+                 with_outcome: true
+               )
+             ) >= 1
+
       assert length(Storage.query_routing_decisions([])) >= 1
     end
   end
@@ -107,7 +142,17 @@ defmodule ElPaso.Context.StorageTest do
   describe "upsert_api_usage/1 and daily_spend/1" do
     test "registra uso y calcula gasto diario" do
       today = Date.utc_today()
-      assert :ok = Storage.upsert_api_usage(%{user_id: "u1", model_id: "gpt-4", date: today, input_tokens: 100, output_tokens: 50, cost_usd: Decimal.from_float(0.5)})
+
+      assert :ok =
+               Storage.upsert_api_usage(%{
+                 user_id: "u1",
+                 model_id: "gpt-4",
+                 date: today,
+                 input_tokens: 100,
+                 output_tokens: 50,
+                 cost_usd: Decimal.from_float(0.5)
+               })
+
       assert Storage.daily_spend("u1") == 0.5
     end
   end
@@ -128,7 +173,16 @@ defmodule ElPaso.Context.StorageTest do
   describe "usage_report/1" do
     test "genera reporte de uso" do
       today = Date.utc_today()
-      Storage.upsert_api_usage(%{user_id: "u1", model_id: "gpt-4", date: today, input_tokens: 10, output_tokens: 5, cost_usd: Decimal.from_float(1.0)})
+
+      Storage.upsert_api_usage(%{
+        user_id: "u1",
+        model_id: "gpt-4",
+        date: today,
+        input_tokens: 10,
+        output_tokens: 5,
+        cost_usd: Decimal.from_float(1.0)
+      })
+
       report = Storage.usage_report([])
       assert is_map(report)
       assert is_list(report.users)
@@ -139,7 +193,16 @@ defmodule ElPaso.Context.StorageTest do
   describe "usage_report_csv/1" do
     test "genera CSV" do
       today = Date.utc_today()
-      Storage.upsert_api_usage(%{user_id: "u1", model_id: "gpt-4", date: today, input_tokens: 10, output_tokens: 5, cost_usd: Decimal.from_float(1.0)})
+
+      Storage.upsert_api_usage(%{
+        user_id: "u1",
+        model_id: "gpt-4",
+        date: today,
+        input_tokens: 10,
+        output_tokens: 5,
+        cost_usd: Decimal.from_float(1.0)
+      })
+
       csv = Storage.usage_report_csv([])
       assert is_binary(csv)
       assert csv =~ "user,model,cost"

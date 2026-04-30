@@ -61,7 +61,7 @@ defmodule ElPaso.Context.Manager do
     session_table =
       :ets.new(:session_states, [
         :named_table,
-        :protected,
+        :public,
         :set,
         {:read_concurrency, true},
         {:write_concurrency, true}

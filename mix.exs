@@ -56,7 +56,7 @@ defmodule ElPaso.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   defp deps do
-    [
+    base = [
       {:plug, "~> 1.19"},
       {:plug_cowboy, "~> 2.7"},
       {:finch, "~> 0.19"},
@@ -70,7 +70,6 @@ defmodule ElPaso.MixProject do
       {:jose, "~> 1.11"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
-      {:zaguan, path: "../zaguan"},
       {:telemetry_metrics_prometheus, "~> 1.1"},
       {:batamanta, path: "../batamanta", runtime: false},
 
@@ -79,6 +78,8 @@ defmodule ElPaso.MixProject do
       {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
+
+    [{:zaguan, path: "../zaguan"} | base]
   end
 
   defp escript do
@@ -99,10 +100,17 @@ defmodule ElPaso.MixProject do
       ignore_modules: [
         ElPaso.CLI,
         ElPaso.CLI.Commands,
+        ElPaso.CLI.Commands.RouterStats,
         ElPaso.HTTP.Server,
         ElPaso.HTTP.WebSocketHandler,
         ElPaso.HTTP.Dashboard,
-        ElPaso.Engine.Plugin.Echo
+        ElPaso.Engine.Plugin.Echo,
+        ElPaso.Application,
+        ElPaso.Examples.Pipeline,
+        Mix.Tasks.Elpaso,
+        Mix.Tasks.Elpaso.Engine.Add,
+        Mix.Tasks.Elpaso.Model.Add,
+        Mix.Tasks.Elpaso.RegisterWrapper
       ],
       summary: [
         threshold: 70

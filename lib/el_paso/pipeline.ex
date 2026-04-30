@@ -34,16 +34,16 @@ defmodule ElPaso.Pipeline do
          %{} = engine <- Repo.get(Engine, model.engine_id),
          {:ok, response} <-
            execute_inference(request_id, session_id, messages, model, engine, routing_decision),
-          {:ok, _} <-
-            Storage.save_routing_decision(%{
-              request_id: request_id,
-              session_id: session_id,
-              model_id: routing_decision.model_name,
-              task_type: Map.get(options, :task_type, "general"),
-              selected_model: routing_decision.model_name,
-              decided_at: DateTime.utc_now() |> DateTime.truncate(:second),
-              outcome: "pending"
-            }) do
+         {:ok, _} <-
+           Storage.save_routing_decision(%{
+             request_id: request_id,
+             session_id: session_id,
+             model_id: routing_decision.model_name,
+             task_type: Map.get(options, :task_type, "general"),
+             selected_model: routing_decision.model_name,
+             decided_at: DateTime.utc_now() |> DateTime.truncate(:second),
+             outcome: "pending"
+           }) do
       {:ok, response}
     else
       nil -> {:error, :model_not_found}

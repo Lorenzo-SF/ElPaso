@@ -25,8 +25,8 @@ defmodule ElPaso.Config.Wizard do
   Paso 1: Selección del tipo de motor.
   """
   def step_engine_type do
-    # Stub: en producción usaría Zaguan.UI.Select
-    # Por ahora, devuelve valor por defecto
+    # Stub: Zaguan no expone widgets de prompt CLI simple (solo componentes TUI).
+    # Para un wizard interactivo real se usaría IO.gets o una librería de prompts.
     {:ok, "llama_server"}
   end
 
@@ -41,7 +41,7 @@ defmodule ElPaso.Config.Wizard do
   Paso 3: Confirmación y guardado de configuración.
   """
   def step_confirm do
-    # Stub: en producción usaría Zaguan.UI.Confirm
+    # Stub: Zaguan.UI.Components.Confirm requiere runtime TUI; no es adecuado para CLI simple.
     IO.puts("¿Guardar configuración? [S/n]")
     :ok
   end

@@ -61,17 +61,19 @@ defmodule Mix.Tasks.Elpaso.Personality do
         IO.puts("No hay personalidades registradas")
 
       personalities ->
-        IO.puts("┌─────────┬─────────────────────┐")
-        IO.puts("│ Name    │ System Prompt     │")
-        IO.puts("├─────────┼─────────────────────┤")
+        alias Zaguan.Drawer.Components.Table
 
-        Enum.each(personalities, fn personality ->
-          IO.puts(
-            "│ #{personality.name} │ #{String.slice(personality.system_prompt, 0, 20)}... │"
-          )
+        rows = Enum.map(personalities, fn personality ->
+          prompt = String.slice(personality.system_prompt, 0, 30) <> "..."
+          [personality.name, prompt]
         end)
 
-        IO.puts("└─────────┴─────────────────────┘")
+        Table.print(
+          headers: ["Name", "System Prompt"],
+          rows: rows,
+          table_border: :rounded,
+          headers_color: :cyan
+        )
     end
   end
 

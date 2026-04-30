@@ -62,16 +62,16 @@ defmodule ElPaso do
 
   ```bash
   # Initialize the system
-  mix elpaso init
+  elpaso init
 
   # Add an engine (e.g. Ollama)
-  mix elpaso engine add ollama
+  elpaso engine add ollama --adapter ollama --base-url http://localhost:11434/v1
 
-  # Add a model  
-  mix elpaso model add fast --engine ollama
+  # Add a model
+  elpaso model add fast --engine ollama --url http://localhost:11434/v1
 
   # Start the server
-  mix run --no-halt
+  elpaso server start
   ```
 
   ## Configuration

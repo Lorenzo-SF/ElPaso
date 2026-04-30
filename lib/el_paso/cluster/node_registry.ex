@@ -78,7 +78,9 @@ defmodule ElPaso.Cluster.NodeRegistry do
 
         node_name ->
           # Iniciar net_kernel con shortnames
-          case :net_kernel.start([node_name, :shortnames]) do
+          node_atom = String.to_atom(node_name)
+
+          case :net_kernel.start([node_atom, :shortnames]) do
             {:ok, _pid} ->
               Logger.info("Started net_kernel as #{node_name}")
 

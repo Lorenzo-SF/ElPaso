@@ -108,7 +108,7 @@ export DATABASE_URL="postgresql://user:password@localhost/elpaso"
 ### 6. Iniciar el servidor
 
 ```bash
-mix run --no-halt
+elpaso server start
 ```
 
 El servidor arrancará en `http://localhost:8080` (o el puerto configurado).

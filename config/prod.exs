@@ -5,6 +5,11 @@ import Config
 # Cargar desde variables de entorno
 # ==============================================================
 
+# Logger en producción: solo warnings y errores
+config :logger, :console,
+  level: :warning,
+  format: "$time [$level] $message\n"
+
 # Puerto HTTP
 config :elpaso,
   http_port: String.to_integer(System.get_env("HTTP_PORT") || "4000")
@@ -78,4 +83,5 @@ config :elpaso, ElPaso.Repo,
   password: System.get_env("DB_PASSWORD") || "postgres",
   database: System.get_env("DB_NAME") || "elpaso_prod",
   port: String.to_integer(System.get_env("DB_PORT") || "5432"),
-  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE") || "10")
+  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE") || "10"),
+  log: false

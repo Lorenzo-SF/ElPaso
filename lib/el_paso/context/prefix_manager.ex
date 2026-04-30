@@ -40,7 +40,7 @@ defmodule ElPaso.Context.PrefixManager do
 
   def init(_args) do
     # Inicializar ETS para almacenar bloques canónicos
-    prefix_table = :ets.new(:prefix_blocks, [:named_table, :protected, :set])
+    prefix_table = :ets.new(:prefix_blocks, [:named_table, :public, :set])
     {:ok, %{table: prefix_table}}
   end
 

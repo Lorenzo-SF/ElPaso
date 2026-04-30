@@ -57,23 +57,26 @@ defmodule ElPaso.Domain.ModelManager do
     # Find the model
     model = Enum.find(state.models, &(&1.name == model_id))
 
-    case model do
-      nil ->
-        {:error, :model_not_found}
+    result =
+      case model do
+        nil ->
+          {:error, :model_not_found}
 
-      %Model{engine_id: engine_id} ->
-        # Get engine
-        engine = Repo.get(Engine, engine_id)
+        %Model{engine_id: engine_id} ->
+          # Get engine
+          engine = Repo.get(Engine, engine_id)
 
-        case engine do
-          nil ->
-            {:error, :engine_not_found}
+          case engine do
+            nil ->
+              {:error, :engine_not_found}
 
-          _ ->
-            # Dispatch to engine (this would be implemented in the engine adapter)
-            {:ok, %{content: "Response from #{model.name}", finish_reason: :stop}}
-        end
-    end
+            _ ->
+              # Dispatch to engine (this would be implemented in the engine adapter)
+              {:ok, %{content: "Response from #{model.name}", finish_reason: :stop}}
+          end
+      end
+
+    {:reply, result, state}
   end
 
   @doc """
