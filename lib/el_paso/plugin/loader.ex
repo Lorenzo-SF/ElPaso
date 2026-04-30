@@ -6,7 +6,6 @@ defmodule ElPaso.Plugin.Loader do
   """
 
   alias ElPaso.CLI.Output
-  alias ElPaso.Engine.Registry
 
   @doc """
   Carga todos los plugins configurados.
@@ -50,9 +49,9 @@ defmodule ElPaso.Plugin.Loader do
         Output.warning("Plugin #{module_name} no implementa ElPaso.Engine behaviour completo")
         :skip
       else
-        # Registrar en el registry
+        # Registrar en el registry de Zaguan
         engine_name = module.name()
-        Registry.register(engine_name, module)
+        Registry.register(Zaguan.Engine.Registry, engine_name, module)
         Output.success("Plugin de engine cargado: #{module_name} (#{engine_name})")
         {:ok, engine_name}
       end
@@ -84,7 +83,7 @@ defmodule ElPaso.Plugin.Loader do
   Descarga un plugin (lo desregistra).
   """
   def unload_engine_plugin(engine_name) do
-    Registry.unregister(engine_name)
+    Registry.unregister(Zaguan.Engine.Registry, engine_name)
     Output.error("Plugin de engine descargado: #{engine_name}")
     :ok
   end

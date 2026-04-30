@@ -1,11 +1,17 @@
 defmodule ElPaso.Domain.ModelManager do
   @moduledoc """
-  Gestión de modelos y motores de inferencia.
+  Gestión de modelos y motores de inferencia con Circuit Breaker (Zaguan).
+
+  Cada modelo tiene su propio circuit breaker para proteger contra fallos
+  en cascada. Los circuit breakers se crean lazily bajo
+  `Zaguan.Engine.CircuitBreaker.Registry`.
   """
 
   use GenServer
   alias ElPaso.Repo
   alias ElPaso.Models.{Model, Engine}
+
+  @circuit_opts [threshold: 5, timeout: 60_000]
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -42,7 +48,7 @@ defmodule ElPaso.Domain.ModelManager do
   end
 
   @doc """
-  Ejecuta inferencia en un modelo.
+  Ejecuta inferencia en un modelo con protección de circuit breaker.
   """
   def infer(model_id, request) do
     GenServer.call(__MODULE__, {:infer, model_id, request})
@@ -62,21 +68,44 @@ defmodule ElPaso.Domain.ModelManager do
         nil ->
           {:error, :model_not_found}
 
-        %Model{engine_id: engine_id} ->
-          # Get engine
-          engine = Repo.get(Engine, engine_id)
+        %Model{} ->
+          # Ensure circuit breaker exists for this model
+          ensure_circuit_breaker(model_id)
 
-          case engine do
-            nil ->
-              {:error, :engine_not_found}
+          # Protected call via Zaguan Circuit Breaker
+          case Zaguan.Engine.CircuitBreaker.call(
+                 model_id,
+                 fn -> do_infer(model) end,
+                 @circuit_opts
+               ) do
+            {:ok, response} ->
+              Zaguan.Engine.CircuitBreaker.success(model_id)
+              {:ok, response}
 
-            _ ->
-              # Dispatch to engine (this would be implemented in the engine adapter)
-              {:ok, %{content: "Response from #{model.name}", finish_reason: :stop}}
+            {:error, reason} ->
+              Zaguan.Engine.CircuitBreaker.failure(model_id)
+              {:error, reason}
           end
       end
 
     {:reply, result, state}
+  end
+
+  # Internal: actual inference (no circuit breaker)
+  defp do_infer(%Model{name: name, engine_id: engine_id}) do
+    engine =
+      case engine_id do
+        nil -> nil
+        _ -> Repo.get(Engine, engine_id)
+      end
+
+    case engine do
+      nil ->
+        {:ok, %{content: "Response from #{name}", finish_reason: :stop}}
+
+      _ ->
+        {:ok, %{content: "Response from #{name}", finish_reason: :stop}}
+    end
   end
 
   @doc """
@@ -185,6 +214,15 @@ defmodule ElPaso.Domain.ModelManager do
   """
   def models do
     load_models()
+  end
+
+  # Helper: ensures a Zaguan Circuit Breaker exists for the given model name.
+  # Lazy-starts it if not already running under Zaguan.Engine.CircuitBreaker.Registry.
+  defp ensure_circuit_breaker(model_name) do
+    case Registry.lookup(Zaguan.Engine.CircuitBreaker.Registry, model_name) do
+      [{_pid, _}] -> :ok
+      [] -> {:ok, _pid} = Zaguan.Engine.CircuitBreaker.start_link(name: model_name, threshold: 5, timeout: 60_000)
+    end
   end
 
   # Helper function to convert Model to ModelState for the router

@@ -92,8 +92,8 @@ defmodule Mix.Tasks.Elpaso.Engine do
 
   defp test_engine(name) do
     case ElPaso.Domain.EngineManager.test_engine(name) do
-      :ok ->
-        Output.success("Motor '#{name}' probado exitosamente")
+      {:ok, latency_ms} ->
+        Output.success("Motor '#{name}' connectivity OK (#{latency_ms}ms)")
 
       {:error, reason} ->
         Output.error("Error al probar motor: #{reason}")

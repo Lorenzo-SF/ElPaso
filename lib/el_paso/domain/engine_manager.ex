@@ -51,18 +51,44 @@ defmodule ElPaso.Domain.EngineManager do
   end
 
   @doc """
-  Prueba la conectividad de un motor.
+  Prueba la conectividad de un motor haciendo un HTTP GET a su base_url.
+
+  Retorna:
+  - `{:ok, latency_ms}` si el motor responde
+  - `{:error, reason}` si no se puede conectar
   """
   def test_engine(name) do
     case Repo.get_by(Engine, name: name) do
       nil ->
         {:error, "Motor no encontrado"}
 
-      _engine ->
-        # In a real implementation, this would make an actual HTTP request to test connectivity
-        # For now, we'll just return success
-        :ok
+      %Engine{base_url: base_url, adapter: adapter} ->
+        start = System.monotonic_time()
+
+        # Determinar endpoint de health check según el adapter
+        health_url = health_url(adapter, base_url)
+
+        case :httpc.request(:get, {health_url, []}, [], []) do
+          {:ok, {{_version, status, _reason}, _headers, _body}} when status >= 200 and status < 400 ->
+            latency_ms = System.convert_time_unit(System.monotonic_time() - start, :native, :millisecond)
+            {:ok, latency_ms}
+
+          {:ok, {{_version, status, _reason}, _headers, _body}} ->
+            {:error, "HTTP #{status}"}
+
+          {:error, reason} ->
+            {:error, inspect(reason)}
+        end
     end
+  end
+
+  # Ollama responde a GET /api/tags
+  defp health_url("ollama", base_url), do: "#{base_url}/api/tags"
+  # Para otros adapters intentamos el raíz o /v1/models
+  defp health_url(_adapter, base_url) do
+    # Strip trailing slash
+    base = :string.trim(base_url, :trailing, "/")
+    "#{base}/v1/models"
   end
 
   @doc """

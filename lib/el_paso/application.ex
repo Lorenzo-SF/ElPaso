@@ -18,13 +18,10 @@ defmodule ElPaso.Application do
 
   - **ElPaso.Repo** - Ecto repository for PostgreSQL persistence
   - **ModelManager** - Supervises model lifecycle (start/stop/health)
-  - **SessionSupervisor** - Manages session state in ETS and PostgreSQL
-  - **SummarizationSupervisor** - Handles background summarization jobs
   - **Telemetry.Store** - Collects metrics and events
   - **HTTP Server** - REST API endpoints (Plug.Cowboy)
-  - **Event.Supervisor** - Error handling and logging
   - **AutoTuner** - Adaptive routing optimization
-  - **Engine.Registry** - Central registry of inference engines
+  - **Zaguan.Engine.Supervisor** - Central registry of inference engines (Zaguan)
 
   ## Cluster Support
 
@@ -53,26 +50,17 @@ defmodule ElPaso.Application do
       # Ecto Repo supervisor - conexión a PostgreSQL
       {ElPaso.Repo, []},
 
-      # Registro central de engines disponibles
-      ElPaso.Engine.Registry,
-
       # Supervisor de la gestión de motores de inferencia
       ElPaso.Domain.ModelManager,
-
-      # Supervisor de la gestión de sesiones y conversaciones
-      ElPaso.Context.SessionSupervisor,
-
-      # Supervisor para el procesamiento de resúmenes
-      ElPaso.Context.SummarizationSupervisor,
 
       # Servidor de telemetry para métricas
       ElPaso.Telemetry.Store,
 
-      # Supervisor para el manejo de errores y eventos
-      ElPaso.Event.Supervisor,
-
       # AutoTuner para aprendizaje adaptativo
-      ElPaso.Domain.AutoTuner
+      ElPaso.Domain.AutoTuner,
+
+      # Motor de inferencia: Registry + Monitor + Leader + Workers (Zaguan)
+      Zaguan.Engine.Supervisor
     ]
 
     # Servidor HTTP solo si no estamos en modo CLI

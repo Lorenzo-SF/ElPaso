@@ -16,6 +16,7 @@ defmodule ElPaso.CLI.Output do
   """
 
   alias Zaguan.Drawer.Components.{Bar, Box, Breadcrumbs, Header, Json, Separator, Table}
+  alias Zaguan.Drawer.Printer
 
   # Colores corporativos ElPaso
   @color_primary {0, 180, 216}
@@ -26,32 +27,56 @@ defmodule ElPaso.CLI.Output do
   @color_muted {149, 165, 166}
 
   # ==========================================================================
-  # Mensajes flash semánticos
+  # Mensajes flash semánticos (delegados en Zaguan.Drawer.Printer)
   # ==========================================================================
 
   @doc """
   Imprime un mensaje de éxito.
   """
   @spec success(String.t()) :: :ok
-  def success(message), do: IO.puts("✅ #{message}")
+  def success(message), do: Printer.print_success(message)
 
   @doc """
   Imprime un mensaje de error.
   """
   @spec error(String.t()) :: :ok
-  def error(message), do: IO.puts("❌ #{message}")
+  def error(message), do: Printer.print_error(message)
 
   @doc """
   Imprime un mensaje informativo.
   """
   @spec info(String.t()) :: :ok
-  def info(message), do: IO.puts("ℹ️  #{message}")
+  def info(message), do: Printer.print_info(message)
 
   @doc """
   Imprime un mensaje de advertencia.
   """
   @spec warning(String.t()) :: :ok
-  def warning(message), do: IO.puts("⚠️  #{message}")
+  def warning(message), do: Printer.print_warning(message)
+
+  @doc """
+  Imprime un mensaje de debug.
+  """
+  @spec debug(String.t()) :: :ok
+  def debug(message), do: Printer.print_debug(message)
+
+  @doc """
+  Imprime un mensaje crítico.
+  """
+  @spec critical(String.t()) :: :ok
+  def critical(message), do: Printer.print_critical(message)
+
+  @doc """
+  Imprime un mensaje de alerta.
+  """
+  @spec alert(String.t()) :: :ok
+  def alert(message), do: Printer.print_alert(message)
+
+  @doc """
+  Imprime un mensaje de emergencia.
+  """
+  @spec emergency(String.t()) :: :ok
+  def emergency(message), do: Printer.print_emergency(message)
 
   # ==========================================================================
   # Headers y secciones

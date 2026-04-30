@@ -889,8 +889,8 @@ defmodule ElPaso.CLI do
 
     if name do
       case ElPaso.Domain.EngineManager.test_engine(name) do
-        :ok ->
-          Output.success("Motor '#{name}' conectividad verificada exitosamente")
+        {:ok, latency_ms} ->
+          Output.success("Motor '#{name}' connectivity OK (#{latency_ms}ms)")
 
         {:error, reason} ->
           Output.error("Error al verificar conectividad: #{reason}")
@@ -1052,13 +1052,14 @@ defmodule ElPaso.CLI do
     end
   end
 
-  defp handle_router(["tune" | _]) do
-    try do
-      ElPaso.Domain.AutoTuner.run_now()
-      Output.success("Auto-tuneo completado")
-    rescue
-      _ ->
-        Output.warning("Auto-tuneo no disponible en este momento")
+  defp handle_router(["tune" | rest]) do
+    if get_opt(rest, :revert_auto) do
+      case ElPaso.Domain.AutoTuner.revert_last() do
+        {:ok, msg} -> Output.success(msg)
+        {:error, msg} -> Output.error(msg)
+      end
+    else
+      run_router_tune_sync()
     end
   end
 
@@ -1094,6 +1095,108 @@ defmodule ElPaso.CLI do
 
   defp handle_router([]) do
     Output.info("Usa 'elpaso router --help' para ver ayuda del comando router.")
+  end
+
+  # Ejecuta el tuneo de forma síncrona (no usa el AutoTuner periódico).
+  defp run_router_tune_sync do
+    try do
+      Output.info("Analizando tendencias de routing (últimos 30 días)...")
+
+      analyses = ElPaso.Domain.RouterAnalyzer.analyze_trends(:last_30d)
+
+      if Enum.empty?(analyses) do
+        Output.warning("No hay datos suficientes para análisis. Se necesitan routing_decisions en la DB.")
+      else
+        appliable =
+          Enum.filter(analyses, fn a ->
+            n = a.n_decisions
+            confidence = min(n / 500.0, 1.0) *
+              (case a.success_trend do
+                 :improving -> 0.9
+                 :degrading -> 1.0
+                 :stable -> 0.5
+               end)
+            n >= 50 and confidence >= 0.85
+          end)
+
+        if Enum.empty?(appliable) do
+          Output.info("No hay cambios de alta confianza para aplicar.")
+          Output.divider("Análisis de tendencias")
+          print_router_analyses(analyses)
+        else
+          changes =
+            Enum.map(appliable, fn analysis ->
+              apply_tune_affinity(analysis)
+            end)
+
+          ElPaso.Context.Storage.save_auto_tune_run(%{
+            applied: length(changes),
+            at: DateTime.utc_now(),
+            changes: changes
+          })
+
+          Output.divider("Cambios aplicados (#{length(changes)})")
+
+          rows =
+            Enum.map(changes, fn c ->
+              [ "#{c.model_id}@#{c.task_type}",
+                "#{Float.round(c.previous_affinity, 2)} → #{Float.round(c.new_affinity, 2)}" ]
+            end)
+
+          Output.data_table(
+            headers: ["Modelo@Tarea", "Affinity anterior → nueva"],
+            rows: rows,
+            table_border: :rounded,
+            headers_color: :cyan
+          )
+
+          Output.success("Auto-tuneo completado: #{length(changes)} cambio(s) aplicado(s)")
+        end
+      end
+    rescue
+      e ->
+        Output.error("Error en auto-tuneo: #{inspect(e)}")
+    end
+  end
+
+  defp apply_tune_affinity(analysis) do
+    current = ElPaso.Config.Loader.get_affinity(analysis.model_id, analysis.task_type)
+
+    suggested =
+      case analysis.success_trend do
+        :improving -> min(current + 0.1, 1.0)
+        :degrading -> max(current - 0.15, 0.1)
+        :stable -> current
+      end
+
+    ElPaso.Config.Loader.update_affinity(analysis.model_id, analysis.task_type, suggested)
+
+    %{
+      model_id: analysis.model_id,
+      task_type: analysis.task_type,
+      previous_affinity: current,
+      new_affinity: suggested
+    }
+  end
+
+  defp print_router_analyses(analyses) do
+    rows =
+      Enum.map(analyses, fn a ->
+        trend =
+          case a.success_trend do
+            :improving -> "↑ Mejorando"
+            :degrading -> "↓ Degradando"
+            :stable -> "→ Estable"
+          end
+        alert = if a.alert, do: "⚠️", else: ""
+        ["#{a.model_id}@#{a.task_type}", "#{Float.round(a.overall_success_rate, 1)}%", trend, to_string(a.n_decisions), alert]
+      end)
+
+    Output.data_table(
+      headers: ["Modelo@Tarea", "Success Rate", "Trend", "N", "Alerta"],
+      rows: rows,
+      headers_color: :yellow
+    )
   end
 
   defp handle_bench(["run" | rest]) do
@@ -1160,8 +1263,8 @@ defmodule ElPaso.CLI do
       rows =
         Enum.map(sessions, fn s ->
           user = s.user_id || "anon"
-          created = s.created_at || "N/A"
-          [s.id, user, to_string(created)]
+          created = s.inserted_at || "N/A"
+          [s.session_id, user, to_string(created)]
         end)
 
       Output.data_table(
@@ -1182,20 +1285,23 @@ defmodule ElPaso.CLI do
           Output.error("Sesión no encontrada: #{id}")
 
         session ->
-          Output.section(session.id, subtitle: "Sesión")
+          Output.section(session.session_id, subtitle: "Sesión")
 
           Output.data_table(
             headers: ["Campo", "Valor"],
             rows: [
               ["Usuario", session.user_id || "anon"],
-              ["Creada", to_string(session.created_at)],
+              ["Modelo", session.model_id || "—"],
+              ["Estado", session.status || "—"],
+              ["Modo contexto", session.context_mode || "—"],
+              ["Creada", to_string(session.inserted_at)],
               ["Actualizada", to_string(session.updated_at)]
             ],
             table_border: :rounded,
             headers_color: :cyan
           )
 
-          messages = ElPaso.Context.Storage.get_all_messages(session.id)
+          messages = ElPaso.Context.Storage.get_all_messages(session.session_id)
           Output.divider("Mensajes (#{length(messages)})")
 
           if messages != [] do
@@ -1224,13 +1330,31 @@ defmodule ElPaso.CLI do
 
     cond do
       Keyword.get(opts, :all) ->
-        # No hay función para borrar todo en Storage, usamos truncate vía Repo
-        Ecto.Adapters.SQL.query!(ElPaso.Repo, "TRUNCATE sessions, messages CASCADE")
-        Output.success("Todas las sesiones y mensajes eliminados")
+        # Borrar todas las sesiones y sus mensajes vía Repo (Ecto)
+        try do
+          ElPaso.Repo.delete_all(ElPaso.Context.Schemas.Message)
+          {_, _} = ElPaso.Repo.delete_all(ElPaso.Context.Schemas.Session)
+          Output.success("Todas las sesiones y mensajes eliminados")
+        rescue
+          e ->
+            Output.error("Error al limpiar sesiones: #{inspect(e)}")
+        end
 
       id = Keyword.get(opts, :session) ->
-        ElPaso.Context.Storage.delete_session(id)
-        Output.success("Sesión #{id} eliminada")
+        # Fetch session first, then delete (Storage.delete_session expects %Session{})
+        case ElPaso.Context.Storage.get_session(id) do
+          nil ->
+            Output.error("Sesión no encontrada: #{id}")
+
+          session ->
+            case ElPaso.Context.Storage.delete_session(session) do
+              {:ok, _} ->
+                Output.success("Sesión #{id} eliminada")
+
+              {:error, reason} ->
+                Output.error("Error al eliminar sesión: #{inspect(reason)}")
+            end
+        end
 
       true ->
         Output.error("Especifica --all o --session <id>")
