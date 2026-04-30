@@ -7,16 +7,18 @@ defmodule Mix.Tasks.Elpaso.Model.Start do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
     case args do
       [name] ->
-        IO.puts("Starting model #{name}...")
+        Output.info("Starting model #{name}...")
 
         # In this simplified version, just show a sample
-        IO.puts("✅ Model #{name} started successfully!")
+        Output.success("Model #{name} started successfully!")
 
       _ ->
-        IO.puts("Usage: mix elpaso model start <name>")
+        Output.error("Usage: mix elpaso model start <name>")
     end
   end
 end

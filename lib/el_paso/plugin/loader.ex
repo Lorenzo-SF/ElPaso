@@ -5,6 +5,7 @@ defmodule ElPaso.Plugin.Loader do
   Permite cargar engines dinámicamente desde archivos .ex en disco.
   """
 
+  alias ElPaso.CLI.Output
   alias ElPaso.Engine.Registry
 
   @doc """
@@ -25,7 +26,7 @@ defmodule ElPaso.Plugin.Loader do
     resolved_path = Path.expand(path)
 
     unless File.exists?(resolved_path) do
-      IO.puts("⚠️ Plugin no encontrado: #{resolved_path}")
+      Output.warning("Plugin no encontrado: #{resolved_path}")
       :skip
     else
       load_and_register_plugin(resolved_path, module_name)
@@ -46,18 +47,18 @@ defmodule ElPaso.Plugin.Loader do
 
       # Verificar que implementa el behaviour
       unless implements_engine_behaviour?(module) do
-        IO.puts("⚠️ Plugin #{module_name} no implementa ElPaso.Engine behaviour completo")
+        Output.warning("Plugin #{module_name} no implementa ElPaso.Engine behaviour completo")
         :skip
       else
         # Registrar en el registry
         engine_name = module.name()
         Registry.register(engine_name, module)
-        IO.puts("✅ Plugin de engine cargado: #{module_name} (#{engine_name})")
+        Output.success("Plugin de engine cargado: #{module_name} (#{engine_name})")
         {:ok, engine_name}
       end
     rescue
       e ->
-        IO.puts("❌ Error cargando plugin #{module_name}: #{Exception.message(e)}")
+        Output.error("Error cargando plugin #{module_name}: #{Exception.message(e)}")
         :skip
     end
   end
@@ -84,7 +85,7 @@ defmodule ElPaso.Plugin.Loader do
   """
   def unload_engine_plugin(engine_name) do
     Registry.unregister(engine_name)
-    IO.puts("❌ Plugin de engine descargado: #{engine_name}")
+    Output.error("Plugin de engine descargado: #{engine_name}")
     :ok
   end
 

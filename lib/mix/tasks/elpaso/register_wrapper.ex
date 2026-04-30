@@ -18,6 +18,7 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
   alias ElPaso.Repo
   alias ElPaso.Models.{Engine, Model, Profile}
 
@@ -34,7 +35,7 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
       Mix.raise("Wrapper no encontrado: #{wrapper}")
     end
 
-    IO.puts("📖 Leyendo wrapper: #{wrapper}")
+    Output.info("Leyendo wrapper: #{wrapper}")
     content = File.read!(wrapper)
 
     globals = parse_globals(content)
@@ -44,8 +45,8 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
       Mix.raise("No se encontraron modelos en el wrapper.")
     end
 
-    IO.puts("   → Puerto #{globals.port}, API key: #{globals.api_key}")
-    IO.puts("   → #{length(models_cfg)} modelo(s) detectado(s)")
+    Output.info("Puerto #{globals.port}, API key: #{globals.api_key}")
+    Output.info("#{length(models_cfg)} modelo(s) detectado(s)")
     IO.puts("")
 
     engine = ensure_engine!(globals)
@@ -56,10 +57,10 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
     end)
 
     IO.puts("")
-    IO.puts("✅ Registro completo.")
-    IO.puts("   Engine : #{engine.name} → http://localhost:#{globals.port}/v1")
-    IO.puts("   Arranca el servidor con:  llama-server <alias>")
-    IO.puts("   Arranca ElPaso con:       elpaso server start")
+    Output.success("Registro completo.")
+    Output.info("Engine : #{engine.name} → http://localhost:#{globals.port}/v1")
+    Output.info("Arranca el servidor con:  llama-server <alias>")
+    Output.info("Arranca ElPaso con:       elpaso server start")
   end
 
   # ---------------------------------------------------------------------------
@@ -143,10 +144,10 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
           active: true
         })
         |> Repo.insert!()
-        |> tap(fn e -> IO.puts("  ➕ Engine   : #{e.name} @ #{e.base_url}") end)
+        |> tap(fn e -> Output.success("Engine   : #{e.name} @ #{e.base_url}") end)
 
       existing ->
-        IO.puts("  ℹ️  Engine   : #{existing.name} ya existe")
+        Output.info("Engine   : #{existing.name} ya existe")
         existing
     end
   end
@@ -222,10 +223,10 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
           vram_mb: 16_000
         })
         |> Repo.insert!()
-        |> tap(fn m -> IO.puts("  ➕ Model    : #{m.name} (#{m.description})") end)
+        |> tap(fn m -> Output.success("Model    : #{m.name} (#{m.description})") end)
 
       existing ->
-        IO.puts("  ℹ️  Model    : #{existing.name} ya existe")
+        Output.info("Model    : #{existing.name} ya existe")
         existing
     end
   end
@@ -245,10 +246,10 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
           description: "Perfil por defecto para #{cfg.alias}"
         })
         |> Repo.insert!()
-        |> tap(fn p -> IO.puts("  ➕ Profile  : #{p.name}") end)
+        |> tap(fn p -> Output.success("Profile  : #{p.name}") end)
 
       existing ->
-        IO.puts("  ℹ️  Profile  : #{existing.name} ya existe")
+        Output.info("Profile  : #{existing.name} ya existe")
         existing
     end
   end

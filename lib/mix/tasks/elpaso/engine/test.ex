@@ -7,16 +7,18 @@ defmodule Mix.Tasks.Elpaso.Engine.Test do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
     case args do
       [name] ->
-        IO.puts("Testing engine #{name}...")
+        Output.info("Testing engine #{name}...")
 
         # In this simplified version, just show a sample
-        IO.puts("✅ Engine #{name} tested successfully!")
+        Output.success("Engine #{name} tested successfully!")
 
       _ ->
-        IO.puts("Usage: mix elpaso engine test <name>")
+        Output.error("Usage: mix elpaso engine test <name>")
     end
   end
 end

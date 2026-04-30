@@ -7,8 +7,10 @@ defmodule Mix.Tasks.Elpaso.Init do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(_args) do
-    IO.puts("Initializing ElPaso configuration...")
+    Output.info("Initializing ElPaso configuration...")
 
     # Create config directory if it doesn't exist
     config_dir = Path.expand("~/.config/elpaso")
@@ -41,11 +43,11 @@ defmodule Mix.Tasks.Elpaso.Init do
       """
 
       File.write!(config_file, default_config)
-      IO.puts("✅ Configuration file created at #{config_file}")
+      Output.success("Configuration file created at #{config_file}")
     else
-      IO.puts("ℹ️  Configuration file already exists at #{config_file}")
+      Output.info("Configuration file already exists at #{config_file}")
     end
 
-    IO.puts("✅ ElPaso initialized successfully!")
+    Output.success("ElPaso initialized successfully!")
   end
 end

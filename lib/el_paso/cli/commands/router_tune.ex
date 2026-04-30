@@ -3,6 +3,8 @@ defmodule ElPaso.CLI.Commands.RouterTune do
   Comando para ajustar el enrutamiento de modelos.
   """
 
+  alias ElPaso.CLI.Output
+
   @doc """
   Ejecuta el comando de ajuste del enrutamiento.
   """
@@ -17,20 +19,20 @@ defmodule ElPaso.CLI.Commands.RouterTune do
   defp revert_auto_tune do
     case ElPaso.Domain.AutoTuner.revert_last() do
       {:ok, message} ->
-        IO.puts("✓ #{message}")
+        Output.success(message)
 
       {:error, message} ->
-        IO.puts("✗ #{message}")
+        Output.error(message)
     end
   end
 
   defp run_tuner(_opts) do
-    IO.puts("Ejecutando análisis de tendencias...")
+    Output.info("Ejecutando análisis de tendencias...")
 
     analyses = ElPaso.Domain.RouterAnalyzer.analyze_trends(:last_30d)
 
     if Enum.empty?(analyses) do
-      IO.puts(
+      Output.warning(
         "No hay datos suficientes para análisis. Se necesitan al menos 500 routing_decisions."
       )
     else
@@ -39,24 +41,48 @@ defmodule ElPaso.CLI.Commands.RouterTune do
   end
 
   defp print_analyses(analyses) do
-    IO.puts("Análisis de tendencias:\n")
+    Output.section("Análisis de tendencias")
 
-    analyses
-    |> Enum.each(fn a ->
-      trend_icon =
-        case a.success_trend do
-          :improving -> "↑"
-          :degrading -> "↓"
-          :stable -> "→"
-        end
+    rows =
+      Enum.map(analyses, fn a ->
+        trend =
+          case a.success_trend do
+            :improving -> "↑ Mejorando"
+            :degrading -> "↓ Degradando"
+            :stable -> "→ Estable"
+          end
 
-      status = if a.alert, do: "⚠️", else: ""
+        alert = if a.alert, do: "⚠️", else: ""
 
-      IO.puts(
-        "#{a.model_id}@#{a.task_type}: #{a.overall_success_rate}% #{trend_icon} (n=#{a.n_decisions}) #{status}"
-      )
+        [
+          "#{a.model_id}@#{a.task_type}",
+          "#{a.overall_success_rate}%",
+          trend,
+          to_string(a.n_decisions),
+          alert
+        ]
+      end)
 
-      IO.puts("  retry_rate: #{a.retry_rate_pct}%, latencia: #{a.median_latency_ms}ms")
-    end)
+    Output.data_table(
+      ["Modelo@Tarea", "Success Rate", "Trend", "N", "Alerta"],
+      rows,
+      headers_color: :yellow
+    )
+
+    Output.divider("Detalle por métrica")
+
+    detail_rows =
+      Enum.map(analyses, fn a ->
+        [
+          "#{a.model_id}@#{a.task_type}",
+          "#{a.retry_rate_pct}%",
+          "#{a.median_latency_ms}ms"
+        ]
+      end)
+
+    Output.data_table(
+      ["Modelo@Tarea", "Retry Rate", "Latencia mediana"],
+      detail_rows
+    )
   end
 end

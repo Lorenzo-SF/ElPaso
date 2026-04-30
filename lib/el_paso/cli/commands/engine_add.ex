@@ -3,15 +3,17 @@ defmodule ElPaso.CLI.Commands.EngineAdd do
   Comando para añadir un nuevo motor de inferencia.
   """
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
-    IO.puts(
+    Output.info(
       "Usage: elpaso engine add --name <name> --adapter <adapter> --base-url <url> [--api-key <key>] [--description <desc>] [--active true|false]"
     )
 
     if Enum.member?(args, "--help") or Enum.member?(args, "-h") do
-      IO.puts("""
-      elpaso engine add
+      Output.section("elpaso engine add")
 
+      IO.puts("""
       Registra un nuevo motor de inferencia en la base de datos.
 
       Opciones:
@@ -29,7 +31,7 @@ defmodule ElPaso.CLI.Commands.EngineAdd do
           --base-url http://localhost:11434/v1
       """)
     else
-      IO.puts("Use 'elpaso engine add --help' para más información.")
+      Output.info("Use 'elpaso engine add --help' para más información.")
     end
   end
 end

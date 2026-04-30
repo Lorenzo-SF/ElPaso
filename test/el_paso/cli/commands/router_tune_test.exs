@@ -59,6 +59,6 @@ defmodule ElPaso.CLI.Commands.RouterTuneTest do
         RouterTune.run(revert_auto: true)
       end)
 
-    assert output =~ "✓" or output =~ "✗"
+    assert output =~ "✅" or output =~ "❌"
   end
 end

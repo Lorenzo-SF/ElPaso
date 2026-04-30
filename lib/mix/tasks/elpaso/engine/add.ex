@@ -16,6 +16,7 @@ defmodule Mix.Tasks.Elpaso.Engine.Add do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
   alias ElPaso.Repo
   alias ElPaso.Models.Engine
 
@@ -39,7 +40,7 @@ defmodule Mix.Tasks.Elpaso.Engine.Add do
       )
 
     if is_nil(name) or is_nil(opts[:adapter]) or is_nil(opts[:url]) do
-      IO.puts(:stderr, "Uso: mix elpaso.engine.add <nombre> --adapter <adapter> --url <url>")
+      Output.error("Uso: mix elpaso.engine.add <nombre> --adapter <adapter> --url <url>")
       System.halt(1)
     end
 
@@ -55,10 +56,10 @@ defmodule Mix.Tasks.Elpaso.Engine.Add do
         })
         |> Repo.insert!()
 
-        IO.puts("✅ Engine '#{name}' registrado.")
+        Output.success("Engine '#{name}' registrado.")
 
       existing ->
-        IO.puts("ℹ️  Engine '#{existing.name}' ya existe.")
+        Output.info("Engine '#{existing.name}' ya existe.")
     end
   end
 end

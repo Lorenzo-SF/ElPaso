@@ -13,17 +13,19 @@ defmodule ElPaso.CLI.Commands.Bench do
     unknown: "Hola, ¿cómo estás?"
   }
 
+  alias ElPaso.CLI.Output
+
   def run(opts) do
     model_id = opts[:model]
     n = opts[:requests] || 7
     prompts = @default_prompts
 
-    IO.puts("=== Benchmark ElPaso: #{model_id || "auto"} — #{n} requests ===\n")
+    Output.section("Benchmark ElPaso", subtitle: "#{model_id || "auto"} — #{n} requests")
 
     results =
       Enum.map(1..n, fn i ->
         {task_type, _prompt} = select_prompt(prompts, i)
-        IO.puts("#{i}/#{n} (#{task_type})...")
+        Output.info("#{i}/#{n} (#{task_type})...")
 
         # Simulación de benchmark
         %{task_type: task_type, latency_ms: :rand.uniform(1000), ok: true}
@@ -41,9 +43,20 @@ defmodule ElPaso.CLI.Commands.Bench do
   defp print_summary(results) do
     latencies = Enum.map(results, & &1.latency_ms)
     avg = if latencies != [], do: Enum.sum(latencies) |> div(length(latencies)), else: 0
+    max_latency = if latencies != [], do: Enum.max(latencies), else: 0
+    min_latency = if latencies != [], do: Enum.min(latencies), else: 0
 
-    IO.puts("\n=== Resumen ===")
-    IO.puts("Latencia media: #{avg}ms")
-    IO.puts("Total requests: #{length(results)}")
+    Output.divider("Resumen")
+
+    Output.alert_box(
+      [
+        "Latencia media: #{avg}ms",
+        "Mínima: #{min_latency}ms | Máxima: #{max_latency}ms",
+        "Total requests: #{length(results)}"
+      ],
+      type: :info
+    )
+
+    Output.progress_bar(avg, 1000, label: "Latencia media")
   end
 end

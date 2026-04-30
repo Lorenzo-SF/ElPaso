@@ -11,6 +11,8 @@ defmodule Mix.Tasks.Elpaso.Model do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
     case args do
       ["add" | rest] ->
@@ -29,13 +31,13 @@ defmodule Mix.Tasks.Elpaso.Model do
         stop_model(name)
 
       _ ->
-        IO.puts("Usage: mix elpaso model <command>")
-        IO.puts("Commands:")
-        IO.puts("  add    Add a new model")
-        IO.puts("  list   List all models")
-        IO.puts("  remove Remove a model")
-        IO.puts("  start Start a model")
-        IO.puts("  stop   Stop a model")
+        Output.error("Usage: mix elpaso model <command>")
+        Output.info("Commands:")
+        Output.info("  add    Add a new model")
+        Output.info("  list   List all models")
+        Output.info("  remove Remove a model")
+        Output.info("  start  Start a model")
+        Output.info("  stop   Stop a model")
     end
   end
 
@@ -59,36 +61,33 @@ defmodule Mix.Tasks.Elpaso.Model do
                url: url
              }) do
           {:ok, _model} ->
-            IO.puts("✅ Modelo '#{name}' creado exitosamente")
+            Output.success("Modelo '#{name}' creado exitosamente")
 
           {:error, reason} ->
-            IO.puts("❌ Error al crear modelo: #{reason}")
+            Output.error("Error al crear modelo: #{reason}")
         end
       else
-        IO.puts("❌ Motor '#{engine_name}' no encontrado")
+        Output.error("Motor '#{engine_name}' no encontrado")
       end
     else
-      IO.puts("Uso: mix elpaso model add --name <name> --engine <engine> --url <url>")
+      Output.error("Uso: mix elpaso model add --name <name> --engine <engine> --url <url>")
     end
   end
 
   defp list_models() do
     case ElPaso.Domain.ModelManager.list_models() do
       [] ->
-        IO.puts("No hay modelos registrados")
+        Output.warning("No hay modelos registrados")
 
       models ->
-        alias Zaguan.Drawer.Components.Table
-
         rows =
           Enum.map(models, fn model ->
             [model.name, model.engine_id, model.url, to_string(model.active)]
           end)
 
-        Table.print(
-          headers: ["Name", "Engine", "URL", "Active"],
-          rows: rows,
-          table_border: :rounded,
+        Output.data_table(
+          ["Name", "Engine", "URL", "Active"],
+          rows,
           headers_color: :cyan
         )
     end
@@ -97,30 +96,30 @@ defmodule Mix.Tasks.Elpaso.Model do
   defp remove_model(name) do
     case ElPaso.Domain.ModelManager.delete_model(name) do
       {:ok, _} ->
-        IO.puts("✅ Modelo '#{name}' eliminado exitosamente")
+        Output.success("Modelo '#{name}' eliminado exitosamente")
 
       {:error, reason} ->
-        IO.puts("❌ Error al eliminar modelo: #{format_error(reason)}")
+        Output.error("Error al eliminar modelo: #{format_error(reason)}")
     end
   end
 
   defp start_model(name) do
     case ElPaso.Domain.ModelManager.start_model(name) do
       {:ok, _} ->
-        IO.puts("✅ Modelo '#{name}' iniciado exitosamente")
+        Output.success("Modelo '#{name}' iniciado exitosamente")
 
       {:error, reason} ->
-        IO.puts("❌ Error al iniciar modelo: #{format_error(reason)}")
+        Output.error("Error al iniciar modelo: #{format_error(reason)}")
     end
   end
 
   defp stop_model(name) do
     case ElPaso.Domain.ModelManager.stop_model(name) do
       {:ok, _} ->
-        IO.puts("✅ Modelo '#{name}' detenido exitosamente")
+        Output.success("Modelo '#{name}' detenido exitosamente")
 
       {:error, reason} ->
-        IO.puts("❌ Error al detener modelo: #{format_error(reason)}")
+        Output.error("Error al detener modelo: #{format_error(reason)}")
     end
   end
 

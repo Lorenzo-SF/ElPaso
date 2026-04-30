@@ -7,16 +7,18 @@ defmodule Mix.Tasks.Elpaso.Model.Stop do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
     case args do
       [name] ->
-        IO.puts("Stopping model #{name}...")
+        Output.info("Stopping model #{name}...")
 
         # In this simplified version, just show a sample
-        IO.puts("✅ Model #{name} stopped successfully!")
+        Output.success("Model #{name} stopped successfully!")
 
       _ ->
-        IO.puts("Usage: mix elpaso model stop <name>")
+        Output.error("Usage: mix elpaso model stop <name>")
     end
   end
 end

@@ -3,15 +3,17 @@ defmodule ElPaso.CLI.Commands.ModelAdd do
   Comando para añadir un nuevo modelo a la configuración.
   """
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
-    IO.puts(
+    Output.info(
       "Usage: elpaso model add --name <name> --engine <engine> --url <url> [--api-key <key>] [--description <desc>] [--active true|false] [--max-tokens <num>]"
     )
 
     if Enum.member?(args, "--help") or Enum.member?(args, "-h") do
-      IO.puts("""
-      elpaso model add
+      Output.section("elpaso model add")
 
+      IO.puts("""
       Registra un nuevo modelo de inferencia en la base de datos.
 
       Opciones:
@@ -31,7 +33,7 @@ defmodule ElPaso.CLI.Commands.ModelAdd do
           --api-key no-api-key-required
       """)
     else
-      IO.puts("Use 'elpaso model add --help' para más información.")
+      Output.info("Use 'elpaso model add --help' para más información.")
     end
   end
 end

@@ -3,7 +3,7 @@ defmodule ElPaso.CLI do
   CLI principal para elpaso.
   """
 
-  alias Zaguan.Drawer.Components.{Header, Separator, Table}
+  alias ElPaso.CLI.Output
 
   def main([]) do
     IO.puts("""
@@ -400,9 +400,9 @@ defmodule ElPaso.CLI do
           route_command(args)
 
         {:error, {app, reason}} ->
-          IO.puts("❌ Error al iniciar la aplicación #{app}: #{inspect(reason)}")
-          IO.puts("   Asegúrate de que PostgreSQL está corriendo y la DB existe.")
-          IO.puts("   Crea la DB con:  mix ecto.create && mix ecto.migrate")
+          Output.error("Error al iniciar la aplicación #{app}: #{inspect(reason)}")
+          Output.info("Asegúrate de que PostgreSQL está corriendo y la DB existe.")
+          Output.info("Crea la DB con:  mix ecto.create && mix ecto.migrate")
           System.halt(1)
       end
     else
@@ -427,19 +427,46 @@ defmodule ElPaso.CLI do
 
   defp route_command(args) do
     case args do
-      ["init" | rest] -> handle_init(rest)
-      ["model" | rest] -> handle_model(rest)
-      ["engine" | rest] -> handle_engine(rest)
-      ["personality" | rest] -> handle_personality(rest)
-      ["profile" | rest] -> handle_profile(rest)
-      ["config" | rest] -> handle_config(rest)
-      ["db" | rest] -> handle_db(rest)
-      ["server" | rest] -> handle_server(rest)
-      ["router" | rest] -> handle_router(rest)
-      ["bench" | rest] -> handle_bench(rest)
-      ["context" | rest] -> handle_context(rest)
-      ["cluster" | rest] -> handle_cluster(rest)
-      _ -> IO.puts("Comando desconocido. Usa 'elpaso --help' para ver los comandos disponibles.")
+      ["init" | rest] ->
+        handle_init(rest)
+
+      ["model" | rest] ->
+        handle_model(rest)
+
+      ["engine" | rest] ->
+        handle_engine(rest)
+
+      ["personality" | rest] ->
+        handle_personality(rest)
+
+      ["profile" | rest] ->
+        handle_profile(rest)
+
+      ["config" | rest] ->
+        handle_config(rest)
+
+      ["db" | rest] ->
+        handle_db(rest)
+
+      ["server" | rest] ->
+        handle_server(rest)
+
+      ["router" | rest] ->
+        handle_router(rest)
+
+      ["bench" | rest] ->
+        handle_bench(rest)
+
+      ["context" | rest] ->
+        handle_context(rest)
+
+      ["cluster" | rest] ->
+        handle_cluster(rest)
+
+      _ ->
+        Output.error(
+          "Comando desconocido. Usa 'elpaso --help' para ver los comandos disponibles."
+        )
     end
   end
 
@@ -452,7 +479,7 @@ defmodule ElPaso.CLI do
     File.mkdir_p!(config_dir)
 
     if File.exists?(config_file) do
-      IO.puts("ℹ️  Configuración ya existe en #{config_file}")
+      Output.info("Configuración ya existe en #{config_file}")
     else
       default_config = """
       # ElPaso Configuration
@@ -476,10 +503,10 @@ defmodule ElPaso.CLI do
       """
 
       File.write!(config_file, default_config)
-      IO.puts("✅ Configuración creada en #{config_file}")
+      Output.success("Configuración creada en #{config_file}")
     end
 
-    IO.puts("✅ ElPaso inicializado")
+    Output.success("ElPaso inicializado")
   end
 
   # ==================== DB HANDLERS ====================
@@ -499,21 +526,21 @@ defmodule ElPaso.CLI do
       {:ok, conn} ->
         case Postgrex.query(conn, "CREATE DATABASE #{db_name}", []) do
           {:ok, _} ->
-            IO.puts("✅ Base de datos '#{db_name}' creada")
+            Output.success("Base de datos '#{db_name}' creada")
             GenServer.stop(conn)
 
           {:error, %{postgres: %{code: :duplicate_database}}} ->
-            IO.puts("ℹ️  Base de datos '#{db_name}' ya existe")
+            Output.info("Base de datos '#{db_name}' ya existe")
             GenServer.stop(conn)
 
           {:error, reason} ->
-            IO.puts("❌ Error al crear la base de datos: #{inspect(reason)}")
+            Output.error("Error al crear la base de datos: #{inspect(reason)}")
             System.halt(1)
         end
 
       {:error, reason} ->
-        IO.puts("❌ No se pudo conectar a PostgreSQL: #{inspect(reason)}")
-        IO.puts("   Asegúrate de que PostgreSQL está corriendo.")
+        Output.error("No se pudo conectar a PostgreSQL: #{inspect(reason)}")
+        Output.info("Asegúrate de que PostgreSQL está corriendo.")
         System.halt(1)
     end
   end
@@ -523,10 +550,10 @@ defmodule ElPaso.CLI do
 
     case Ecto.Migrator.run(ElPaso.Repo, path, :up, all: true) do
       [] ->
-        IO.puts("ℹ️  No hay migraciones pendientes")
+        Output.info("No hay migraciones pendientes")
 
       migrations ->
-        IO.puts("✅ #{length(migrations)} migración(es) aplicada(s)")
+        Output.success("#{length(migrations)} migración(es) aplicada(s)")
     end
   end
 
@@ -535,21 +562,21 @@ defmodule ElPaso.CLI do
     status = Ecto.Migrator.migrations(ElPaso.Repo, path)
 
     if status == [] do
-      IO.puts("No hay migraciones")
+      Output.warning("No hay migraciones")
     else
       rows =
         Enum.map(status, fn {state, version, name} ->
           state_str =
             case state do
-              :up -> "✅ Aplicada"
-              :down -> "⬜ Pendiente"
-              :missing -> "❌ Faltante"
+              :up -> "Aplicada"
+              :down -> "Pendiente"
+              :missing -> "Faltante"
             end
 
           [to_string(version), name, state_str]
         end)
 
-      Table.print(
+      Output.data_table(
         headers: ["Versión", "Nombre", "Estado"],
         rows: rows,
         table_border: :rounded,
@@ -559,7 +586,7 @@ defmodule ElPaso.CLI do
   end
 
   defp handle_db([]) do
-    IO.puts("Usa 'elpaso db --help' para ver ayuda.")
+    Output.info("Usa 'elpaso db --help' para ver ayuda.")
     IO.puts("Comandos: create, migrate, status")
   end
 
@@ -568,7 +595,7 @@ defmodule ElPaso.CLI do
   defp handle_model(["list" | _]) do
     case ElPaso.Domain.ModelManager.list_models() do
       [] ->
-        IO.puts("No hay modelos registrados")
+        Output.warning("No hay modelos registrados")
 
       models ->
         rows =
@@ -576,7 +603,7 @@ defmodule ElPaso.CLI do
             [m.name, m.engine_id, m.url, to_string(m.active)]
           end)
 
-        Table.print(
+        Output.data_table(
           headers: ["Name", "Engine", "URL", "Active"],
           rows: rows,
           table_border: :rounded,
@@ -591,14 +618,14 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.ModelManager.delete_model(name) do
         :ok ->
-          IO.puts("✅ Modelo '#{name}' eliminado exitosamente")
+          Output.success("Modelo '#{name}' eliminado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al eliminar modelo: #{reason}")
+          Output.error("Error al eliminar modelo: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
-      IO.puts("Uso: elpaso model delete --name <nombre>")
+      Output.error("Error: Falta --name")
+      Output.error("Uso: elpaso model delete --name <nombre>")
     end
   end
 
@@ -619,14 +646,14 @@ defmodule ElPaso.CLI do
 
       case ElPaso.Domain.ModelManager.update_model(name, attrs) do
         {:ok, _model} ->
-          IO.puts("✅ Modelo '#{name}' actualizado exitosamente")
+          Output.success("Modelo '#{name}' actualizado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al actualizar modelo: #{reason}")
+          Output.error("Error al actualizar modelo: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
-      IO.puts("Uso: elpaso model update --name <nombre> [opciones]")
+      Output.error("Error: Falta --name")
+      Output.error("Uso: elpaso model update --name <nombre> [opciones]")
     end
   end
 
@@ -636,12 +663,12 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.ModelManager.get_model(name) do
         nil ->
-          IO.puts("❌ Modelo no encontrado")
+          Output.error("Modelo no encontrado")
 
         model ->
-          Header.print(model.name, subtitle: "Modelo")
+          Output.section(model.name, subtitle: "Modelo")
 
-          Table.print(
+          Output.data_table(
             headers: ["Campo", "Valor"],
             rows: [
               ["Engine", model.engine_id],
@@ -656,8 +683,8 @@ defmodule ElPaso.CLI do
           )
       end
     else
-      IO.puts("❌ Error: Falta --name")
-      IO.puts("Uso: elpaso model show --name <nombre>")
+      Output.error("Error: Falta --name")
+      Output.error("Uso: elpaso model show --name <nombre>")
     end
   end
 
@@ -667,14 +694,14 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.ModelManager.start_model(name) do
         {:ok, _model} ->
-          IO.puts("✅ Modelo '#{name}' iniciado exitosamente")
+          Output.success("Modelo '#{name}' iniciado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al iniciar modelo: #{reason}")
+          Output.error("Error al iniciar modelo: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
-      IO.puts("Uso: elpaso model start --name <nombre>")
+      Output.error("Error: Falta --name")
+      Output.error("Uso: elpaso model start --name <nombre>")
     end
   end
 
@@ -684,14 +711,14 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.ModelManager.stop_model(name) do
         {:ok, _model} ->
-          IO.puts("✅ Modelo '#{name}' detenido exitosamente")
+          Output.success("Modelo '#{name}' detenido exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al detener modelo: #{reason}")
+          Output.error("Error al detener modelo: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
-      IO.puts("Uso: elpaso model stop --name <nombre>")
+      Output.error("Error: Falta --name")
+      Output.error("Uso: elpaso model stop --name <nombre>")
     end
   end
 
@@ -716,19 +743,19 @@ defmodule ElPaso.CLI do
 
       case ElPaso.Domain.ModelManager.create_model(attrs) do
         {:ok, _model} ->
-          IO.puts("✅ Modelo '#{name}' creado exitosamente")
+          Output.success("Modelo '#{name}' creado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al crear modelo: #{reason}")
+          Output.error("Error al crear modelo: #{reason}")
       end
     else
-      IO.puts("❌ Error: Faltan parámetros requeridos")
-      IO.puts("Uso: elpaso model add --name <name> --engine <engine> --url <url> [opciones]")
+      Output.error("Error: Faltan parámetros requeridos")
+      Output.error("Uso: elpaso model add --name <name> --engine <engine> --url <url> [opciones]")
     end
   end
 
   defp handle_model([]) do
-    IO.puts("Usa 'elpaso model --help' para ver ayuda del comando model.")
+    Output.info("Usa 'elpaso model --help' para ver ayuda del comando model.")
   end
 
   defp handle_model(args) do
@@ -738,7 +765,7 @@ defmodule ElPaso.CLI do
   defp handle_engine(["list" | _]) do
     case ElPaso.Domain.EngineManager.list_engines() do
       [] ->
-        IO.puts("No hay motores registrados")
+        Output.warning("No hay motores registrados")
 
       engines ->
         rows =
@@ -746,7 +773,7 @@ defmodule ElPaso.CLI do
             [e.name, e.adapter, e.base_url, to_string(e.active)]
           end)
 
-        Table.print(
+        Output.data_table(
           headers: ["Name", "Adapter", "Base URL", "Active"],
           rows: rows,
           table_border: :rounded,
@@ -761,13 +788,13 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.EngineManager.delete_engine(name) do
         :ok ->
-          IO.puts("✅ Motor '#{name}' eliminado exitosamente")
+          Output.success("Motor '#{name}' eliminado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al eliminar motor: #{reason}")
+          Output.error("Error al eliminar motor: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
+      Output.error("Error: Falta --name")
     end
   end
 
@@ -786,13 +813,13 @@ defmodule ElPaso.CLI do
 
       case ElPaso.Domain.EngineManager.update_engine(name, attrs) do
         {:ok, _engine} ->
-          IO.puts("✅ Motor '#{name}' actualizado exitosamente")
+          Output.success("Motor '#{name}' actualizado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al actualizar motor: #{reason}")
+          Output.error("Error al actualizar motor: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
+      Output.error("Error: Falta --name")
     end
   end
 
@@ -802,12 +829,12 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.EngineManager.list_engines() |> Enum.find(&(&1.name == name)) do
         nil ->
-          IO.puts("❌ Motor no encontrado")
+          Output.error("Motor no encontrado")
 
         engine ->
-          Header.print(engine.name, subtitle: "Motor")
+          Output.section(engine.name, subtitle: "Motor")
 
-          Table.print(
+          Output.data_table(
             headers: ["Campo", "Valor"],
             rows: [
               ["Adapter", engine.adapter],
@@ -820,7 +847,7 @@ defmodule ElPaso.CLI do
           )
       end
     else
-      IO.puts("❌ Error: Falta --name")
+      Output.error("Error: Falta --name")
     end
   end
 
@@ -843,15 +870,15 @@ defmodule ElPaso.CLI do
 
       case ElPaso.Domain.EngineManager.create_engine(attrs) do
         {:ok, _engine} ->
-          IO.puts("✅ Motor '#{name}' creado exitosamente")
+          Output.success("Motor '#{name}' creado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al crear motor: #{reason}")
+          Output.error("Error al crear motor: #{reason}")
       end
     else
-      IO.puts("❌ Error: Faltan parámetros requeridos")
+      Output.error("Error: Faltan parámetros requeridos")
 
-      IO.puts(
+      Output.error(
         "Uso: elpaso engine add --name <name> --adapter <adapter> --base-url <url> [opciones]"
       )
     end
@@ -863,14 +890,14 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.EngineManager.test_engine(name) do
         :ok ->
-          IO.puts("✅ Motor '#{name}' conectividad verificada exitosamente")
+          Output.success("Motor '#{name}' conectividad verificada exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al verificar conectividad: #{reason}")
+          Output.error("Error al verificar conectividad: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
-      IO.puts("Uso: elpaso engine test --name <nombre>")
+      Output.error("Error: Falta --name")
+      Output.error("Uso: elpaso engine test --name <nombre>")
     end
   end
 
@@ -937,19 +964,19 @@ defmodule ElPaso.CLI do
     config = ElPaso.Config.Loader.load_config_file()
 
     if config == %{} do
-      IO.puts("ℹ️  No hay configuración. Ejecuta: elpaso init")
+      Output.info("No hay configuración. Ejecuta: elpaso init")
     else
-      Header.print("~/.config/elpaso/elpaso.conf", subtitle: "Configuración")
+      Output.section("~/.config/elpaso/elpaso.conf", subtitle: "Configuración")
 
       Enum.each(config, fn {section, values} ->
-        Separator.print(section, char: "═")
+        Output.divider(section, char: "═")
 
         rows =
           Enum.map(values, fn {key, value} ->
             [to_string(key), to_string(value)]
           end)
 
-        Table.print(
+        Output.data_table(
           headers: ["Clave", "Valor"],
           rows: rows,
           table_border: :rounded,
@@ -979,21 +1006,21 @@ defmodule ElPaso.CLI do
       updated_section = Map.put(section_map, key, value)
       updated_config = Map.put(config, section, updated_section)
       ElPaso.Config.Loader.save_config_file(updated_config)
-      IO.puts("✅ #{section}.#{key} = #{value}")
+      Output.success("#{section}.#{key} = #{value}")
     else
-      IO.puts("❌ Faltan parámetros")
-      IO.puts("Uso: elpaso config set --section <s> --key <k> --value <v>")
+      Output.error("Faltan parámetros")
+      Output.error("Uso: elpaso config set --section <s> --key <k> --value <v>")
     end
   end
 
   defp handle_config(["reload" | _]) do
-    IO.puts("Recargando configuración...")
+    Output.info("Recargando configuración...")
     _ = ElPaso.Config.Loader.load_config_file()
-    IO.puts("✅ Configuración recargada")
+    Output.success("Configuración recargada")
   end
 
   defp handle_config([]) do
-    IO.puts("Usa 'elpaso config --help' para ver ayuda del comando config.")
+    Output.info("Usa 'elpaso config --help' para ver ayuda del comando config.")
   end
 
   defp handle_router(["stats" | rest]) do
@@ -1004,7 +1031,7 @@ defmodule ElPaso.CLI do
       decisions = ElPaso.Context.Storage.query_routing_decisions(limit: limit)
 
       if decisions == [] do
-        IO.puts("ℹ️  No hay decisiones de routing registradas")
+        Output.info("No hay decisiones de routing registradas")
       else
         rows =
           Enum.map(decisions, fn d ->
@@ -1012,7 +1039,7 @@ defmodule ElPaso.CLI do
             [d.request_id, d.selected_model, d.reason, lat]
           end)
 
-        Table.print(
+        Output.data_table(
           headers: ["Request ID", "Modelo", "Razón", "Latencia"],
           rows: rows,
           table_border: :rounded,
@@ -1021,17 +1048,17 @@ defmodule ElPaso.CLI do
       end
     rescue
       _ ->
-        IO.puts("ℹ️  No hay estadísticas de routing disponibles")
+        Output.info("No hay estadísticas de routing disponibles")
     end
   end
 
   defp handle_router(["tune" | _]) do
     try do
       ElPaso.Domain.AutoTuner.run_now()
-      IO.puts("✅ Auto-tuneo completado")
+      Output.success("Auto-tuneo completado")
     rescue
       _ ->
-        IO.puts("⚠️  Auto-tuneo no disponible en este momento")
+        Output.warning("Auto-tuneo no disponible en este momento")
     end
   end
 
@@ -1040,7 +1067,7 @@ defmodule ElPaso.CLI do
       states = ElPaso.Domain.ModelManager.all_states()
 
       if states == [] do
-        IO.puts("ℹ️  No hay reglas de routing activas")
+        Output.info("No hay reglas de routing activas")
       else
         rows =
           Enum.map(states, fn s ->
@@ -1052,7 +1079,7 @@ defmodule ElPaso.CLI do
             ]
           end)
 
-        Table.print(
+        Output.data_table(
           headers: ["Modelo", "Estado", "Cola", "Latencia media"],
           rows: rows,
           table_border: :rounded,
@@ -1061,12 +1088,12 @@ defmodule ElPaso.CLI do
       end
     rescue
       _ ->
-        IO.puts("⚠️  No se pudieron cargar las reglas de routing")
+        Output.warning("No se pudieron cargar las reglas de routing")
     end
   end
 
   defp handle_router([]) do
-    IO.puts("Usa 'elpaso router --help' para ver ayuda del comando router.")
+    Output.info("Usa 'elpaso router --help' para ver ayuda del comando router.")
   end
 
   defp handle_bench(["run" | rest]) do
@@ -1090,15 +1117,15 @@ defmodule ElPaso.CLI do
     concurrency = Keyword.get(opts, :concurrency, 1)
     duration = Keyword.get(opts, :duration, 10)
 
-    IO.puts("Benchmark:")
-    IO.puts("  Modelos: #{Enum.join(models, ", ")}")
-    IO.puts("  Prompt: #{prompt}")
-    IO.puts("  Concurrencia: #{concurrency}")
-    IO.puts("  Duración: #{duration}s")
+    Output.section("Benchmark")
+    Output.info("Modelos: #{Enum.join(models, ", ")}")
+    Output.info("Prompt: #{prompt}")
+    Output.info("Concurrencia: #{concurrency}")
+    Output.info("Duración: #{duration}s")
     IO.puts("")
 
     Enum.each(models, fn model ->
-      IO.puts("Testeando #{model}...")
+      Output.info("Testeando #{model}...")
 
       {time_us, result} =
         :timer.tc(fn ->
@@ -1109,16 +1136,16 @@ defmodule ElPaso.CLI do
         {:ok, resp} ->
           tokens = Map.get(resp, :completion_tokens, 0)
           tps = if time_us > 0, do: Float.round(tokens / (time_us / 1_000_000), 1), else: 0
-          IO.puts("  ✅ #{time_us / 1000}ms | #{tokens} tokens | #{tps} tok/s")
+          Output.success("#{time_us / 1000}ms | #{tokens} tokens | #{tps} tok/s")
 
         {:error, reason} ->
-          IO.puts("  ❌ Error: #{inspect(reason)}")
+          Output.error("Error: #{inspect(reason)}")
       end
     end)
   end
 
   defp handle_bench([]) do
-    IO.puts("Usa 'elpaso bench --help' para ver ayuda del comando bench.")
+    Output.info("Usa 'elpaso bench --help' para ver ayuda del comando bench.")
   end
 
   defp handle_context(["list" | rest]) do
@@ -1128,7 +1155,7 @@ defmodule ElPaso.CLI do
     sessions = ElPaso.Context.Storage.list_sessions() |> Enum.take(limit)
 
     if sessions == [] do
-      IO.puts("No hay sesiones registradas")
+      Output.warning("No hay sesiones registradas")
     else
       rows =
         Enum.map(sessions, fn s ->
@@ -1137,7 +1164,7 @@ defmodule ElPaso.CLI do
           [s.id, user, to_string(created)]
         end)
 
-      Table.print(
+      Output.data_table(
         headers: ["ID", "Usuario", "Creada"],
         rows: rows,
         table_border: :rounded,
@@ -1152,12 +1179,12 @@ defmodule ElPaso.CLI do
     if id do
       case ElPaso.Context.Storage.get_session(id) do
         nil ->
-          IO.puts("❌ Sesión no encontrada: #{id}")
+          Output.error("Sesión no encontrada: #{id}")
 
         session ->
-          Header.print(session.id, subtitle: "Sesión")
+          Output.section(session.id, subtitle: "Sesión")
 
-          Table.print(
+          Output.data_table(
             headers: ["Campo", "Valor"],
             rows: [
               ["Usuario", session.user_id || "anon"],
@@ -1169,7 +1196,7 @@ defmodule ElPaso.CLI do
           )
 
           messages = ElPaso.Context.Storage.get_all_messages(session.id)
-          Separator.print("Mensajes (#{length(messages)})")
+          Output.divider("Mensajes (#{length(messages)})")
 
           if messages != [] do
             msg_rows =
@@ -1178,7 +1205,7 @@ defmodule ElPaso.CLI do
                 [m.role, preview]
               end)
 
-            Table.print(
+            Output.data_table(
               headers: ["Rol", "Contenido"],
               rows: msg_rows,
               table_border: :rounded,
@@ -1187,8 +1214,8 @@ defmodule ElPaso.CLI do
           end
       end
     else
-      IO.puts("❌ Falta ID de sesión")
-      IO.puts("Uso: elpaso context show <session_id>")
+      Output.error("Falta ID de sesión")
+      Output.error("Uso: elpaso context show <session_id>")
     end
   end
 
@@ -1199,19 +1226,19 @@ defmodule ElPaso.CLI do
       Keyword.get(opts, :all) ->
         # No hay función para borrar todo en Storage, usamos truncate vía Repo
         Ecto.Adapters.SQL.query!(ElPaso.Repo, "TRUNCATE sessions, messages CASCADE")
-        IO.puts("✅ Todas las sesiones y mensajes eliminados")
+        Output.success("Todas las sesiones y mensajes eliminados")
 
       id = Keyword.get(opts, :session) ->
         ElPaso.Context.Storage.delete_session(id)
-        IO.puts("✅ Sesión #{id} eliminada")
+        Output.success("Sesión #{id} eliminada")
 
       true ->
-        IO.puts("❌ Especifica --all o --session <id>")
+        Output.error("Especifica --all o --session <id>")
     end
   end
 
   defp handle_context([]) do
-    IO.puts("Usa 'elpaso context --help' para ver ayuda del comando context.")
+    Output.info("Usa 'elpaso context --help' para ver ayuda del comando context.")
   end
 
   defp handle_cluster(["status" | _]) do
@@ -1219,9 +1246,9 @@ defmodule ElPaso.CLI do
       nodes = ElPaso.Cluster.NodeRegistry.all_nodes()
 
       if nodes == [] do
-        IO.puts("🔴 Sin nodos en el cluster")
+        Output.error("Sin nodos en el cluster")
       else
-        Header.print("Cluster ElPaso", subtitle: "#{length(nodes)} nodo(s)")
+        Output.section("Cluster ElPaso", subtitle: "#{length(nodes)} nodo(s)")
 
         rows =
           Enum.map(nodes, fn n ->
@@ -1231,7 +1258,7 @@ defmodule ElPaso.CLI do
             [to_string(n), status]
           end)
 
-        Table.print(
+        Output.data_table(
           headers: ["Nodo", "Estado"],
           rows: rows,
           table_border: :rounded,
@@ -1240,7 +1267,7 @@ defmodule ElPaso.CLI do
       end
     rescue
       _ ->
-        IO.puts("ℹ️  Cluster no configurado. Habilita en ~/.config/elpaso/elpaso.conf")
+        Output.info("Cluster no configurado. Habilita en ~/.config/elpaso/elpaso.conf")
     end
   end
 
@@ -1249,15 +1276,15 @@ defmodule ElPaso.CLI do
       nodes = ElPaso.Cluster.NodeRegistry.all_nodes()
 
       if nodes == [] do
-        IO.puts("No hay nodos registrados")
+        Output.warning("No hay nodos registrados")
       else
         rows =
           Enum.map(nodes, fn n ->
-            alive = if Node.ping(String.to_atom(n)) == :pong, do: "🟢 vivo", else: "🔴 caído"
+            alive = if Node.ping(String.to_atom(n)) == :pong, do: "Activo", else: "Inactivo"
             [to_string(n), alive]
           end)
 
-        Table.print(
+        Output.data_table(
           headers: ["Nodo", "Estado"],
           rows: rows,
           table_border: :rounded,
@@ -1266,7 +1293,7 @@ defmodule ElPaso.CLI do
       end
     rescue
       _ ->
-        IO.puts("ℹ️  Cluster no disponible")
+        Output.info("Cluster no disponible")
     end
   end
 
@@ -1275,7 +1302,7 @@ defmodule ElPaso.CLI do
 
     case Keyword.get(opts, :nodes) do
       nil ->
-        IO.puts("❌ Especifica --nodes ip1,ip2")
+        Output.error("Especifica --nodes ip1,ip2")
 
       nodes_str ->
         nodes = String.split(nodes_str, ",")
@@ -1283,15 +1310,15 @@ defmodule ElPaso.CLI do
         Enum.each(nodes, fn n ->
           node_atom = String.to_atom("elpaso@#{n}")
           Node.connect(node_atom)
-          IO.puts("🔗 Conectando a #{node_atom}...")
+          Output.info("Conectando a #{node_atom}...")
         end)
 
-        IO.puts("✅ Conectado a #{length(nodes)} nodo(s)")
+        Output.success("Conectado a #{length(nodes)} nodo(s)")
     end
   end
 
   defp handle_cluster([]) do
-    IO.puts("Usa 'elpaso cluster --help' para ver ayuda del comando cluster.")
+    Output.info("Usa 'elpaso cluster --help' para ver ayuda del comando cluster.")
   end
 
   # ==================== PERSONALITY HANDLERS ====================
@@ -1310,14 +1337,14 @@ defmodule ElPaso.CLI do
 
       case ElPaso.Domain.PersonalityManager.create_personality(attrs) do
         {:ok, _personality} ->
-          IO.puts("✅ Personalidad '#{name}' creada exitosamente")
+          Output.success("Personalidad '#{name}' creada exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al crear personalidad: #{reason}")
+          Output.error("Error al crear personalidad: #{reason}")
       end
     else
-      IO.puts("❌ Error: Faltan parámetros requeridos")
-      IO.puts("Uso: elpaso personality add --name <nombre> --system-prompt <prompt>")
+      Output.error("Error: Faltan parámetros requeridos")
+      Output.error("Uso: elpaso personality add --name <nombre> --system-prompt <prompt>")
     end
   end
 
@@ -1325,7 +1352,7 @@ defmodule ElPaso.CLI do
     personalities = ElPaso.Domain.PersonalityManager.list_personalities()
 
     if Enum.empty?(personalities) do
-      IO.puts("No hay personalidades registradas")
+      Output.warning("No hay personalidades registradas")
     else
       rows =
         Enum.map(personalities, fn p ->
@@ -1334,7 +1361,7 @@ defmodule ElPaso.CLI do
           [p.name, desc, prompt]
         end)
 
-      Table.print(
+      Output.data_table(
         headers: ["Nombre", "Descripción", "System Prompt"],
         rows: rows,
         table_border: :rounded,
@@ -1349,13 +1376,13 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.PersonalityManager.delete_personality(name) do
         {:ok, _} ->
-          IO.puts("✅ Personalidad '#{name}' eliminada exitosamente")
+          Output.success("Personalidad '#{name}' eliminada exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al eliminar personalidad: #{reason}")
+          Output.error("Error al eliminar personalidad: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
+      Output.error("Error: Falta --name")
     end
   end
 
@@ -1365,12 +1392,12 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.PersonalityManager.get_personality(name) do
         nil ->
-          IO.puts("❌ Personalidad no encontrada")
+          Output.error("Personalidad no encontrada")
 
         personality ->
-          Header.print(personality.name, subtitle: "Personalidad")
+          Output.section(personality.name, subtitle: "Personalidad")
 
-          Table.print(
+          Output.data_table(
             headers: ["Campo", "Valor"],
             rows: [
               ["Descripción", personality.description || "N/A"],
@@ -1381,7 +1408,7 @@ defmodule ElPaso.CLI do
           )
       end
     else
-      IO.puts("❌ Error: Falta --name")
+      Output.error("Error: Falta --name")
     end
   end
 
@@ -1391,15 +1418,15 @@ defmodule ElPaso.CLI do
 
     if model_name && personality_name do
       # This would be implemented in the future to assign personality to model
-      IO.puts("✅ Personalidad '#{personality_name}' asignada al modelo '#{model_name}'")
+      Output.success("Personalidad '#{personality_name}' asignada al modelo '#{model_name}'")
     else
-      IO.puts("❌ Error: Faltan parámetros requeridos")
-      IO.puts("Uso: elpaso personality use --model <modelo> --personality <nombre>")
+      Output.error("Error: Faltan parámetros requeridos")
+      Output.error("Uso: elpaso personality use --model <modelo> --personality <nombre>")
     end
   end
 
   defp handle_personality([]) do
-    IO.puts("Usa 'elpaso personality --help' para ver ayuda.")
+    Output.info("Usa 'elpaso personality --help' para ver ayuda.")
   end
 
   defp handle_personality(args) do
@@ -1430,18 +1457,18 @@ defmodule ElPaso.CLI do
 
         case ElPaso.Domain.ProfileManager.create_profile(attrs) do
           {:ok, _profile} ->
-            IO.puts("✅ Profile '#{name}' creado exitosamente")
+            Output.success("Profile '#{name}' creado exitosamente")
 
           {:error, reason} ->
-            IO.puts("❌ Error al crear profile: #{reason}")
+            Output.error("Error al crear profile: #{reason}")
         end
       else
-        IO.puts("❌ Error: Uno o más elementos no encontrados (modelo, motor o personalidad)")
+        Output.error("Error: Uno o más elementos no encontrados (modelo, motor o personalidad)")
       end
     else
-      IO.puts("❌ Error: Faltan parámetros requeridos")
+      Output.error("Error: Faltan parámetros requeridos")
 
-      IO.puts(
+      Output.error(
         "Uso: elpaso profile add --name <nombre> --model <modelo> --engine <motor> --personality <personalidad>"
       )
     end
@@ -1451,14 +1478,14 @@ defmodule ElPaso.CLI do
     profiles = ElPaso.Domain.ProfileManager.list_profiles()
 
     if Enum.empty?(profiles) do
-      IO.puts("No hay profiles registrados")
+      Output.warning("No hay profiles registrados")
     else
       rows =
         Enum.map(profiles, fn p ->
           [p.name, p.model.name, p.engine.name, p.personality.name]
         end)
 
-      Table.print(
+      Output.data_table(
         headers: ["Nombre", "Modelo", "Motor", "Personalidad"],
         rows: rows,
         table_border: :rounded,
@@ -1473,13 +1500,13 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.ProfileManager.delete_profile(name) do
         {:ok, _} ->
-          IO.puts("✅ Profile '#{name}' eliminado exitosamente")
+          Output.success("Profile '#{name}' eliminado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al eliminar profile: #{reason}")
+          Output.error("Error al eliminar profile: #{reason}")
       end
     else
-      IO.puts("❌ Error: Falta --name")
+      Output.error("Error: Falta --name")
     end
   end
 
@@ -1489,12 +1516,12 @@ defmodule ElPaso.CLI do
     if name do
       case ElPaso.Domain.ProfileManager.get_profile(name) do
         nil ->
-          IO.puts("❌ Profile no encontrado")
+          Output.error("Profile no encontrado")
 
         profile ->
-          Header.print(profile.name, subtitle: "Profile")
+          Output.section(profile.name, subtitle: "Profile")
 
-          Table.print(
+          Output.data_table(
             headers: ["Campo", "Valor"],
             rows: [
               ["Modelo", profile.model.name],
@@ -1506,12 +1533,12 @@ defmodule ElPaso.CLI do
           )
       end
     else
-      IO.puts("❌ Error: Falta --name")
+      Output.error("Error: Falta --name")
     end
   end
 
   defp handle_profile([]) do
-    IO.puts("Usa 'elpaso profile --help' para ver ayuda.")
+    Output.info("Usa 'elpaso profile --help' para ver ayuda.")
   end
 
   defp handle_profile(args) do
@@ -1535,18 +1562,18 @@ defmodule ElPaso.CLI do
       Application.put_env(:elpaso, :http_port, port)
     end
 
-    Header.print("ElPaso v0.1.0", subtitle: "Multi-Model LLM Proxy")
+    Output.section("ElPaso v0.1.0", subtitle: "Multi-Model LLM Proxy")
     IO.puts("")
-    IO.puts("[init] Arrancando aplicación OTP...")
+    Output.info("Arrancando aplicación OTP...")
 
     case Application.ensure_all_started(:elpaso) do
       {:ok, _} ->
-        IO.puts("[init] ✅ Aplicación OTP lista")
+        Output.success("Aplicación OTP lista")
         IO.puts("")
 
-        Separator.print("Endpoints")
+        Output.divider("Endpoints")
 
-        Table.print(
+        Output.data_table(
           headers: ["Servicio", "URL"],
           rows: [
             ["HTTP", "http://0.0.0.0:#{port}"],
@@ -1563,43 +1590,45 @@ defmodule ElPaso.CLI do
           models = ElPaso.Domain.ModelManager.list_models()
 
           if engines != [] do
-            Separator.print("Engines registrados")
+            Output.divider("Engines registrados")
 
-            engine_rows = Enum.map(engines, fn e ->
-              [e.name, e.adapter, e.base_url]
-            end)
+            engine_rows =
+              Enum.map(engines, fn e ->
+                [e.name, e.adapter, e.base_url]
+              end)
 
-            Table.print(
+            Output.data_table(
               headers: ["Nombre", "Adapter", "Base URL"],
               rows: engine_rows,
               table_border: :rounded,
               headers_color: :yellow
             )
           else
-            IO.puts("⚠️  No hay engines registrados. Usa: elpaso engine add ...")
+            Output.warning("No hay engines registrados. Usa: elpaso engine add ...")
           end
 
           if models != [] do
-            Separator.print("Modelos registrados")
+            Output.divider("Modelos registrados")
 
-            model_rows = Enum.map(models, fn m ->
-              [m.name, m.engine_id, m.url]
-            end)
+            model_rows =
+              Enum.map(models, fn m ->
+                [m.name, m.engine_id, m.url]
+              end)
 
-            Table.print(
+            Output.data_table(
               headers: ["Nombre", "Engine", "URL"],
               rows: model_rows,
               table_border: :rounded,
               headers_color: :yellow
             )
           else
-            IO.puts("⚠️  No hay modelos registrados. Usa: elpaso model add ...")
+            Output.warning("No hay modelos registrados. Usa: elpaso model add ...")
           end
         rescue
           _ -> :ok
         end
 
-        Separator.print("Servidor activo — Ctrl+C para detener")
+        Output.divider("Servidor activo — Ctrl+C para detener")
 
         receive do
         after
@@ -1607,7 +1636,7 @@ defmodule ElPaso.CLI do
         end
 
       {:error, {app, reason}} ->
-        IO.puts("[init] ❌ Error al iniciar #{app}: #{inspect(reason)}")
+        Output.error("Error al iniciar #{app}: #{inspect(reason)}")
         System.halt(1)
     end
   end
@@ -1615,24 +1644,24 @@ defmodule ElPaso.CLI do
   defp handle_server(["stop" | _]) do
     case Application.stop(:elpaso) do
       :ok ->
-        IO.puts("✅ Servidor detenido")
+        Output.success("Servidor detenido")
 
       {:error, {:not_started, :elpaso}} ->
-        IO.puts("ℹ️  ElPaso no está en ejecución")
+        Output.info("ElPaso no está en ejecución")
     end
   end
 
   defp handle_server(["restart" | _]) do
-    IO.puts("[init] Reiniciando ElPaso...")
+    Output.info("Reiniciando ElPaso...")
     Application.stop(:elpaso)
 
     case Application.ensure_all_started(:elpaso) do
       {:ok, _} ->
         port = ElPaso.Config.http_port()
-        IO.puts("[init] ✅ Reiniciado en http://0.0.0.0:#{port}")
+        Output.success("Reiniciado en http://0.0.0.0:#{port}")
 
       {:error, {app, reason}} ->
-        IO.puts("[init] ❌ Error al reiniciar #{app}: #{inspect(reason)}")
+        Output.error("Error al reiniciar #{app}: #{inspect(reason)}")
         System.halt(1)
     end
   end
@@ -1640,11 +1669,11 @@ defmodule ElPaso.CLI do
   defp handle_server(["status" | _]) do
     case Application.started_applications() |> Enum.find(&(elem(&1, 0) == :elpaso)) do
       nil ->
-        IO.puts("🔴 Detenido")
+        Output.error("Detenido")
 
       _ ->
         port = ElPaso.Config.http_port()
-        IO.puts("🟢 Activo en http://localhost:#{port}")
+        Output.success("Activo en http://localhost:#{port}")
     end
   end
 
@@ -1664,12 +1693,12 @@ defmodule ElPaso.CLI do
       |> Enum.take(-lines)
       |> Enum.each(&IO.write/1)
     else
-      IO.puts("ℹ️  No se encontró #{log_path}. Los logs van a stdout.")
+      Output.info("No se encontró #{log_path}. Los logs van a stdout.")
     end
   end
 
   defp handle_server([]) do
-    IO.puts("Usa 'elpaso server --help' para ver ayuda.")
+    Output.info("Usa 'elpaso server --help' para ver ayuda.")
   end
 
   defp handle_server(args) do

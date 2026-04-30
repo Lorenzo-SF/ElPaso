@@ -10,6 +10,8 @@ defmodule Mix.Tasks.Elpaso.Personality do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
     case args do
       ["add" | rest] ->
@@ -25,12 +27,12 @@ defmodule Mix.Tasks.Elpaso.Personality do
         show_personality(name)
 
       _ ->
-        IO.puts("Usage: mix elpaso personality <command>")
-        IO.puts("Commands:")
-        IO.puts("  add    Add a new personality")
-        IO.puts("  list   List all personalities")
-        IO.puts("  remove Remove a personality")
-        IO.puts("  show   Show details of a personality")
+        Output.error("Usage: mix elpaso personality <command>")
+        Output.info("Commands:")
+        Output.info("  add    Add a new personality")
+        Output.info("  list   List all personalities")
+        Output.info("  remove Remove a personality")
+        Output.info("  show   Show details of a personality")
     end
   end
 
@@ -45,34 +47,31 @@ defmodule Mix.Tasks.Elpaso.Personality do
              system_prompt: system_prompt
            }) do
         {:ok, _personality} ->
-          IO.puts("✅ Personalidad '#{name}' creada exitosamente")
+          Output.success("Personalidad '#{name}' creada exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al crear personalidad: #{reason}")
+          Output.error("Error al crear personalidad: #{reason}")
       end
     else
-      IO.puts("Uso: mix elpaso personality add --name <name> --system-prompt <prompt>")
+      Output.error("Uso: mix elpaso personality add --name <name> --system-prompt <prompt>")
     end
   end
 
   defp list_personalities() do
     case ElPaso.Domain.PersonalityManager.list_personalities() do
       [] ->
-        IO.puts("No hay personalidades registradas")
+        Output.warning("No hay personalidades registradas")
 
       personalities ->
-        alias Zaguan.Drawer.Components.Table
-
         rows =
           Enum.map(personalities, fn personality ->
             prompt = String.slice(personality.system_prompt, 0, 30) <> "..."
             [personality.name, prompt]
           end)
 
-        Table.print(
-          headers: ["Name", "System Prompt"],
-          rows: rows,
-          table_border: :rounded,
+        Output.data_table(
+          ["Name", "System Prompt"],
+          rows,
           headers_color: :cyan
         )
     end
@@ -81,21 +80,21 @@ defmodule Mix.Tasks.Elpaso.Personality do
   defp remove_personality(name) do
     case ElPaso.Domain.PersonalityManager.delete_personality(name) do
       :ok ->
-        IO.puts("✅ Personalidad '#{name}' eliminada exitosamente")
+        Output.success("Personalidad '#{name}' eliminada exitosamente")
 
       {:error, reason} ->
-        IO.puts("❌ Error al eliminar personalidad: #{reason}")
+        Output.error("Error al eliminar personalidad: #{reason}")
     end
   end
 
   defp show_personality(name) do
     case ElPaso.Domain.PersonalityManager.get_personality(name) do
       nil ->
-        IO.puts("❌ Personalidad no encontrada")
+        Output.error("Personalidad no encontrada")
 
       personality ->
-        IO.puts("Personalidad: #{personality.name}")
-        IO.puts("  System Prompt: #{personality.system_prompt}")
+        Output.section("Personalidad: #{personality.name}")
+        Output.info("System Prompt: #{personality.system_prompt}")
     end
   end
 

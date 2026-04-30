@@ -7,16 +7,18 @@ defmodule Mix.Tasks.Elpaso.Engine.Remove do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
     case args do
       [name] ->
-        IO.puts("Removing engine #{name}...")
+        Output.info("Removing engine #{name}...")
 
         # In this simplified version, just show a sample
-        IO.puts("✅ Engine #{name} removed successfully!")
+        Output.success("Engine #{name} removed successfully!")
 
       _ ->
-        IO.puts("Usage: mix elpaso engine remove <name>")
+        Output.error("Usage: mix elpaso engine remove <name>")
     end
   end
 end

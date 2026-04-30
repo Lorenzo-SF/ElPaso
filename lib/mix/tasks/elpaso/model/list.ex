@@ -7,8 +7,10 @@ defmodule Mix.Tasks.Elpaso.Model.List do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(_args) do
-    IO.puts("Listing all models...")
+    Output.info("Listing all models...")
 
     # In this simplified version, just show a sample
     IO.puts("""
@@ -19,6 +21,6 @@ defmodule Mix.Tasks.Elpaso.Model.List do
     - mistral-7b (vllm)
     """)
 
-    IO.puts("✅ Models listed successfully!")
+    Output.success("Models listed successfully!")
   end
 end

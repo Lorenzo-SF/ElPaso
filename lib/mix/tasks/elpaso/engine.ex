@@ -10,6 +10,8 @@ defmodule Mix.Tasks.Elpaso.Engine do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(args) do
     case args do
       ["add" | rest] ->
@@ -25,12 +27,12 @@ defmodule Mix.Tasks.Elpaso.Engine do
         test_engine(name)
 
       _ ->
-        IO.puts("Usage: mix elpaso engine <command>")
-        IO.puts("Commands:")
-        IO.puts("  add    Add a new engine")
-        IO.puts("  list     List all engines")
-        IO.puts("  remove Remove an engine")
-        IO.puts("  test   Test an engine")
+        Output.error("Usage: mix elpaso engine <command>")
+        Output.info("Commands:")
+        Output.info("  add    Add a new engine")
+        Output.info("  list   List all engines")
+        Output.info("  remove Remove an engine")
+        Output.info("  test   Test an engine")
     end
   end
 
@@ -47,33 +49,32 @@ defmodule Mix.Tasks.Elpaso.Engine do
              base_url: base_url
            }) do
         {:ok, _engine} ->
-          IO.puts("✅ Motor '#{name}' creado exitosamente")
+          Output.success("Motor '#{name}' creado exitosamente")
 
         {:error, reason} ->
-          IO.puts("❌ Error al crear motor: #{reason}")
+          Output.error("Error al crear motor: #{reason}")
       end
     else
-      IO.puts("Uso: mix elpaso engine add --name <name> --adapter <adapter> --base-url <url>")
+      Output.error(
+        "Uso: mix elpaso engine add --name <name> --adapter <adapter> --base-url <url>"
+      )
     end
   end
 
   defp list_engines() do
     case ElPaso.Domain.EngineManager.list_engines() do
       [] ->
-        IO.puts("No hay motores registrados")
+        Output.warning("No hay motores registrados")
 
       engines ->
-        alias Zaguan.Drawer.Components.Table
-
         rows =
           Enum.map(engines, fn engine ->
             [engine.name, engine.adapter, engine.base_url, to_string(engine.active)]
           end)
 
-        Table.print(
-          headers: ["Name", "Adapter", "Base URL", "Active"],
-          rows: rows,
-          table_border: :rounded,
+        Output.data_table(
+          ["Name", "Adapter", "Base URL", "Active"],
+          rows,
           headers_color: :cyan
         )
     end
@@ -82,20 +83,20 @@ defmodule Mix.Tasks.Elpaso.Engine do
   defp remove_engine(name) do
     case ElPaso.Domain.EngineManager.delete_engine(name) do
       {:ok, _} ->
-        IO.puts("✅ Motor '#{name}' eliminado exitosamente")
+        Output.success("Motor '#{name}' eliminado exitosamente")
 
       {:error, reason} ->
-        IO.puts("❌ Error al eliminar motor: #{reason}")
+        Output.error("Error al eliminar motor: #{reason}")
     end
   end
 
   defp test_engine(name) do
     case ElPaso.Domain.EngineManager.test_engine(name) do
       :ok ->
-        IO.puts("✅ Motor '#{name}' probado exitosamente")
+        Output.success("Motor '#{name}' probado exitosamente")
 
       {:error, reason} ->
-        IO.puts("❌ Error al probar motor: #{reason}")
+        Output.error("Error al probar motor: #{reason}")
     end
   end
 

@@ -7,8 +7,10 @@ defmodule Mix.Tasks.Elpaso.Engine.List do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
+
   def run(_args) do
-    IO.puts("Listing all engines...")
+    Output.info("Listing all engines...")
 
     # In this simplified version, just show a sample
     IO.puts("""
@@ -20,6 +22,6 @@ defmodule Mix.Tasks.Elpaso.Engine.List do
     - ollama (local)
     """)
 
-    IO.puts("✅ Engines listed successfully!")
+    Output.success("Engines listed successfully!")
   end
 end

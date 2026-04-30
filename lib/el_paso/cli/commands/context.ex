@@ -3,6 +3,7 @@ defmodule ElPaso.CLI.Commands.Context do
   Comando para gestionar el contexto de sesiones.
   """
 
+  alias ElPaso.CLI.Output
   alias ElPaso.Context.Storage
 
   @doc """
@@ -25,7 +26,7 @@ defmodule ElPaso.CLI.Commands.Context do
         render_text(session)
       end
     else
-      IO.puts("Sesión no encontrada: #{session_id}")
+      Output.error("Sesión no encontrada: #{session_id}")
     end
   end
 
@@ -33,19 +34,45 @@ defmodule ElPaso.CLI.Commands.Context do
   Lista todas las sesiones activas.
   """
   def list_sessions do
-    IO.puts("Lista de sesiones (por implementar)")
+    sessions = Storage.list_sessions()
+
+    if sessions == [] do
+      Output.info("No hay sesiones activas")
+    else
+      Output.section("Sesiones activas")
+
+      rows =
+        Enum.map(sessions, fn s ->
+          [
+            s.session_id,
+            s.user_id || "—",
+            s.status || "—",
+            format_datetime(s.inserted_at)
+          ]
+        end)
+
+      Output.data_table(
+        ["ID", "Usuario", "Estado", "Creada"],
+        rows
+      )
+    end
   end
 
   # Renderizado en texto
   defp render_text(session) when is_map(session) do
-    IO.puts("\n=== Sesión #{session.session_id} ===")
-    IO.puts("Usuario: #{session.user_id || "—"}")
-    IO.puts("Modelo: #{session.model_id || "—"}")
-    IO.puts("Estado: #{session.status || "—"}")
-    IO.puts("Modo contexto: #{session.context_mode || "—"}")
-    IO.puts("Creada: #{format_datetime(session.inserted_at)}")
-    IO.puts("Última actividad: #{format_datetime(session.updated_at)}")
-    IO.puts("")
+    Output.section(session.session_id, subtitle: "Sesión")
+
+    Output.data_table(
+      ["Campo", "Valor"],
+      [
+        ["Usuario", session.user_id || "—"],
+        ["Modelo", session.model_id || "—"],
+        ["Estado", session.status || "—"],
+        ["Modo contexto", session.context_mode || "—"],
+        ["Creada", format_datetime(session.inserted_at)],
+        ["Última actividad", format_datetime(session.updated_at)]
+      ]
+    )
   end
 
   # Renderizado en JSON
@@ -60,7 +87,7 @@ defmodule ElPaso.CLI.Commands.Context do
       updated_at: format_datetime(session.updated_at)
     }
 
-    IO.puts(Jason.encode!(data, pretty: true))
+    Output.json_data(data)
   end
 
   defp format_datetime(nil), do: "—"

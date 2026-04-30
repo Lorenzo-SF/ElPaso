@@ -18,6 +18,7 @@ defmodule Mix.Tasks.Elpaso.Model.Add do
 
   use Mix.Task
 
+  alias ElPaso.CLI.Output
   alias ElPaso.Repo
   alias ElPaso.Models.{Engine, Model}
 
@@ -43,16 +44,15 @@ defmodule Mix.Tasks.Elpaso.Model.Add do
       )
 
     if is_nil(name) or is_nil(opts[:engine]) or is_nil(opts[:url]) do
-      IO.puts(:stderr, "Uso: mix elpaso.model.add <nombre> --engine <engine> --url <url>")
+      Output.error("Uso: mix elpaso.model.add <nombre> --engine <engine> --url <url>")
       System.halt(1)
     end
 
     engine = Repo.get_by(Engine, name: opts[:engine])
 
     if is_nil(engine) do
-      IO.puts(
-        :stderr,
-        "❌ Engine '#{opts[:engine]}' no existe. Regístralo primero con: mix elpaso engine add"
+      Output.error(
+        "Engine '#{opts[:engine]}' no existe. Regístralo primero con: mix elpaso engine add"
       )
 
       System.halt(1)
@@ -73,10 +73,10 @@ defmodule Mix.Tasks.Elpaso.Model.Add do
         })
         |> Repo.insert!()
 
-        IO.puts("✅ Model '#{name}' registrado (engine: #{engine.name}).")
+        Output.success("Model '#{name}' registrado (engine: #{engine.name}).")
 
       existing ->
-        IO.puts("ℹ️  Model '#{existing.name}' ya existe.")
+        Output.info("Model '#{existing.name}' ya existe.")
     end
   end
 end

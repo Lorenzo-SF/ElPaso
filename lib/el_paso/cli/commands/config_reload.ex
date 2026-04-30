@@ -3,11 +3,19 @@ defmodule ElPaso.CLI.Commands.ConfigReload do
   Muestra la configuración actual del sistema desde la base de datos.
   """
 
+  alias ElPaso.CLI.Output
+
   def run(_opts) do
-    IO.puts("\n=== Configuración Actual ===")
-    IO.puts("Configuración cargada desde base de datos:")
-    IO.puts("  - Modelos: (no hay modelos registrados aún)")
-    IO.puts("  - Motores: (no hay motores registrados aún)")
-    IO.puts("Use 'elpaso model add' para registrar modelos")
+    Output.section("Configuración Actual")
+
+    Output.alert_box(
+      [
+        "No hay modelos registrados aún.",
+        "No hay motores registrados aún.",
+        "",
+        "Use 'elpaso model add' para registrar modelos"
+      ],
+      type: :warning
+    )
   end
 end

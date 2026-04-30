@@ -1,28 +1,25 @@
 defmodule ElPaso.CLI.Commands.RouterStats do
-  alias Zaguan.Drawer.Components.{Header, Separator, Table}
+  alias ElPaso.CLI.Output
   alias ElPaso.Domain.RouterStats
 
   def run(opts) do
     since = opts[:since] || :last_24h
     report = RouterStats.aggregate(since)
 
-    Header.print("Routing Stats", subtitle: "#{period_label(since)}")
+    Output.section("Routing Stats", subtitle: period_label(since))
+    Output.divider("Resumen global")
 
-    Separator.print("Resumen global")
-
-    Table.print(
-      headers: ["Métrica", "Valor"],
-      rows: [
+    Output.data_table(
+      ["Métrica", "Valor"],
+      [
         ["Total decisiones", to_string(report.total_decisions)],
         ["Fallbacks", "#{report.fallback_count} (#{report.fallback_rate_pct}%)"],
         ["Cold starts", to_string(report.cold_starts)],
         ["Errores", to_string(report.error_count)]
-      ],
-      headers_color: :cyan,
-      table_border: :rounded
+      ]
     )
 
-    Separator.print("Por modelo")
+    Output.divider("Por modelo")
 
     model_rows =
       report.by_model
@@ -36,15 +33,14 @@ defmodule ElPaso.CLI.Commands.RouterStats do
         ]
       end)
 
-    Table.print(
-      headers: ["Modelo", "Calls", "Avg", "p95", "Errores"],
-      rows: model_rows,
-      headers_color: :yellow,
-      table_border: :rounded
+    Output.data_table(
+      ["Modelo", "Calls", "Avg", "p95", "Errores"],
+      model_rows,
+      headers_color: :yellow
     )
 
     if opts[:format] == "json" do
-      Zaguan.Drawer.Components.Json.print(report)
+      Output.json_data(report)
     end
   end
 
