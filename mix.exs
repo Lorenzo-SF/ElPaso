@@ -130,7 +130,7 @@ defmodule ElPaso.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"],
+      extras: ["README.md", "README_ES.md"],
       source_url: @source_url,
       source_ref: "v#{@version}"
     ]
@@ -138,11 +138,12 @@ defmodule ElPaso.MixProject do
 
   defp package do
     [
-      description: "Multi-model LLM proxy for local and remote inference engines",
+      description:
+        "Multi-model LLM proxy for Elixir. OpenAI-compatible gateway with smart routing, session management, and support for local (Ollama, vLLM) and remote (OpenAI, Anthropic) inference engines.",
       licenses: ["MIT"],
-      maintainers: ["ElPaso Team"],
+      maintainers: ["Lorenzo-SF"],
       links: %{"GitHub" => @source_url},
-      files: ~w(lib mix.exs README.md LICENSE .formatter.exs)
+      files: ~w(lib mix.exs README.md README_ES.md LICENSE .formatter.exs)
     ]
   end
 

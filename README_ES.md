@@ -3,24 +3,24 @@
 [![License](https://img.shields.io/github/license/Lorenzo-SF/ElPaso)](https://github.com/Lorenzo-SF/ElPaso/blob/main/LICENSE)
 [![CI](https://github.com/Lorenzo-SF/ElPaso/actions/workflows/ci.yml/badge.svg)](https://github.com/Lorenzo-SF/ElPaso/actions)
 
-> **Multi-model LLM proxy for Elixir.** A unified gateway to local and remote inference engines with smart routing, session management, and OpenAI-compatible API.
+> **Proxy multi-modelo LLM para Elixir.** Un gateway unificado para motores de inferencia locales y remotos con routing inteligente, gestión de sesiones y API compatible con OpenAI.
 
 ---
 
-## What is ElPaso?
+## ¿Qué es ElPaso?
 
-ElPaso is an inference proxy that sits between your application and multiple LLM providers — local (llama.cpp, Ollama, vLLM) or remote (OpenAI, Anthropic) — exposing a single OpenAI-compatible endpoint.
+ElPaso es un proxy de inferencia que se sitúa entre tu aplicación y múltiples proveedores de LLM — locales (llama.cpp, Ollama, vLLM) o remotos (OpenAI, Anthropic) — exponiendo un único endpoint compatible con OpenAI.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   Your Application                  │
+│                   Tu Aplicación                     │
 │              POST /v1/chat/completions              │
 │                      ↓                              │
 │  ┌─────────────────────────────────────────────┐    │
 │  │         🤖 ElPaso Router                     │    │
-│  │         "Need code" → coder (Qwen)           │    │
-│  │         "Explain" → reasoning (R1)           │    │
-│  │         "Summarize" → fast (Gemma)           │    │
+│  │         "Necesito código" → coder (Qwen)     │    │
+│  │         "Explícame" → reasoning (R1)         │    │
+│  │         "Resume" → fast (Gemma)              │    │
 │  └─────────────────────────────────────────────┘    │
 │                      ↓                              │
 │        ┌──────────┬──────────┬───────────┐         │
@@ -32,16 +32,16 @@ ElPaso is an inference proxy that sits between your application and multiple LLM
 
 ---
 
-## Requirements
+## Requisitos
 
 - **Elixir**: 1.19.5+
 - **OTP**: 28+
-- **PostgreSQL**: 14+ (for session persistence)
+- **PostgreSQL**: 14+ (para persistencia de sesiones)
 - Linux / macOS / WSL2
 
 ---
 
-## Installation
+## Instalación
 
 ```bash
 git clone https://github.com/Lorenzo-SF/ElPaso.git
@@ -50,7 +50,7 @@ mix deps.get
 mix compile
 ```
 
-Set up the database:
+Configurar la base de datos:
 
 ```bash
 export DATABASE_URL="postgresql://user:password@localhost/elpaso"
@@ -60,49 +60,49 @@ mix ecto.migrate
 
 ---
 
-## Quick Start
+## Inicio Rápido
 
 ```bash
-# Start the server
+# Iniciar el servidor
 elpaso server start
 # → http://localhost:8080
 
-# Add an engine
+# Añadir un motor
 mix elpaso engine add \
   --name ollama-local \
   --adapter ollama \
   --base-url http://localhost:11434
 
-# Add a model
+# Añadir un modelo
 mix elpaso model add \
   --name llama3 \
   --engine ollama-local \
   --url http://localhost:11434/v1
 
-# Query
- curl -X POST http://localhost:8080/v1/chat/completions \
+# Consultar
+curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello!"}], "model": "auto"}'
+  -d '{"messages": [{"role": "user", "content": "Hola!"}], "model": "auto"}'
 ```
 
 ---
 
-## Key Features
+## Características Principales
 
-- **Single API** — OpenAI-compatible endpoint for all models
-- **Smart Routing** — Route by task type (code, reasoning, fast)
-- **Session Context** — Portable conversation history across models
-- **Engine Management** — Register and manage inference backends
-- **Telemetry** — Prometheus metrics built-in
-- **Cluster Mode** — Automatic node discovery with libcluster
+- **API Única** — Endpoint compatible con OpenAI para todos los modelos
+- **Routing Inteligente** — Ruta por tipo de tarea (código, razonamiento, rápido)
+- **Contexto de Sesión** — Historial de conversación portable entre modelos
+- **Gestión de Motores** — Registra y gestiona backends de inferencia
+- **Telemetría** — Métricas Prometheus integradas
+- **Modo Cluster** — Descubrimiento automático de nodos con libcluster
 
 ---
 
 ## CLI
 
 ```bash
-mix elpaso engine add --name <name> --adapter <adapter> --base-url <url>
-mix elpaso model add --name <name> --engine <engine> --url <url>
+mix elpaso engine add --name <nombre> --adapter <adapter> --base-url <url>
+mix elpaso model add --name <nombre> --engine <motor> --url <url>
 mix elpaso router stats
 mix elpaso router tune
 mix elpaso bench run
@@ -110,31 +110,31 @@ mix elpaso bench run
 
 ---
 
-## API Endpoints
+## Endpoints de la API
 
-| Endpoint | Method | Description |
+| Endpoint | Método | Descripción |
 |----------|--------|-------------|
-| `/v1/chat/completions` | POST | Chat completion (OpenAI compatible) |
-| `/v1/models` | GET | List available models |
+| `/v1/chat/completions` | POST | Chat completion (compatible OpenAI) |
+| `/v1/models` | GET | Listar modelos disponibles |
 | `/health` | GET | Health check |
-| `/metrics` | GET | Prometheus metrics |
+| `/metrics` | GET | Métricas Prometheus |
 
 ---
 
-## Documentation
+## Documentación
 
-- [README_ES.md](README_ES.md) — Spanish version
+- [README.md](README.md) — Versión en inglés
 
 ---
 
-## Development
+## Desarrollo
 
 ```bash
 # Tests
 export DATABASE_URL="postgresql://user:password@localhost/elpaso_test"
 mix test
 
-# Quality
+# Calidad
 mix format
 mix credo --strict
 mix dialyzer
@@ -142,6 +142,6 @@ mix dialyzer
 
 ---
 
-## License
+## Licencia
 
-MIT. See [LICENSE](LICENSE).
+MIT. Ver [LICENSE](LICENSE).
