@@ -1,9 +1,5 @@
 defmodule ElPaso.Security.RateLimiterTest do
-  @moduledoc """
-  Tests para ElPaso.Security.RateLimiter.
-  """
-
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias ElPaso.Security.RateLimiter
 
@@ -13,25 +9,28 @@ defmodule ElPaso.Security.RateLimiterTest do
   end
 
   describe "check_rate/2" do
-    test "permite requests dentro del límite" do
-      assert :ok = RateLimiter.check_rate("user-1", 60)
-      assert :ok = RateLimiter.check_rate("user-1", 60)
+    test "primer request es aceptado" do
+      assert :ok = RateLimiter.check_rate("user_1", 5)
     end
 
-    test "limita requests excesivos" do
-      # Agotar el bucket
-      for _ <- 1..60 do
-        RateLimiter.check_rate("user-2", 60)
-      end
-
-      # El siguiente debe ser limitado
-      assert {:error, :rate_limited} = RateLimiter.check_rate("user-2", 60)
+    test "requests dentro del límite son aceptados" do
+      assert :ok = RateLimiter.check_rate("user_2", 5)
+      assert :ok = RateLimiter.check_rate("user_2", 5)
+      assert :ok = RateLimiter.check_rate("user_2", 5)
+      assert :ok = RateLimiter.check_rate("user_2", 5)
+      assert :ok = RateLimiter.check_rate("user_2", 5)
     end
-  end
 
-  describe "init/0" do
-    test "inicializa el rate limiter" do
-      assert :rate_limiter in :ets.all()
+    test "requests que exceden el límite son rechazados" do
+      assert :ok = RateLimiter.check_rate("user_3", 2)
+      assert :ok = RateLimiter.check_rate("user_3", 2)
+      assert {:error, :rate_limited} = RateLimiter.check_rate("user_3", 2)
+    end
+
+    test "diferentes usuarios tienen buckets independientes" do
+      assert :ok = RateLimiter.check_rate("user_a", 1)
+      assert {:error, :rate_limited} = RateLimiter.check_rate("user_a", 1)
+      assert :ok = RateLimiter.check_rate("user_b", 1)
     end
   end
 end

@@ -6,6 +6,22 @@ defmodule ElPaso.Engine.HTTPClient do
   """
   require Logger
 
+  # ── Safe Logging ────────────────────────────────────────────
+  # Redacta API keys y secrets de mensajes de log
+  defp log_safe_error(msg) do
+    Logger.error(fn -> sanitize_for_log(msg) end)
+  end
+
+  defp sanitize_for_log(term) when is_binary(term), do: term
+  defp sanitize_for_log(%{api_key: _} = map) do
+    Map.put(map, :api_key, "[REDACTED]")
+  end
+  defp sanitize_for_log(%{config: config} = map) when is_map(config) do
+    sanitized_config = Map.drop(config || %{}, [:api_key])
+    Map.put(map, :config, sanitized_config)
+  end
+  defp sanitize_for_log(term), do: inspect(term)
+
   @finch ElPaso.Finch
 
   # Timeout por defecto: 120 segundos
@@ -50,15 +66,16 @@ defmodule ElPaso.Engine.HTTPClient do
     url = "#{String.trim(base_url, "/")}/chat/completions"
 
     case request(:post, url, headers, body, timeout) do
-      {:ok, %{"choices" => [%{"message" => message, "finish_reason" => finish}]}} ->
+      {:ok, %{"choices" => [%{"message" => message, "finish_reason" => finish}]} = response} ->
+        resp_usage = Map.get(response, "usage", %{})
         {:ok,
          %{
            content: message["content"],
            finish_reason: map_finish_reason(finish),
            prompt_tokens:
-             Map.get(body, "usage", %{}) |> Map.get("prompt_tokens", 0) |> safe_int(),
+             Map.get(resp_usage, "prompt_tokens", 0) |> safe_int(),
            completion_tokens:
-             Map.get(body, "usage", %{}) |> Map.get("completion_tokens", 0) |> safe_int()
+             Map.get(resp_usage, "completion_tokens", 0) |> safe_int()
          }}
 
       {:ok, %{"error" => error}} ->
@@ -92,13 +109,17 @@ defmodule ElPaso.Engine.HTTPClient do
     temperature = Keyword.get(opts, :temperature, 0.7)
     timeout = Keyword.get(opts, :timeout, @default_timeout)
 
-    # Anthropic usa un formato diferente de mensajes
-    body = %{
-      model: model,
-      messages: transform_messages_for_anthropic(messages),
-      max_tokens: max_tokens,
-      temperature: temperature
-    }
+    # Extraer mensaje de sistema y mensajes de conversación
+    {system_msg, conversation} = extract_system_message(messages)
+
+    body =
+      %{
+        model: model,
+        messages: transform_messages_for_anthropic(conversation),
+        max_tokens: max_tokens,
+        temperature: temperature
+      }
+      |> maybe_add_system(system_msg)
 
     headers = [
       {"content-type", "application/json"},
@@ -109,15 +130,15 @@ defmodule ElPaso.Engine.HTTPClient do
     url = "#{String.trim(base_url, "/")}/v1/messages"
 
     case request(:post, url, headers, body, timeout) do
-      {:ok, %{"content" => [%{"text" => text}], "stop_reason" => stop}} ->
-        usage = Map.get(body, "usage", %{})
+      {:ok, %{"content" => [%{"text" => text}], "stop_reason" => stop} = response} ->
+        resp_usage = Map.get(response, "usage", %{})
 
         {:ok,
          %{
            content: text,
            finish_reason: map_anthropic_reason(stop),
-           prompt_tokens: Map.get(usage, "input_tokens", 0) |> safe_int(),
-           completion_tokens: Map.get(usage, "output_tokens", 0) |> safe_int()
+           prompt_tokens: Map.get(resp_usage, "input_tokens", 0) |> safe_int(),
+           completion_tokens: Map.get(resp_usage, "output_tokens", 0) |> safe_int()
          }}
 
       {:ok, %{"error" => error}} ->
@@ -284,7 +305,7 @@ defmodule ElPaso.Engine.HTTPClient do
 
     request = Finch.build(method, url, headers, encoded_body)
 
-    case Finch.call(request, @finch, timeout) do
+    case Finch.request(request, @finch, receive_timeout: timeout) do
       {:ok, %{status: status, headers: _resp_headers, body: body}}
       when status >= 200 and status < 300 ->
         case Jason.decode(body) do
@@ -300,8 +321,8 @@ defmodule ElPaso.Engine.HTTPClient do
         end
 
       {:error, reason} ->
-        Logger.error("[ElPaso.Engine.HTTPClient] Request failed: #{inspect(reason)}")
-        {:error, %{type: :network_error, reason: inspect(reason)}}
+        log_safe_error("[ElPaso.Engine.HTTPClient] Request failed: #{sanitize_for_log(reason)}")
+        {:error, %{type: :network_error, reason: sanitize_for_log(reason)}}
     end
   end
 
@@ -309,25 +330,38 @@ defmodule ElPaso.Engine.HTTPClient do
     encoded_body = Jason.encode!(body)
     request = Finch.build(method, url, headers, encoded_body)
 
-    case Finch.stream(request, @finch, timeout || @default_timeout, chunk_callback) do
+    case Finch.stream(request, @finch, chunk_callback, receive_timeout: timeout || @default_timeout) do
       :ok ->
         :ok
 
       {:error, reason} ->
-        Logger.error("[ElPaso.Engine.HTTPClient] Stream failed: #{inspect(reason)}")
-        {:error, reason}
+        log_safe_error("[ElPaso.Engine.HTTPClient] Stream failed: #{sanitize_for_log(reason)}")
+        {:error, sanitize_for_log(reason)}
     end
   end
+
+  # Extrae el mensaje con role: "system" y lo separa del resto
+  defp extract_system_message(messages) do
+    system = Enum.find(messages, &(Map.get(&1, "role") == "system" or Map.get(&1, :role) == :system))
+    conversation = Enum.reject(messages, &(Map.get(&1, "role") == "system" or Map.get(&1, :role) == :system))
+    {system, conversation}
+  end
+
+  defp maybe_add_system(body, nil), do: body
+  defp maybe_add_system(body, %{"content" => content}), do: Map.put(body, :system, content)
+  defp maybe_add_system(body, %{content: content}), do: Map.put(body, :system, content)
 
   defp transform_messages_for_anthropic(messages) do
     Enum.map(messages, fn
       %{"role" => role, "content" => content} when role in ["user", "assistant"] ->
         %{role: role, content: content}
-
-      %{"role" => "system", "content" => content} ->
-        # Anthropic usa el campo system del request, no como mensaje
-        %{role: "user", content: "[SYSTEM: #{content}]"}
+      %{role: role, content: content} when role in [:user, :assistant] ->
+        %{role: Atom.to_string(role), content: content}
+      _ ->
+        # No debería llegar aquí porque los system ya se extrajeron
+        nil
     end)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp map_finish_reason("stop"), do: :stop

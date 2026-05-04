@@ -4,6 +4,12 @@ defmodule ElPaso.Engine do
 
   Los engines pueden ser procesos locales (como Ollama) o APIs remotas.
   Este behaviour define la interfaz que todo engine debe implementar.
+
+  > **Nota**: Ningún adapter built-in actual usa este behaviour directamente.
+  > Los adapters en `ElPaso.Engine.Adapter` usan funciones planas delegando
+  > a `ElPaso.Engine.HTTPClient`. Este behaviour está disponible para
+  > plugins externos o implementaciones futuras que requieran una interfaz
+  > formal.
   """
 
   @doc "Nombre del engine, usado como identificador en config"

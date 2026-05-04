@@ -1,42 +1,68 @@
 defmodule ElPaso.Security.Auth do
+  @moduledoc """
+  Autenticación de requests por API key.
+
+  Busca usuarios en la tabla `users` de PostgreSQL (vía Ecto).
+  Soporta también una API key global como fallback para desarrollo.
+  """
+
+  alias ElPaso.Repo
+  alias ElPaso.Models.User
+  import Ecto.Query
+
   @doc """
-  Autentica un request por su API key. Devuelve el user_id si es válido.
+  Autentica un request por su API key. Devuelve {:ok, user_id} si es válido.
   """
   def authenticate(api_key) do
-    auth_config = ElPaso.Config.Loader.get().auth
-    # Dynamic access to avoid static typing warning for stub config
-    enabled = Map.get(auth_config, :enabled, false)
-    allow_anonymous = Map.get(auth_config, :allow_anonymous, true)
-    users = Map.get(auth_config, :users, [])
+    config = ElPaso.Config.Loader.get() |> case do
+      {:ok, c} -> c
+      {:error, _} -> %{}
+    end
+
+    auth_enabled = get_in(config, [:auth, :enabled]) || false
+    allow_anonymous = get_in(config, [:auth, :allow_anonymous]) || true
 
     cond do
-      not enabled ->
+      not auth_enabled ->
         {:ok, "anonymous"}
 
-      api_key == nil and allow_anonymous ->
+      is_nil(api_key) and allow_anonymous ->
         {:ok, "anonymous"}
 
-      api_key == nil ->
+      is_nil(api_key) ->
         {:error, :missing_api_key}
 
       true ->
-        case find_user_by_key(users, api_key) do
-          nil -> {:error, :invalid_api_key}
-          user -> {:ok, user.id}
+        # Buscar en base de datos primero
+        case find_user_in_db(api_key) do
+          %User{id: user_id, active: true} ->
+            {:ok, user_id}
+
+          %User{active: false} ->
+            {:error, :user_inactive}
+
+          nil ->
+            # Fallback: API key global (para desarrollo)
+            global_key = Application.get_env(:elpaso, :inference_api_key)
+            if api_key == global_key do
+              {:ok, "admin"}
+            else
+              {:error, :invalid_api_key}
+            end
         end
     end
   end
 
   @doc """
-  Verifica si una API key es válida para /auth/token.
+  Verifica si una API key es válida para generar token JWT en /auth/token.
   """
   def valid_api_key?(api_key) do
-    auth_config = ElPaso.Config.Loader.get().auth
-    users = Map.get(auth_config, :users, [])
-
-    # Verificar en la lista de usuarios o usar API key global
-    find_user_by_key(users, api_key) != nil or
-      api_key == Application.get_env(:elpaso, :inference_api_key)
+    case find_user_in_db(api_key) do
+      %User{active: true} -> true
+      _ ->
+        # Fallback global key
+        api_key == Application.get_env(:elpaso, :inference_api_key)
+    end
   end
 
   @doc """
@@ -49,7 +75,20 @@ defmodule ElPaso.Security.Auth do
     end
   end
 
-  defp find_user_by_key(users, api_key) do
-    Enum.find(users, fn u -> u.api_key == api_key end)
+  # ── Private ──────────────────────────────────────────────────
+
+  defp find_user_in_db(api_key) do
+    # La API key se almacena hasheada. Comparamos con hash SHA256.
+    # NOTA: Si las API keys no están hasheadas aún, busca directa.
+    # Para migración gradual: intentar ambos.
+    api_key_hash = :crypto.hash(:sha256, api_key) |> Base.encode16(case: :lower)
+
+    Repo.one(
+      from u in User,
+        where: u.api_key_hash == ^api_key_hash,
+        or_where: u.api_key_hash == ^api_key
+    )
+  rescue
+    _ -> nil
   end
 end

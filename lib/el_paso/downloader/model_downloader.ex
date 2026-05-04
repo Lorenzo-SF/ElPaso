@@ -4,7 +4,10 @@ defmodule ElPaso.ModelDownloader do
   """
 
   @hf_base_url "https://huggingface.co"
-  @download_dir Application.compile_env(:elpaso, :default_models_dir, "~/modelos")
+  defp download_dir do
+    Application.get_env(:elpaso, :default_models_dir, "~/modelos")
+    |> Path.expand()
+  end
 
   @doc """
   Starts a model download from HuggingFace Hub.
@@ -109,7 +112,7 @@ defmodule ElPaso.ModelDownloader do
       result =
         Finch.build(:get, url)
         |> Finch.stream(
-          ElPasoFinch,
+          ElPaso.Finch,
           {File.open!(temp_path, [:write, :binary]), 0},
           fn
             {:status, status}, acc when status == 200 ->
@@ -174,7 +177,7 @@ defmodule ElPaso.ModelDownloader do
 
   defp default_dest_path(repo_id, filename) do
     basename = Path.basename(repo_id)
-    Path.join([@download_dir, basename, filename])
+    Path.join([download_dir(), basename, filename])
   end
 
   defp get_content_length(headers) do
@@ -233,6 +236,6 @@ defmodule ModelDownloaderRegistry do
   end
 
   def init do
-    :ets.new(@table, [:named_table, :public, :set])
+    :ets.new(@table, [:named_table, :public, :set, read_concurrency: true])
   end
 end

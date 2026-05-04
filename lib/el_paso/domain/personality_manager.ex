@@ -9,6 +9,7 @@ defmodule ElPaso.Domain.PersonalityManager do
   @doc """
   Crea una nueva personalidad.
   """
+  @spec create_personality(map()) :: {:ok, Personality.t()} | {:error, Ecto.Changeset.t()}
   def create_personality(attrs) do
     %Personality{}
     |> Personality.changeset(attrs)
@@ -18,6 +19,7 @@ defmodule ElPaso.Domain.PersonalityManager do
   @doc """
   Lista todas las personalidades.
   """
+  @spec list_personalities() :: [Personality.t()]
   def list_personalities do
     Repo.all(Personality)
   end
@@ -25,6 +27,7 @@ defmodule ElPaso.Domain.PersonalityManager do
   @doc """
   Obtiene una personalidad por nombre.
   """
+  @spec get_personality(String.t()) :: Personality.t() | nil
   def get_personality(name) do
     Repo.get_by(Personality, name: name)
   end
@@ -32,6 +35,7 @@ defmodule ElPaso.Domain.PersonalityManager do
   @doc """
   Elimina una personalidad por nombre.
   """
+  @spec delete_personality(String.t()) :: {:ok, Personality.t()} | {:error, String.t()}
   def delete_personality(name) do
     case Repo.get_by(Personality, name: name) do
       nil ->
@@ -45,6 +49,7 @@ defmodule ElPaso.Domain.PersonalityManager do
   @doc """
   Actualiza una personalidad existente.
   """
+  @spec update_personality(String.t(), map()) :: {:ok, Personality.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def update_personality(name, attrs) do
     case Repo.get_by(Personality, name: name) do
       nil ->

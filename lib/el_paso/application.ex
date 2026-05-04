@@ -56,6 +56,9 @@ defmodule ElPaso.Application do
       # Finch para HTTP client (motor de inferencia)
       {Finch, name: ElPaso.Finch},
 
+      # Task.Supervisor para inferencias asíncronas
+      {Task.Supervisor, name: ElPaso.TaskSupervisor},
+
       # Supervisor de la gestión de motores de inferencia
       ElPaso.Domain.ModelManager,
 

@@ -41,7 +41,8 @@ defmodule ElPaso.Domain.AutoTuner do
   def init(_opts) do
     state = %{
       last_run: nil,
-      last_suggestions_applied: []
+      last_suggestions_applied: [],
+      tuning?: false    # ← NUEVO: flag para prevenir solapamiento
     }
 
     # Schedule next run
@@ -51,18 +52,28 @@ defmodule ElPaso.Domain.AutoTuner do
   end
 
   @impl true
+  def handle_info(:run_auto_tune, %{tuning?: true} = state) do
+    # Ya hay un tune en progreso, reprogramar para más tarde
+    Process.send_after(self(), :run_auto_tune, 60_000)
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(:run_auto_tune, state) do
-    do_auto_tune(state)
+    {:noreply, %{state | tuning?: true}, {:continue, :run_auto_tune}}
   end
 
   @impl true
   def handle_cast(:run_auto_tune, state) do
-    {:noreply, state, {:continue, :run_now}}
+    {:noreply, %{state | tuning?: true}, {:continue, :run_auto_tune}}
   end
 
   @impl true
-  def handle_continue(:run_now, state) do
-    {:noreply, do_auto_tune(state)}
+  def handle_continue(:run_auto_tune, state) do
+    case do_auto_tune(state) do
+      {:noreply, new_state} ->
+        {:noreply, Map.put(new_state, :tuning?, false)}
+    end
   end
 
   @impl true

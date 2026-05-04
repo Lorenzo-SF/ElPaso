@@ -61,7 +61,7 @@ defmodule ElPaso.CLI do
       elpaso router --help
       elpaso bench --help
       elpaso context --help
-      elapso cluster --help
+      elpaso cluster --help
 
     Ejemplos:
       elpaso --help             # Esta guía
@@ -279,7 +279,7 @@ defmodule ElPaso.CLI do
 
     COMANDOS:
 
-      elpasar bench run      Ejecutar benchmark
+      elpaso bench run      Ejecutar benchmark
 
     USO:
 
@@ -512,19 +512,27 @@ defmodule ElPaso.CLI do
   # ==================== DB HANDLERS ====================
 
   defp handle_db(["create" | _]) do
-    config =
-      Ecto.Repo.Supervisor.parse_url(
-        System.get_env("DATABASE_URL", "postgresql://postgres:postgres@localhost/elpaso")
-      )
+    # Validar que el nombre de BD solo contenga caracteres seguros
+    db_url = System.get_env("DATABASE_URL", "postgresql://postgres:postgres@localhost/elpaso")
 
+    config = Ecto.Repo.Supervisor.parse_url(db_url)
     db_name = config[:database]
+
+    # Validar db_name contra inyección: solo letras, números, guiones y underscore
+    unless String.match?(db_name, ~r/^[a-zA-Z0-9_-]+$/) do
+      Output.error("Nombre de base de datos inválido: '#{db_name}'. Solo se permiten letras, números, guiones y underscores.")
+      System.halt(1)
+    end
 
     # Conectar a postgres sin especificar DB para crear la nuestra
     create_config = Keyword.put(config, :database, "postgres")
 
     case Postgrex.start_link(create_config) do
       {:ok, conn} ->
-        case Postgrex.query(conn, "CREATE DATABASE #{db_name}", []) do
+        # Usar quoted identifier para prevenir SQL injection
+        safe_db_name = "\"#{String.replace(db_name, "\"", "\"\"")}\""
+
+        case Postgrex.query(conn, "CREATE DATABASE #{safe_db_name}", []) do
           {:ok, _} ->
             Output.success("Base de datos '#{db_name}' creada")
             GenServer.stop(conn)
@@ -535,6 +543,7 @@ defmodule ElPaso.CLI do
 
           {:error, reason} ->
             Output.error("Error al crear la base de datos: #{inspect(reason)}")
+            GenServer.stop(conn)
             System.halt(1)
         end
 

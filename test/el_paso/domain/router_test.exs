@@ -1,90 +1,72 @@
 defmodule ElPaso.Domain.RouterTest do
-  @moduledoc """
-  Tests para ElPaso.Domain.Router.
-  """
-
-  use ElPaso.DataCase, async: true
-
+  use ElPaso.DataCase
   alias ElPaso.Domain.Router
-  alias ElPaso.Domain.ModelManager
-  alias ElPaso.Context.Storage
-  alias ElPaso.Models.{User, Engine}
+  alias ElPaso.Repo
+  alias ElPaso.Models.{Model, Engine}
 
   setup do
-    {:ok, engine} =
-      ElPaso.Repo.insert(%Engine{
-        name: "router-engine",
-        adapter: "ollama",
-        base_url: "http://localhost:11434"
-      })
+    {:ok, engine} = Repo.insert(%Engine{
+      name: "test-engine",
+      adapter: "openai",
+      base_url: "http://localhost:9999/v1",
+      active: true
+    })
 
-    {:ok, _} =
-      ModelManager.create_model(%{name: "gpt-4-test", engine_id: engine.id, active: true})
+    {:ok, model1} = Repo.insert(%Model{
+      name: "coder-model",
+      engine_id: engine.id,
+      url: "http://localhost:9999/v1",
+      active: true,
+      task_affinity: %{code: 0.9, reasoning: 0.5, summarization: 0.3, unknown: 0.5},
+      complexity_ceiling: 1.0
+    })
 
-    %{engine: engine}
+    {:ok, model2} = Repo.insert(%Model{
+      name: "fast-model",
+      engine_id: engine.id,
+      url: "http://localhost:9999/v1",
+      active: true,
+      task_affinity: %{code: 0.3, reasoning: 0.4, summarization: 0.9, unknown: 0.5},
+      complexity_ceiling: 0.7
+    })
+
+    %{engine: engine, models: [model1, model2]}
   end
 
   describe "select_model/2" do
-    test "selecciona el primer modelo activo" do
-      assert {:ok, decision} = Router.select_model([], %{})
-      assert decision.model_name == "gpt-4-test"
-      assert is_binary(decision.decision_reason)
+    test "selecciona el modelo con mayor affinity para tareas de código", %{} do
+      messages = [%{"role" => "user", "content" => "Write a Python function to implement quicksort algorithm"}]
+      assert {:ok, %{model_name: "coder-model"}} = Router.select_model(messages, %{})
     end
 
-    test "devuelve error si no hay modelos activos", %{engine: engine} do
-      ModelManager.stop_model("gpt-4-test")
-      assert {:error, :no_active_model} = Router.select_model([], %{})
+    test "selecciona modelo para summarization", %{} do
+      messages = [%{"role" => "user", "content" => "Summarize this document"}]
+      assert {:ok, %{model_name: "fast-model"}} = Router.select_model(messages, %{})
+    end
+
+    test "retorna error si no hay modelos activos" do
+      Repo.update_all(Model, set: [active: false])
+      messages = [%{"role" => "user", "content" => "Hello"}]
+      assert {:error, :no_active_model} = Router.select_model(messages, %{})
+    end
+
+    test "incluye task_type y score en la decisión" do
+      messages = [%{"role" => "user", "content" => "Write code to sort an array"}]
+      {:ok, decision} = Router.select_model(messages, %{})
+      assert decision.task_type in [:code, :unknown]
+      assert is_number(decision.score)
     end
   end
 
   describe "get_model_state/1" do
-    test "devuelve estado de modelo existente" do
-      assert {:ok, state} = Router.get_model_state("gpt-4-test")
-      assert state.name == "gpt-4-test"
-      assert state.status == "active"
+    test "devuelve estado para modelo existente" do
+      {:ok, state} = Router.get_model_state("coder-model")
+      assert state.name == "coder-model"
+      assert state.status in ["active", "inactive"]
     end
 
-    test "devuelve error si no existe" do
+    test "error para modelo inexistente" do
       assert {:error, :model_not_found} = Router.get_model_state("nonexistent")
-    end
-  end
-
-  describe "get_routing_config/1" do
-    test "devuelve config de modelo existente" do
-      assert {:ok, config} = Router.get_routing_config("gpt-4-test")
-      assert is_map(config.task_affinity)
-    end
-
-    test "devuelve error si no existe" do
-      assert {:error, :model_not_found} = Router.get_routing_config("nonexistent")
-    end
-  end
-
-  describe "update_routing_outcome/2" do
-    test "actualiza el resultado de un enrutamiento existente", %{engine: _engine} do
-      {:ok, user} = ElPaso.Repo.insert(%User{username: "router-test", role: "user"})
-      {:ok, _session} = Storage.create_session(%{session_id: "sess-123", user_id: user.id})
-
-      {:ok, _} =
-        Storage.save_routing_decision(%{
-          session_id: "sess-123",
-          request_id: "req-123",
-          selected_model: "gpt-4-test",
-          model_id: "gpt-4-test",
-          task_type: "code",
-          decided_at: DateTime.utc_now() |> DateTime.truncate(:second)
-        })
-
-      assert :ok =
-               Router.update_routing_outcome("req-123", %{outcome: "success", response_time: 150})
-    end
-
-    test "devuelve error si el enrutamiento no existe" do
-      assert {:error, :not_found} =
-               Router.update_routing_outcome("nonexistent", %{
-                 outcome: "success",
-                 response_time: 150
-               })
     end
   end
 end

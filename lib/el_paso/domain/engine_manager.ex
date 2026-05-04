@@ -9,6 +9,7 @@ defmodule ElPaso.Domain.EngineManager do
   @doc """
   Crea un nuevo motor.
   """
+  @spec create_engine(map()) :: {:ok, Engine.t()} | {:error, Ecto.Changeset.t()}
   def create_engine(attrs) do
     %Engine{}
     |> Engine.changeset(attrs)
@@ -18,6 +19,7 @@ defmodule ElPaso.Domain.EngineManager do
   @doc """
   Lista todos los motores.
   """
+  @spec list_engines() :: [Engine.t()]
   def list_engines do
     Repo.all(Engine)
   end
@@ -25,6 +27,7 @@ defmodule ElPaso.Domain.EngineManager do
   @doc """
   Elimina un motor por nombre.
   """
+  @spec delete_engine(String.t()) :: {:ok, Engine.t()} | {:error, String.t()}
   def delete_engine(name) do
     case Repo.get_by(Engine, name: name) do
       nil ->
@@ -38,6 +41,7 @@ defmodule ElPaso.Domain.EngineManager do
   @doc """
   Actualiza un motor existente.
   """
+  @spec update_engine(String.t(), map()) :: {:ok, Engine.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def update_engine(name, attrs) do
     case Repo.get_by(Engine, name: name) do
       nil ->
@@ -57,6 +61,7 @@ defmodule ElPaso.Domain.EngineManager do
   - `{:ok, latency_ms}` si el motor responde
   - `{:error, reason}` si no se puede conectar
   """
+  @spec test_engine(String.t()) :: {:ok, non_neg_integer()} | {:error, String.t()}
   def test_engine(name) do
     case Repo.get_by(Engine, name: name) do
       nil ->
@@ -64,19 +69,19 @@ defmodule ElPaso.Domain.EngineManager do
 
       %Engine{base_url: base_url, adapter: adapter} ->
         start = System.monotonic_time()
-
-        # Determinar endpoint de health check según el adapter
         health_url = health_url(adapter, base_url)
 
-        case :httpc.request(:get, {health_url, []}, [], []) do
-          {:ok, {{_version, status, _reason}, _headers, _body}}
-          when status >= 200 and status < 400 ->
+        # Usar Finch en lugar de :httpc (bloqueante)
+        request = Finch.build(:get, health_url)
+        timeout = 10_000  # Timeout corto para health check
+
+        case Finch.request(request, ElPaso.Finch, receive_timeout: timeout) do
+          {:ok, %{status: status}} when status >= 200 and status < 400 ->
             latency_ms =
               System.convert_time_unit(System.monotonic_time() - start, :native, :millisecond)
-
             {:ok, latency_ms}
 
-          {:ok, {{_version, status, _reason}, _headers, _body}} ->
+          {:ok, %{status: status}} ->
             {:error, "HTTP #{status}"}
 
           {:error, reason} ->
@@ -85,18 +90,19 @@ defmodule ElPaso.Domain.EngineManager do
     end
   end
 
-  # Ollama responde a GET /api/tags
-  defp health_url("ollama", base_url), do: "#{base_url}/api/tags"
-  # Para otros adapters intentamos el raíz o /v1/models
+  # Health check URLs por adapter
+  defp health_url("ollama", base_url), do: "#{String.trim_trailing(base_url, "/")}/api/tags"
+  defp health_url("openai", base_url), do: "#{String.trim_trailing(base_url, "/")}/models"
+  defp health_url("anthropic", base_url), do: "#{String.trim_trailing(base_url, "/")}/v1/messages"
   defp health_url(_adapter, base_url) do
-    # Strip trailing slash
-    base = :string.trim(base_url, :trailing, "/")
-    "#{base}/v1/models"
+    # Para llama.cpp y compatibles: intentar /v1/models o /health
+    "#{String.trim_trailing(base_url, "/")}/health"
   end
 
   @doc """
   Obtiene un motor por nombre.
   """
+  @spec get_engine(String.t()) :: Engine.t() | nil
   def get_engine(name) do
     Repo.get_by(Engine, name: name)
   end

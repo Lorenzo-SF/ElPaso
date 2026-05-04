@@ -55,9 +55,44 @@ defmodule ElPaso.Domain.ModelManager do
   `request` es un mapa con:
     - `:messages` — lista de mensajes [{role, content}]
     - `:model_hint` — hint opcional de modelo
+
+  La inferencia se ejecuta de forma asíncrona en un Task supervisado.
+  El proceso llamante recibe la respuesta vía mensaje o se bloquea
+  con un timeout configurable (default: 120_000 ms).
   """
-  def infer(model_id, request) do
-    GenServer.call(__MODULE__, {:infer, model_id, request})
+  def infer(model_id, request, timeout \\ 120_000) do
+    # Validación síncrona rápida: ¿existe el modelo?
+    case get_model_from_state(model_id) do
+      nil ->
+        {:error, :model_not_found}
+
+      model ->
+        # Ejecutar inferencia en un Task separado para no bloquear el GenServer
+        task =
+          Task.Supervisor.async_nolink(ElPaso.TaskSupervisor, fn ->
+            ensure_circuit_breaker(model_id)
+
+            case Zaguan.Engine.CircuitBreaker.call(
+                   model_id,
+                   fn -> do_infer(model, request) end,
+                   @circuit_opts
+                 ) do
+              {:ok, response} ->
+                Zaguan.Engine.CircuitBreaker.success(model_id)
+                {:ok, response}
+
+              {:error, reason} ->
+                Zaguan.Engine.CircuitBreaker.failure(model_id)
+                Logger.warning("[ModelManager] Inference failed for #{model_id}")
+                {:error, reason}
+            end
+          end)
+
+        case Task.yield(task, timeout) || Task.shutdown(task) do
+          {:ok, result} -> result
+          nil -> {:error, %{type: :timeout, message: "Inference timed out after #{timeout}ms"}}
+        end
+    end
   end
 
   @impl GenServer
@@ -65,41 +100,16 @@ defmodule ElPaso.Domain.ModelManager do
     {:reply, Enum.map(state.models, &model_to_state/1), state}
   end
 
-  def handle_call({:infer, model_id, request}, _from, state) do
-    # Find the model by name
+  @impl GenServer
+  def handle_call({:get_model, model_id}, _from, state) do
     model = Enum.find(state.models, &(&1.name == model_id))
+    {:reply, model, state}
+  end
 
-    result =
-      case model do
-        nil ->
-          {:error, :model_not_found}
-
-        %Model{} ->
-          # Ensure circuit breaker exists for this model
-          ensure_circuit_breaker(model_id)
-
-          # Protected call via Zaguan Circuit Breaker
-          case Zaguan.Engine.CircuitBreaker.call(
-                 model_id,
-                 fn -> do_infer(model, request) end,
-                 @circuit_opts
-               ) do
-            {:ok, response} ->
-              Zaguan.Engine.CircuitBreaker.success(model_id)
-              {:ok, response}
-
-            {:error, reason} ->
-              Zaguan.Engine.CircuitBreaker.failure(model_id)
-
-              Logger.warning(
-                "[ModelManager] Inference failed for #{model_id}: #{inspect(reason)}"
-              )
-
-              {:error, reason}
-          end
-      end
-
-    {:reply, result, state}
+  @impl GenServer
+  def handle_call(:reload_models, _from, _state) do
+    models = load_models()
+    {:reply, {:ok, length(models)}, %{models: models, engine_states: %{}}}
   end
 
   # Internal: actual HTTP inference via Engine.Adapter
@@ -237,7 +247,24 @@ defmodule ElPaso.Domain.ModelManager do
     load_models()
   end
 
-  # Helper: ensures a Zaguan Circuit Breaker exists for the given model name.
+  @impl GenServer
+  def handle_info({:model_updated, _model_id}, state) do
+    # Recargar modelos cuando se notifica un cambio
+    models = load_models()
+    {:noreply, %{state | models: models}}
+  end
+
+  # ── Helpers ─────────────────────────────────────────────────
+
+  defp get_model_from_state(model_id) do
+    GenServer.call(__MODULE__, {:get_model, model_id})
+  end
+
+  def reload_models do
+    GenServer.call(__MODULE__, :reload_models)
+  end
+
+  # ── Server Callbacks ────────────────────────────────────────
   # Lazy-starts it if not already running under Zaguan.Engine.CircuitBreaker.Registry.
   defp ensure_circuit_breaker(model_name) do
     case Registry.lookup(Zaguan.Engine.CircuitBreaker.Registry, model_name) do

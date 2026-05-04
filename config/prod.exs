@@ -16,9 +16,10 @@ config :elpaso,
 
 # ==============================================================
 # Autenticación JWT
+# En producción, ELPASO_JWT_SECRET es OBLIGATORIO. Sin fallback inseguro.
 # ==============================================================
 config :elpaso,
-  jwt_secret: System.get_env("ELPASO_JWT_SECRET", "change-me-in-production")
+  jwt_secret: System.get_env("ELPASO_JWT_SECRET")
 
 # ==============================================================
 # API keys configuradas
@@ -75,13 +76,7 @@ config :elpaso, :cluster,
     |> Enum.reject(&(&1 == ""))
 
 # ==============================================================
-# Database (usar runtime.exs para estos valores)
+# Database: configurada en runtime.exs (evitar duplicación)
 # ==============================================================
-config :elpaso, ElPaso.Repo,
-  hostname: System.get_env("DB_HOST") || "localhost",
-  username: System.get_env("DB_USER") || "postgres",
-  password: System.get_env("DB_PASSWORD") || "postgres",
-  database: System.get_env("DB_NAME") || "elpaso_prod",
-  port: String.to_integer(System.get_env("DB_PORT") || "5432"),
-  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE") || "10"),
-  log: false
+# NOTA: La configuración de base de datos está en config/runtime.exs
+# para evitar duplicación entre entornos.

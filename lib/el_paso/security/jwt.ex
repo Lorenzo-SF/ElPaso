@@ -101,9 +101,59 @@ defmodule ElPaso.Security.JWT do
     end
   end
 
-  # Obtener secret desde env o config
+  # Obtener secret desde env o config.
+  # En producción, EXIGE que ELPASO_JWT_SECRET esté configurado con un valor fuerte.
   defp get_secret do
-    System.get_env("ELPASO_JWT_SECRET") ||
-      Application.get_env(:elpaso, :jwt_secret, "dev-secret-change-in-prod")
+    secret = System.get_env("ELPASO_JWT_SECRET") ||
+             Application.get_env(:elpaso, :jwt_secret)
+
+    # Lista negra de secrets inseguros (nunca permitir en producción)
+    unsafe_defaults = [
+      "dev-secret-change-in-prod",
+      "change-me-in-production",
+      "secret",
+      "changeme"
+    ]
+
+    is_prod = Application.get_env(:elpaso, :env) == :prod || config_env_is_prod?()
+
+    cond do
+      is_nil(secret) and is_prod ->
+        raise """
+        ⚠️  ELPASO_JWT_SECRET debe estar configurado en producción.
+
+        Añade a tu entorno:
+          export ELPASO_JWT_SECRET="$(openssl rand -base64 64)"
+
+        O en config/prod.exs:
+          config :elpaso, jwt_secret: System.fetch_env!("ELPASO_JWT_SECRET")
+        """
+
+      is_nil(secret) ->
+        # Desarrollo: generar un secret aleatorio para la sesión
+        # Se almacena en Application env para ser consistente durante la ejecución
+        Logger.warning("JWT secret no configurado. Generando secret temporal para desarrollo.")
+        temp_secret = :crypto.strong_rand_bytes(32) |> Base.encode64()
+        Application.put_env(:elpaso, :jwt_secret, temp_secret)
+        temp_secret
+
+      secret in unsafe_defaults and is_prod ->
+        raise """
+        ⚠️  ELPASO_JWT_SECRET usa un valor por defecto inseguro: "#{secret}"
+
+        Genera un secret fuerte:
+          openssl rand -base64 64
+        """
+
+      true ->
+        secret
+    end
+  end
+
+  defp config_env_is_prod? do
+    case Application.get_env(:elpaso, :env) do
+      :prod -> true
+      _ -> false
+    end
   end
 end

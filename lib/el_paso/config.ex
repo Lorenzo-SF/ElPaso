@@ -27,15 +27,14 @@ defmodule ElPaso.Config do
       end
     end
 
-    # Helper function to create a reference-like structure
-    def ref(value) do
-      {value}
-    end
-
     @doc """
     Devuelve la configuración actual del sistema.
     En modo de desarrollo o test, devuelve valores por defecto si no hay configuración válida.
     En producción, falla si no hay configuración mínima requerida.
+
+    ## Retorno
+      - `{:ok, config}` — configuración cargada exitosamente
+      - `{:error, reason}` — error de configuración (faltan variables requeridas)
     """
     def get do
       # Cargar desde archivo de configuración (prioridad baja)
@@ -64,7 +63,7 @@ defmodule ElPaso.Config do
       is_prod = Application.get_env(:elpaso, :env) == :prod
 
       if is_prod and (!env_inference_url or !env_inference_api_key) do
-        raise """
+        {:error, """
         ⚠️ CONFIGURACIÓN REQUERIDA
 
         El sistema requiere las siguientes variables de entorno:
@@ -81,92 +80,105 @@ defmodule ElPaso.Config do
           export ELPASO_INFERENCE_API_KEY="no-api-key-required"
 
         Para más opciones: elpaso config --wizard
-        """
-      end
+        """}
+      else
+        # En modo no producción, usar valores por defecto para permitir arranque
+        inference_url =
+          env_inference_url || config_get_in(file_config, [:inference, "url"]) ||
+            "http://localhost:8081/v1"
 
-      # En modo no producción, usar valores por defecto para permitir arranque
-      inference_url =
-        env_inference_url || config_get_in(file_config, [:inference, "url"]) ||
-          "http://localhost:8081/v1"
+        inference_api_key =
+          env_inference_api_key || config_get_in(file_config, [:inference, "api_key"]) ||
+            "sk-local-test"
 
-      inference_api_key =
-        env_inference_api_key || config_get_in(file_config, [:inference, "api_key"]) ||
-          "sk-local-test"
-
-      %{
-        inference: %{
-          url: inference_url,
-          api_key: inference_api_key
-        },
-        auth: %{
-          enabled:
-            parse_bool(env_auth_enabled, config_get_in(file_config, [:auth, "enabled"], false)),
-          allow_anonymous:
-            parse_bool(
-              env_allow_anonymous,
-              config_get_in(file_config, [:auth, "allow_anonymous"], true)
-            )
-        },
-        cluster: %{
-          enabled:
-            parse_bool(
-              env_cluster_enabled,
-              config_get_in(file_config, [:cluster, "enabled"], false)
-            ),
-          node_name: env_node_name || config_get_in(file_config, [:cluster, "node_name"]),
-          role: config_get_in(file_config, [:cluster, "role"]) || :both,
-          discovery:
-            env_cluster_discovery || config_get_in(file_config, [:cluster, "discovery"]) ||
-              "static"
-        },
-        routing: %{
-          auto_tune:
-            parse_bool(
-              env_model_routing,
-              config_get_in(file_config, [:routing, "auto_tune"], false)
-            ),
-          auto_tune_min_confidence:
-            parse_float(
-              env_model_routing,
-              config_get_in(file_config, [:routing, "auto_tune_min_confidence"], 0.85)
-            ),
-          auto_tune_min_decisions:
-            parse_int(
-              env_model_routing,
-              config_get_in(file_config, [:routing, "auto_tune_min_decisions"], 50)
-            ),
-          auto_tune_check_interval_hours:
-            parse_float(
-              env_model_routing,
-              config_get_in(file_config, [:routing, "auto_tune_check_interval_hours"], 24)
-            )
-        },
-        cost_management: %{
-          enabled:
-            parse_bool(
-              env_cost_enabled,
-              config_get_in(file_config, [:cost_management, "enabled"], false)
-            ),
-          daily_usd:
-            parse_float(
-              env_daily_limit,
-              config_get_in(file_config, [:cost_management, "daily_usd"], 100.0)
-            ),
-          alert_at_pct:
-            parse_float(
-              env_alert_pct,
-              config_get_in(file_config, [:cost_management, "alert_at_pct"], 80)
-            )
-        },
-        database: %{
-          host: env_db_host || config_get_in(file_config, [:database, "host"]) || "localhost",
-          user: env_db_user || config_get_in(file_config, [:database, "user"]) || "postgres",
-          password:
-            env_db_password || config_get_in(file_config, [:database, "password"]) || "postgres",
-          name: env_db_name || config_get_in(file_config, [:database, "name"]) || "elpaso_prod",
-          port: parse_int(env_db_port, config_get_in(file_config, [:database, "port"], 5432))
+        config = %{
+          inference: %{
+            url: inference_url,
+            api_key: inference_api_key
+          },
+          auth: %{
+            enabled:
+              parse_bool(env_auth_enabled, config_get_in(file_config, [:auth, "enabled"], false)),
+            allow_anonymous:
+              parse_bool(
+                env_allow_anonymous,
+                config_get_in(file_config, [:auth, "allow_anonymous"], true)
+              )
+          },
+          cluster: %{
+            enabled:
+              parse_bool(
+                env_cluster_enabled,
+                config_get_in(file_config, [:cluster, "enabled"], false)
+              ),
+            node_name: env_node_name || config_get_in(file_config, [:cluster, "node_name"]),
+            role: config_get_in(file_config, [:cluster, :role]) || :both,
+            discovery:
+              env_cluster_discovery || config_get_in(file_config, [:cluster, "discovery"]) ||
+                "static"
+          },
+          routing: %{
+            auto_tune:
+              parse_bool(
+                env_model_routing,
+                config_get_in(file_config, [:routing, "auto_tune"], false)
+              ),
+            auto_tune_min_confidence:
+              parse_float(
+                env_model_routing,
+                config_get_in(file_config, [:routing, "auto_tune_min_confidence"], 0.85)
+              ),
+            auto_tune_min_decisions:
+              parse_int(
+                env_model_routing,
+                config_get_in(file_config, [:routing, "auto_tune_min_decisions"], 50)
+              ),
+            auto_tune_check_interval_hours:
+              parse_float(
+                env_model_routing,
+                config_get_in(file_config, [:routing, "auto_tune_check_interval_hours"], 24)
+              )
+          },
+          cost_management: %{
+            enabled:
+              parse_bool(
+                env_cost_enabled,
+                config_get_in(file_config, [:cost_management, "enabled"], false)
+              ),
+            daily_usd:
+              parse_float(
+                env_daily_limit,
+                config_get_in(file_config, [:cost_management, "daily_usd"], 100.0)
+              ),
+            alert_at_pct:
+              parse_float(
+                env_alert_pct,
+                config_get_in(file_config, [:cost_management, "alert_at_pct"], 80)
+              )
+          },
+          database: %{
+            host: env_db_host || config_get_in(file_config, [:database, "host"]) || "localhost",
+            user: env_db_user || config_get_in(file_config, [:database, "user"]) || "postgres",
+            password:
+              env_db_password || config_get_in(file_config, [:database, "password"]) || "postgres",
+            name: env_db_name || config_get_in(file_config, [:database, "name"]) || "elpaso_prod",
+            port: parse_int(env_db_port, config_get_in(file_config, [:database, "port"], 5432))
+          }
         }
-      }
+
+        {:ok, config}
+      end
+    end
+
+    @doc """
+    Versión de `get/0` que hace raise en caso de error.
+    Para uso interno donde no se puede manejar el error.
+    """
+    def get! do
+      case get() do
+        {:ok, config} -> config
+        {:error, reason} -> raise reason
+      end
     end
 
     @doc """
@@ -363,7 +375,7 @@ defmodule ElPaso.Config do
   Devuelve true si el cluster está habilitado.
   """
   def cluster_enabled? do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cluster, :enabled]) == true
   end
 
@@ -371,7 +383,7 @@ defmodule ElPaso.Config do
   Devuelve el rol del nodo actual (:coordinator, :worker, :both).
   """
   def node_role do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cluster, :role]) || :both
   end
 
@@ -379,7 +391,7 @@ defmodule ElPaso.Config do
   Devuelve el nombre del nodo actual.
   """
   def node_name do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cluster, :node_name])
   end
 
@@ -387,7 +399,7 @@ defmodule ElPaso.Config do
   Devuelve la lista de nodos coordinadores configurados.
   """
   def coordinator_nodes do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cluster, :coordinator_nodes]) || []
   end
 
@@ -395,7 +407,7 @@ defmodule ElPaso.Config do
   Devuelve la lista de nodos workers configurados.
   """
   def worker_nodes do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cluster, :worker_nodes]) || []
   end
 
@@ -410,7 +422,7 @@ defmodule ElPaso.Config do
   Devuelve la estrategia de descubrimiento (:static, :gossip).
   """
   def cluster_discovery do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cluster, :discovery]) || "static"
   end
 
@@ -427,7 +439,7 @@ defmodule ElPaso.Config do
   Devuelve true si auto_tune está habilitado.
   """
   def auto_tune_enabled? do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:routing, :auto_tune]) == true
   end
 
@@ -435,7 +447,7 @@ defmodule ElPaso.Config do
   Devuelve la confianza mínima para auto-aplicar sugerencias.
   """
   def auto_tune_min_confidence do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:routing, :auto_tune_min_confidence]) || 0.85
   end
 
@@ -443,7 +455,7 @@ defmodule ElPaso.Config do
   Devuelve el número mínimo de decisiones para auto-aplicar.
   """
   def auto_tune_min_decisions do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:routing, :auto_tune_min_decisions]) || 50
   end
 
@@ -451,7 +463,7 @@ defmodule ElPaso.Config do
   Devuelve el intervalo de verificación en horas.
   """
   def auto_tune_check_interval_hours do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:routing, :auto_tune_check_interval_hours]) || 24
   end
 
@@ -461,7 +473,7 @@ defmodule ElPaso.Config do
   Devuelve true si cost_management está habilitado.
   """
   def cost_management_enabled? do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cost_management, :enabled]) == true
   end
 
@@ -469,7 +481,7 @@ defmodule ElPaso.Config do
   Devuelve el budget diario en USD.
   """
   def daily_usd_limit do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cost_management, :daily_usd]) || 100.0
   end
 
@@ -477,7 +489,7 @@ defmodule ElPaso.Config do
   Devuelve el porcentaje de alert para el budget.
   """
   def cost_alert_at_pct do
-    config = Loader.get()
+    config = Loader.get!()
     Loader.config_get_in(config, [:cost_management, :alert_at_pct]) || 80
   end
 
