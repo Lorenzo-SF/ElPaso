@@ -59,6 +59,9 @@ defmodule ElPaso.Application do
       # Task.Supervisor para inferencias asíncronas
       {Task.Supervisor, name: ElPaso.TaskSupervisor},
 
+      # Gestor del ciclo de vida de llama-server (arranca/apaga modelos)
+      ElPaso.Domain.LlamaServerManager,
+
       # Supervisor de la gestión de motores de inferencia
       ElPaso.Domain.ModelManager,
 
@@ -72,24 +75,16 @@ defmodule ElPaso.Application do
       Zaguan.Engine.Supervisor
     ]
 
-    # Servidor HTTP solo si no estamos en modo CLI
-    http_children =
-      if Application.get_env(:elpaso, :cli_mode) do
-        []
-      else
-        [
-          {Plug.Cowboy, scheme: :http, plug: ElPaso.HTTP.Server, port: http_port()}
-        ]
-      end
-
-    children = base_children ++ http_children
+    # Servidor HTTP: NO se arranca como child del supervisor.
+    # Se arranca manualmente desde `elpaso server start` vía Plug.Cowboy.http/3.
+    # Así los comandos CLI (model list, personality show...) no intentan bindear el puerto.
 
     # Añadir cluster support si está habilitado
     final_children =
       cond do
         Config.cluster_enabled?() and Config.cluster_discovery() == "gossip" ->
           # Modo gossip: usar libcluster para descubrimiento automático
-          children ++
+          base_children ++
             [
               {Cluster.Supervisor,
                [
@@ -106,7 +101,7 @@ defmodule ElPaso.Application do
 
         Config.cluster_enabled?() ->
           # Modo static: NodeRegistry suficiente
-          children ++ [ElPaso.Cluster.NodeRegistry]
+          base_children ++ [ElPaso.Cluster.NodeRegistry]
 
         true ->
           children

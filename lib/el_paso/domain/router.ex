@@ -265,7 +265,7 @@ defmodule ElPaso.Domain.Router do
       max_tokens: Map.get(config, "max_tokens", model && model.max_tokens),
       top_p: Map.get(config, "top_p", model && model.top_p),
       decision_reason: "#{personality.name} (priority: #{personality.priority})",
-      task_type: (task_types |> Enum.map(& &1.type) |> hd()) || "unknown",
+      task_type: (task_types |> Enum.map(& &1.type) |> List.first()) || "unknown",
       score: personality.priority,
       timestamp: DateTime.utc_now()
     }

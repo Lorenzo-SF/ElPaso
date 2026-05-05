@@ -47,6 +47,46 @@ defmodule ElPaso.HTTP.Server do
     |> send_resp(200, ~s({"status":"websocket_endpoint_ready","path":"/v1/chat/ws"}))
   end
 
+  # V2.0: OpenAI-compatible endpoint → enruta a pipeline de personalidades
+  post "/v1/chat/completions" do
+    params = conn.body_params
+    t0 = System.monotonic_time(:millisecond)
+
+    # El campo 'personality' es el que decide: "auto", nombre concreto, o nil
+    personality_hint = params["personality"] || params["model"] || "auto"
+    params = Map.put(params, "personality", personality_hint)
+
+    Logger.info("[HTTP] POST /v1/chat/completions personality=#{personality_hint}")
+
+    internal_req = ElPaso.HTTP.AnthropicProxy.from_openai(params)
+
+    case run_anthropic_pipeline(internal_req, conn) do
+      {:ok, response} ->
+        elapsed = System.monotonic_time(:millisecond) - t0
+        used_model = Map.get(response, :model_name) || "unknown"
+        Logger.info("[HTTP] 200 OK model=#{used_model} #{elapsed}ms")
+
+        openai_resp = ElPaso.HTTP.AnthropicProxy.to_openai(response, used_model)
+
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, Jason.encode!(openai_resp))
+
+      {:error, reason} ->
+        Logger.error("[HTTP] 500 error: #{inspect(reason)}")
+        error_resp = %{
+          error: %{
+            message: "Inference failed: #{inspect(reason)}",
+            type: "server_error"
+          }
+        }
+
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(500, Jason.encode!(error_resp))
+    end
+  end
+
   # V2.0: Anthropic API compatible endpoint
   post "/v1/messages" do
     params = conn.body_params
@@ -394,26 +434,64 @@ defmodule ElPaso.HTTP.Server do
 
   # V2.0: Ejecuta el pipeline para requests Anthropic
   defp run_anthropic_pipeline(internal_req, _conn) do
-    # Seleccionar modelo via router o usar model_hint
-    {model_name, system_prompt, config_overrides} =
-      case internal_req.model_hint do
-        hint when hint in [nil, "", "auto"] ->
-          case ElPaso.Domain.Router.select_personality(internal_req.messages) do
-            {:ok, result} ->
-              {result.model_name, result.system_prompt, result.config}
+    personality_hint = Map.get(internal_req, :personality_hint) ||
+                       internal_req.model_hint || "auto"
 
-            {:error, _} ->
-              {nil, nil, %{}}
-          end
+    # Resolver personalidad → modelo
+    {model_name, system_prompt, config_overrides, _personality_name} =
+      if personality_hint in [nil, "", "auto"] do
+        # Auto-detección via router
+        case ElPaso.Domain.Router.select_personality(internal_req.messages) do
+          {:ok, result} ->
+            Logger.info("[Router] Auto-detect → #{result.personality_name} (model: #{result.model_name})")
+            {result.model_name, result.system_prompt, result.config, result.personality_name}
 
-        name ->
-          {name, nil, %{}}
+          {:error, reason} ->
+            Logger.warning("[Router] Auto-detect falló: #{reason}")
+            {nil, nil, %{}, nil}
+        end
+      else
+        # Personalidad explícita
+        case ElPaso.Domain.PersonalityManager.get_personality(personality_hint) do
+          nil ->
+            Logger.warning("[Router] Personalidad '#{personality_hint}' no encontrada, usando auto-detección")
+            case ElPaso.Domain.Router.select_personality(internal_req.messages) do
+              {:ok, result} ->
+                {result.model_name, result.system_prompt, result.config, result.personality_name}
+              {:error, _} ->
+                {nil, nil, %{}, nil}
+            end
+
+          personality ->
+            model = personality.model
+            engine = personality.engine
+            Logger.info("[Router] Personalidad explícita: #{personality.name} → model: #{model && model.name}, engine: #{engine && engine.name}")
+            {model && model.name, personality.system_prompt, personality.config || %{}, personality.name}
+        end
       end
 
+    resolved = {model_name, system_prompt, config_overrides}
+
+    resolved =
+      if is_nil(elem(resolved, 0)) do
+        import Ecto.Query
+        fallback = ElPaso.Repo.one(from m in ElPaso.Models.Model, where: m.active == true, limit: 1)
+        if fallback do
+          Logger.warning("[Pipeline] Personalidad sin modelo → fallback: #{fallback.name}")
+          {fallback.name, elem(resolved, 1) || "", elem(resolved, 2)}
+        else
+          resolved
+        end
+      else
+        resolved
+      end
+
+    {model_name, system_prompt, config_overrides} = resolved
+
     if is_nil(model_name) do
+      Logger.error("[Pipeline] No hay modelo disponible")
       {:error, %{type: :no_model, message: "No model available for inference"}}
     else
-      # Inyectar system_prompt de la personalidad como primer mensaje
       messages =
         if system_prompt do
           [%{role: "system", content: system_prompt} | internal_req.messages]
@@ -428,11 +506,17 @@ defmodule ElPaso.HTTP.Server do
         max_tokens: Map.get(config_overrides, "max_tokens", internal_req.max_tokens)
       }
 
+      Logger.info("[Pipeline] → infer(#{model_name}) temp=#{request.temperature}")
+
       case ElPaso.Domain.ModelManager.infer(model_name, request) do
-        {:ok, response} ->
-          {:ok, response}
+        {:ok, {:ok, response}} ->
+          {:ok, Map.put(response, :model_name, model_name)}
+
+        {:ok, response} when is_map(response) ->
+          {:ok, Map.put(response, :model_name, model_name)}
 
         {:error, reason} ->
+          Logger.error("[Pipeline] infer error: #{inspect(reason)}")
           {:error, reason}
       end
     end

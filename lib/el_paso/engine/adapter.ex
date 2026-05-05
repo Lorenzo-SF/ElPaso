@@ -173,7 +173,7 @@ defmodule ElPaso.Engine.Adapter do
       "ollama" ->
         ollama(messages, model, engine, routing_decision)
 
-      "llama" ->
+      adapter when adapter in ["llama", "llama_cpp"] ->
         llama_cpp(messages, model, engine, routing_decision)
 
       adapter ->
@@ -198,7 +198,7 @@ defmodule ElPaso.Engine.Adapter do
       "ollama" ->
         stream_ollama(messages, model, engine, routing_decision, callback)
 
-      "llama" ->
+      adapter when adapter in ["llama", "llama_cpp"] ->
         stream_llama_cpp(messages, model, engine, routing_decision, callback)
 
       adapter ->

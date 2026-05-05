@@ -9,6 +9,7 @@ defmodule ElPaso.HTTP.AnthropicProxy do
       :messages,
       :system_override,
       :model_hint,
+      :personality_hint,
       :max_tokens,
       :temperature,
       :stream,
@@ -135,5 +136,47 @@ defmodule ElPaso.HTTP.AnthropicProxy do
 
   defp generate_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
+  end
+
+  # ─── OpenAI format translators ──────────────────────────────────────────
+
+  @doc "Convierte request OpenAI al formato interno de ElPaso."
+  def from_openai(params) when is_map(params) do
+    messages = Map.get(params, "messages", [])
+
+    %InternalRequest{
+      messages: messages,
+      model_hint: Map.get(params, "personality") || Map.get(params, "model"),
+      personality_hint: Map.get(params, "personality"),
+      max_tokens: Map.get(params, "max_tokens"),
+      temperature: Map.get(params, "temperature"),
+      stream: Map.get(params, "stream", false)
+    }
+  end
+
+  @doc "Convierte respuesta interna de ElPaso al formato OpenAI."
+  def to_openai(internal_response, model_name \\ "auto") do
+    used_model = Map.get(internal_response, :model_name) || model_name
+    %{
+      id: "chatcmpl-#{generate_id()}",
+      object: "chat.completion",
+      created: System.os_time(:second),
+      model: used_model,
+      choices: [
+        %{
+          index: 0,
+          message: %{
+            role: "assistant",
+            content: internal_response.content || ""
+          },
+          finish_reason: map_finish_reason(internal_response.finish_reason)
+        }
+      ],
+      usage: %{
+        prompt_tokens: internal_response.prompt_tokens || 0,
+        completion_tokens: internal_response.completion_tokens || 0,
+        total_tokens: (internal_response.prompt_tokens || 0) + (internal_response.completion_tokens || 0)
+      }
+    }
   end
 end

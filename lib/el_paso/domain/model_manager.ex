@@ -61,37 +61,49 @@ defmodule ElPaso.Domain.ModelManager do
   con un timeout configurable (default: 120_000 ms).
   """
   def infer(model_id, request, timeout \\ 120_000) do
-    # Validación síncrona rápida: ¿existe el modelo?
     case get_model_from_state(model_id) do
       nil ->
         {:error, :model_not_found}
 
       model ->
-        # Ejecutar inferencia en un Task separado para no bloquear el GenServer
-        task =
-          Task.Supervisor.async_nolink(ElPaso.TaskSupervisor, fn ->
-            ensure_circuit_breaker(model_id)
+        # Asegurar que el modelo está cargado en llama-server
+        # (lo arranca si es necesario, mata el anterior si es distinto)
+        case ElPaso.Domain.LlamaServerManager.ensure_model(model.name) do
+          :ok ->
+            execute_infer(model, request, timeout)
 
-            case Zaguan.Engine.CircuitBreaker.call(
-                   model_id,
-                   fn -> do_infer(model, request) end,
-                   @circuit_opts
-                 ) do
-              {:ok, response} ->
-                Zaguan.Engine.CircuitBreaker.success(model_id)
-                {:ok, response}
-
-              {:error, reason} ->
-                Zaguan.Engine.CircuitBreaker.failure(model_id)
-                Logger.warning("[ModelManager] Inference failed for #{model_id}")
-                {:error, reason}
-            end
-          end)
-
-        case Task.yield(task, timeout) || Task.shutdown(task) do
-          {:ok, result} -> result
-          nil -> {:error, %{type: :timeout, message: "Inference timed out after #{timeout}ms"}}
+          {:error, reason} ->
+            Logger.error("[ModelManager] No se pudo cargar modelo '#{model.name}': #{inspect(reason)}")
+            {:error, :model_load_failed}
         end
+    end
+  end
+
+  defp execute_infer(model, request, timeout) do
+    model_id = model.name
+    task =
+      Task.Supervisor.async_nolink(ElPaso.TaskSupervisor, fn ->
+        ensure_circuit_breaker(model_id)
+
+        case Zaguan.Engine.CircuitBreaker.call(
+               model_id,
+               fn -> do_infer(model, request) end,
+               @circuit_opts
+             ) do
+          {:ok, response} ->
+            Zaguan.Engine.CircuitBreaker.success(model_id)
+            {:ok, response}
+
+          {:error, reason} ->
+            Zaguan.Engine.CircuitBreaker.failure(model_id)
+            Logger.warning("[ModelManager] Inference failed for #{model_id}")
+            {:error, reason}
+        end
+      end)
+
+    case Task.yield(task, timeout) || Task.shutdown(task) do
+      {:ok, result} -> result
+      nil -> {:error, %{type: :timeout, message: "Inference timed out after #{timeout}ms"}}
     end
   end
 

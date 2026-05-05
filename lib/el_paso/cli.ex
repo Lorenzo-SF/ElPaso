@@ -437,7 +437,6 @@ defmodule ElPaso.CLI do
       ["personality" | rest] ->
         handle_personality(rest)
 
-
       ["config" | rest] ->
         handle_config(rest)
 
@@ -481,7 +480,7 @@ defmodule ElPaso.CLI do
       # ElPaso Configuration
 
       [http]
-      port = 8080
+      port = 4000
       host = "localhost"
 
       [models]
@@ -737,6 +736,7 @@ defmodule ElPaso.CLI do
 
     if name && engine_name && url do
       engine = ElPaso.Repo.get_by(ElPaso.Models.Engine, name: engine_name)
+
       if is_nil(engine) do
         Output.error("Engine '#{engine_name}' no encontrado")
       else
@@ -975,7 +975,9 @@ defmodule ElPaso.CLI do
   defp parse_int(nil), do: nil
 
   defp parse_csv(nil), do: []
-  defp parse_csv(str) when is_binary(str), do: String.split(str, ",", trim: true) |> Enum.map(&String.trim/1)
+
+  defp parse_csv(str) when is_binary(str),
+    do: String.split(str, ",", trim: true) |> Enum.map(&String.trim/1)
 
   defp parse_float(value) when is_binary(value), do: String.to_float(value)
   defp parse_float(value) when is_float(value), do: value
@@ -1518,14 +1520,20 @@ defmodule ElPaso.CLI do
       case ElPaso.Domain.PersonalityManager.create_personality(attrs) do
         {:ok, _personality} ->
           default_tag = if default?, do: ", default", else: ""
-          Output.success("Personalidad '#{name}' creada (priority: #{priority || 0}#{default_tag})")
+
+          Output.success(
+            "Personalidad '#{name}' creada (priority: #{priority || 0}#{default_tag})"
+          )
 
         {:error, reason} ->
           Output.error("Error al crear personalidad: #{inspect(reason)}")
       end
     else
       Output.error("Error: Faltan parámetros requeridos")
-      Output.error("Uso: elpaso personality add --name <nombre> --system-prompt <prompt> [--model <m>] [--engine <e>] [--keywords k1,k2] [--task-types t1,t2] [--priority N] [--default]")
+
+      Output.error(
+        "Uso: elpaso personality add --name <nombre> --system-prompt <prompt> [--model <m>] [--engine <e>] [--keywords k1,k2] [--task-types t1,t2] [--priority N] [--default]"
+      )
     end
   end
 
@@ -1625,11 +1633,14 @@ defmodule ElPaso.CLI do
         ]
       )
 
-    port = Keyword.get(opts, :port, 8080)
+    port = Keyword.get(opts, :port, 4000)
 
-    if port != 8080 do
+    if port != 4000 do
       Application.put_env(:elpaso, :http_port, port)
     end
+
+    IO.write(IO.ANSI.clear())
+    IO.write(IO.ANSI.home())
 
     Output.section("ElPaso v0.1.0", subtitle: "Multi-Model LLM Proxy")
     IO.puts("")
@@ -1637,12 +1648,30 @@ defmodule ElPaso.CLI do
 
     case Application.ensure_all_started(:elpaso) do
       {:ok, _} ->
-        Output.success("Aplicación OTP lista")
-        IO.puts("")
+        # Arrancar el HTTP server manualmente (no en el supervisor)
+        http_port = ElPaso.Config.http_port()
+        case Plug.Cowboy.http(ElPaso.HTTP.Server, [], port: http_port) do
+          {:ok, _pid} ->
+            Output.success("Aplicación OTP lista")
 
-        Output.divider("Endpoints")
+            Output.divider("Endpoints")
 
-        Output.data_table(
+            Output.data_table(
+              headers: ["Servicio", "URL"],
+              rows: [
+                ["HTTP", "http://0.0.0.0:#{http_port}"],
+                ["Dashboard", "http://0.0.0.0:#{http_port}/dashboard"],
+                ["Métricas", "http://0.0.0.0:#{http_port}/metrics"],
+                ["API OpenAI", "POST http://0.0.0.0:#{http_port}/v1/chat/completions"],
+                ["API Anthropic", "POST http://0.0.0.0:#{http_port}/v1/messages"]
+              ],
+              table_border: :rounded,
+              headers_color: :yellow
+            )
+
+          {:error, {:already_started, _pid}} ->
+            Output.success("(compartiendo servidor existente)")
+        end
           headers: ["Servicio", "URL"],
           rows: [
             ["HTTP", "http://0.0.0.0:#{port}"],
@@ -1681,7 +1710,17 @@ defmodule ElPaso.CLI do
 
             model_rows =
               Enum.map(models, fn m ->
-                [m.name, m.engine_id, m.url]
+                engine_name =
+                  if m.engine_id do
+                    case ElPaso.Repo.get(ElPaso.Models.Engine, m.engine_id) do
+                      nil -> m.engine_id
+                      e -> e.name
+                    end
+                  else
+                    "—"
+                  end
+
+                [m.name, engine_name, m.url]
               end)
 
             Output.data_table(
@@ -1736,13 +1775,36 @@ defmodule ElPaso.CLI do
   end
 
   defp handle_server(["status" | _]) do
+    port = ElPaso.Config.http_port()
+
     case Application.started_applications() |> Enum.find(&(elem(&1, 0) == :elpaso)) do
       nil ->
-        Output.error("Detenido")
+        Output.error("Servidor detenido")
 
       _ ->
-        port = ElPaso.Config.http_port()
         Output.success("Activo en http://localhost:#{port}")
+        Output.info("")
+
+        # Estado de llama-server
+        try do
+          current = ElPaso.Domain.LlamaServerManager.current_model()
+          Output.info("  llama-server: #{(current && "→ #{current}") || "sin modelo cargado"}")
+        rescue
+          _ -> Output.info("  llama-server: desconocido")
+        end
+
+        # Conteos
+        try do
+          engines = ElPaso.Repo.aggregate(ElPaso.Models.Engine, :count) || 0
+          models = ElPaso.Repo.aggregate(ElPaso.Models.Model, :count) || 0
+          personalities = ElPaso.Repo.aggregate(ElPaso.Models.Personality, :count) || 0
+
+          Output.info(
+            "  engines: #{engines}  |  modelos: #{models}  |  personalidades: #{personalities}"
+          )
+        rescue
+          _ -> :ok
+        end
     end
   end
 
