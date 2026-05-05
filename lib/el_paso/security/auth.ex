@@ -22,7 +22,7 @@ defmodule ElPaso.Security.Auth do
       end
 
     auth_enabled = get_in(config, [:auth, :enabled]) || false
-    allow_anonymous = get_in(config, [:auth, :allow_anonymous]) || true
+    allow_anonymous = if is_nil(get_in(config, [:auth, :allow_anonymous])), do: true, else: get_in(config, [:auth, :allow_anonymous])
 
     cond do
       not auth_enabled ->

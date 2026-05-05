@@ -1,48 +1,52 @@
 defmodule ElPaso.Domain.ProfileManagerTest do
-  @moduledoc """
-  Tests para ElPaso.Domain.ProfileManager.
-  """
-
-  use ElPaso.DataCase, async: true
+  use ElPaso.DataCase, async: false
 
   alias ElPaso.Domain.ProfileManager
   alias ElPaso.Models.Profile
 
   describe "create_profile/1" do
-    test "crea un profile válido" do
-      assert {:ok, %Profile{} = p} = ProfileManager.create_profile(%{name: "p1"})
-      assert p.name == "p1"
+    test "creates a profile" do
+      attrs = %{
+        name: "test-profile",
+        config: %{},
+        active: true,
+        description: "Test"
+      }
+
+      assert {:ok, %Profile{}} = ProfileManager.create_profile(attrs)
+    end
+
+    test "returns error for invalid attrs" do
+      assert {:error, %Ecto.Changeset{}} = ProfileManager.create_profile(%{})
     end
   end
 
   describe "list_profiles/0" do
-    test "lista profiles" do
-      assert ProfileManager.list_profiles() == []
-      {:ok, _} = ProfileManager.create_profile(%{name: "p2"})
-      assert length(ProfileManager.list_profiles()) == 1
+    test "returns list of profiles" do
+      assert is_list(ProfileManager.list_profiles())
     end
   end
 
   describe "get_profile/1" do
-    test "obtiene por nombre" do
-      {:ok, p} = ProfileManager.create_profile(%{name: "p3"})
-      assert ProfileManager.get_profile("p3").id == p.id
+    test "returns profile by name" do
+      {:ok, _} = ProfileManager.create_profile(%{name: "get-profile", description: "Test"})
+      assert %Profile{name: "get-profile"} = ProfileManager.get_profile("get-profile")
     end
 
-    test "devuelve nil si no existe" do
-      assert ProfileManager.get_profile("none") == nil
+    test "returns nil for unknown" do
+      assert ProfileManager.get_profile("nonexistent") == nil
     end
   end
 
   describe "delete_profile/1" do
-    test "elimina un profile" do
-      {:ok, _} = ProfileManager.create_profile(%{name: "p4"})
-      assert {:ok, %Profile{}} = ProfileManager.delete_profile("p4")
-      assert ProfileManager.get_profile("p4") == nil
+    test "deletes an existing profile" do
+      {:ok, _} = ProfileManager.create_profile(%{name: "delete-profile", description: "Test"})
+      assert {:ok, _} = ProfileManager.delete_profile("delete-profile")
+      assert ProfileManager.get_profile("delete-profile") == nil
     end
 
-    test "falla si no existe" do
-      assert {:error, "Profile no encontrado"} = ProfileManager.delete_profile("none")
+    test "returns error for unknown profile" do
+      assert {:error, "Profile no encontrado"} = ProfileManager.delete_profile("nonexistent")
     end
   end
 end

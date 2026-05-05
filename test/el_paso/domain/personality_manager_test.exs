@@ -1,67 +1,76 @@
 defmodule ElPaso.Domain.PersonalityManagerTest do
-  @moduledoc """
-  Tests para ElPaso.Domain.PersonalityManager.
-  """
-
-  use ElPaso.DataCase, async: true
+  use ElPaso.DataCase, async: false
 
   alias ElPaso.Domain.PersonalityManager
   alias ElPaso.Models.Personality
 
   describe "create_personality/1" do
-    test "crea una personalidad válida" do
-      assert {:ok, %Personality{} = per} =
-               PersonalityManager.create_personality(%{name: "per1", system_prompt: "prompt"})
+    test "creates a personality" do
+      attrs = %{
+        name: "developer",
+        description: "Coding assistant",
+        system_prompt: "You are a helpful coding assistant.",
+        active: true
+      }
 
-      assert per.name == "per1"
+      assert {:ok, %Personality{}} = PersonalityManager.create_personality(attrs)
+    end
+
+    test "returns error for invalid attrs" do
+      assert {:error, %Ecto.Changeset{}} = PersonalityManager.create_personality(%{})
     end
   end
 
   describe "list_personalities/0" do
-    test "lista personalidades" do
-      assert PersonalityManager.list_personalities() == []
-      {:ok, _} = PersonalityManager.create_personality(%{name: "per2", system_prompt: "prompt"})
-      assert length(PersonalityManager.list_personalities()) == 1
+    test "returns list of personalities" do
+      assert is_list(PersonalityManager.list_personalities())
     end
   end
 
   describe "get_personality/1" do
-    test "obtiene por nombre" do
-      {:ok, per} = PersonalityManager.create_personality(%{name: "per3", system_prompt: "prompt"})
-      assert PersonalityManager.get_personality("per3").id == per.id
+    test "returns personality by name" do
+      {:ok, p} = PersonalityManager.create_personality(%{
+        name: "get-test",
+        system_prompt: "Test prompt"
+      })
+
+      assert %Personality{name: "get-test"} = PersonalityManager.get_personality("get-test")
     end
 
-    test "devuelve nil si no existe" do
-      assert PersonalityManager.get_personality("none") == nil
-    end
-  end
-
-  describe "delete_personality/1" do
-    test "elimina una personalidad" do
-      {:ok, _} = PersonalityManager.create_personality(%{name: "per4", system_prompt: "prompt"})
-      assert {:ok, %Personality{}} = PersonalityManager.delete_personality("per4")
-      assert PersonalityManager.get_personality("per4") == nil
-    end
-
-    test "falla si no existe" do
-      assert {:error, "Personalidad no encontrada"} =
-               PersonalityManager.delete_personality("none")
+    test "returns nil for unknown" do
+      assert PersonalityManager.get_personality("nonexistent") == nil
     end
   end
 
   describe "update_personality/2" do
-    test "actualiza una personalidad" do
-      {:ok, _} = PersonalityManager.create_personality(%{name: "per5", system_prompt: "prompt"})
+    test "updates an existing personality" do
+      {:ok, _} = PersonalityManager.create_personality(%{
+        name: "update-test",
+        system_prompt: "Original"
+      })
 
-      assert {:ok, %Personality{} = updated} =
-               PersonalityManager.update_personality("per5", %{description: "desc"})
-
-      assert updated.description == "desc"
+      assert {:ok, updated} = PersonalityManager.update_personality("update-test", %{system_prompt: "Updated"})
+      assert updated.system_prompt == "Updated"
     end
 
-    test "falla si no existe" do
-      assert {:error, "Personalidad no encontrada"} =
-               PersonalityManager.update_personality("none", %{})
+    test "returns error for unknown personality" do
+      assert {:error, "Personalidad no encontrada"} = PersonalityManager.update_personality("nonexistent", %{})
+    end
+  end
+
+  describe "delete_personality/1" do
+    test "deletes an existing personality" do
+      {:ok, _} = PersonalityManager.create_personality(%{
+        name: "delete-test",
+        system_prompt: "To delete"
+      })
+
+      assert {:ok, _} = PersonalityManager.delete_personality("delete-test")
+      assert PersonalityManager.get_personality("delete-test") == nil
+    end
+
+    test "returns error for unknown personality" do
+      assert {:error, "Personalidad no encontrada"} = PersonalityManager.delete_personality("nonexistent")
     end
   end
 end

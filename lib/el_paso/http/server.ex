@@ -10,7 +10,6 @@ defmodule ElPaso.HTTP.Server do
   plug(Plug.Parsers,
     parsers: [:json],
     json_decoder: Jason,
-    body_reader: {Plug.Parsers, :read_body, []},
     # 10MB max body size
     length: 10_000_000
   )
@@ -19,9 +18,7 @@ defmodule ElPaso.HTTP.Server do
   plug(:dispatch)
 
   # V1.3: Add dashboard route
-  get "/dashboard" do
-    ElPaso.HTTP.Dashboard.call(conn, [])
-  end
+  forward "/dashboard", to: ElPaso.HTTP.Dashboard
 
   # V1.3: Metrics endpoint using TelemetryMetricsPrometheus
   get "/metrics" do
@@ -349,12 +346,12 @@ defmodule ElPaso.HTTP.Server do
       |> Enum.filter(fn e -> e.name == "elpaso.inference.complete" end)
       |> Enum.map(fn e -> Map.get(e.measurements || %{}, :latency_ms, 0) end)
 
-    avg_latency = if latencies == [], do: 0, else: Enum.sum(latencies) / length(latencies)
+    avg_latency = if latencies == [], do: 0.0, else: Enum.sum(latencies) / length(latencies)
 
     [
       "# HELP elpaso_prefix_cache_hit_ratio Ratio de cache hit del prefijo",
       "# TYPE elpaso_prefix_cache_hit_ratio gauge",
-      "elpaso_prefix_cache_hit_ratio #{:erlang.float_to_binary(hit_ratio, [{:decimals, 4}])}",
+      "elpaso_prefix_cache_hit_ratio #{:erlang.float_to_binary(hit_ratio * 1.0, [{:decimals, 4}])}",
       "",
       "# HELP elpaso_inference_complete_total Total de inferencias completadas",
       "# TYPE elpaso_inference_complete_total counter",
@@ -366,7 +363,7 @@ defmodule ElPaso.HTTP.Server do
       "",
       "# HELP elpaso_inference_avg_latency_ms Latencia media de inferencia",
       "# TYPE elpaso_inference_avg_latency_ms gauge",
-      "elpaso_inference_avg_latency_ms #{:erlang.float_to_binary(avg_latency, [{:decimals, 2}])}",
+      "elpaso_inference_avg_latency_ms #{:erlang.float_to_binary(avg_latency * 1.0, [{:decimals, 2}])}",
       "",
       "# HELP elpaso_router_fallback_total Fallbacks del router",
       "# TYPE elpaso_router_fallback_total counter",

@@ -332,11 +332,26 @@ defmodule ElPaso.Engine.HTTPClient do
     encoded_body = Jason.encode!(body)
     request = Finch.build(method, url, headers, encoded_body)
 
-    case Finch.stream(request, @finch, chunk_callback,
+    case Finch.stream(
+           request,
+           @finch,
+           :ok,
+           fn _acc, chunk_tuple ->
+             case chunk_tuple do
+               {:data, chunk} -> chunk_callback.(chunk)
+               _ -> :ok
+             end
+
+             :ok
+           end,
            receive_timeout: timeout || @default_timeout
          ) do
-      :ok ->
+      {:ok, _} ->
         :ok
+
+      {:error, reason, _acc} ->
+        log_safe_error("[ElPaso.Engine.HTTPClient] Stream failed: #{sanitize_for_log(reason)}")
+        {:error, sanitize_for_log(reason)}
 
       {:error, reason} ->
         log_safe_error("[ElPaso.Engine.HTTPClient] Stream failed: #{sanitize_for_log(reason)}")

@@ -211,7 +211,7 @@ defmodule ElPaso.Domain.AutoTuner do
   end
 
   defp schedule_next_run do
-    interval_ms = Config.auto_tune_check_interval_hours() * 3600 * 1000
+    interval_ms = trunc(Config.auto_tune_check_interval_hours() * 3600 * 1000)
     Process.send_after(self(), :run_auto_tune, interval_ms)
   end
 end

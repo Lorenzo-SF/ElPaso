@@ -85,11 +85,11 @@ defmodule ElPaso.Config do
       else
         # En modo no producción, usar valores por defecto para permitir arranque
         inference_url =
-          env_inference_url || config_get_in(file_config, [:inference, "url"]) ||
+          env_inference_url || config_get_in(file_config, [:inference, :url]) ||
             "http://localhost:8081/v1"
 
         inference_api_key =
-          env_inference_api_key || config_get_in(file_config, [:inference, "api_key"]) ||
+          env_inference_api_key || config_get_in(file_config, [:inference, :api_key]) ||
             "sk-local-test"
 
         config = %{
@@ -99,71 +99,71 @@ defmodule ElPaso.Config do
           },
           auth: %{
             enabled:
-              parse_bool(env_auth_enabled, config_get_in(file_config, [:auth, "enabled"], false)),
+              parse_bool(env_auth_enabled, config_get_in(file_config, [:auth, :enabled], false)),
             allow_anonymous:
               parse_bool(
                 env_allow_anonymous,
-                config_get_in(file_config, [:auth, "allow_anonymous"], true)
+                config_get_in(file_config, [:auth, :allow_anonymous], true)
               )
           },
           cluster: %{
             enabled:
               parse_bool(
                 env_cluster_enabled,
-                config_get_in(file_config, [:cluster, "enabled"], false)
+                config_get_in(file_config, [:cluster, :enabled], false)
               ),
-            node_name: env_node_name || config_get_in(file_config, [:cluster, "node_name"]),
+            node_name: env_node_name || config_get_in(file_config, [:cluster, :node_name]),
             role: config_get_in(file_config, [:cluster, :role]) || :both,
             discovery:
-              env_cluster_discovery || config_get_in(file_config, [:cluster, "discovery"]) ||
+              env_cluster_discovery || config_get_in(file_config, [:cluster, :discovery]) ||
                 "static"
           },
           routing: %{
             auto_tune:
               parse_bool(
                 env_model_routing,
-                config_get_in(file_config, [:routing, "auto_tune"], false)
+                config_get_in(file_config, [:routing, :auto_tune], false)
               ),
             auto_tune_min_confidence:
               parse_float(
                 env_model_routing,
-                config_get_in(file_config, [:routing, "auto_tune_min_confidence"], 0.85)
+                config_get_in(file_config, [:routing, :auto_tune_min_confidence], 0.85)
               ),
             auto_tune_min_decisions:
               parse_int(
                 env_model_routing,
-                config_get_in(file_config, [:routing, "auto_tune_min_decisions"], 50)
+                config_get_in(file_config, [:routing, :auto_tune_min_decisions], 50)
               ),
             auto_tune_check_interval_hours:
               parse_float(
                 env_model_routing,
-                config_get_in(file_config, [:routing, "auto_tune_check_interval_hours"], 24)
+                config_get_in(file_config, [:routing, :auto_tune_check_interval_hours], 24)
               )
           },
           cost_management: %{
             enabled:
               parse_bool(
                 env_cost_enabled,
-                config_get_in(file_config, [:cost_management, "enabled"], false)
+                config_get_in(file_config, [:cost_management, :enabled], false)
               ),
             daily_usd:
               parse_float(
                 env_daily_limit,
-                config_get_in(file_config, [:cost_management, "daily_usd"], 100.0)
+                config_get_in(file_config, [:cost_management, :daily_usd], 100.0)
               ),
             alert_at_pct:
               parse_float(
                 env_alert_pct,
-                config_get_in(file_config, [:cost_management, "alert_at_pct"], 80)
+                config_get_in(file_config, [:cost_management, :alert_at_pct], 80)
               )
           },
           database: %{
-            host: env_db_host || config_get_in(file_config, [:database, "host"]) || "localhost",
-            user: env_db_user || config_get_in(file_config, [:database, "user"]) || "postgres",
+            host: env_db_host || config_get_in(file_config, [:database, :host]) || "localhost",
+            user: env_db_user || config_get_in(file_config, [:database, :user]) || "postgres",
             password:
-              env_db_password || config_get_in(file_config, [:database, "password"]) || "postgres",
-            name: env_db_name || config_get_in(file_config, [:database, "name"]) || "elpaso_prod",
-            port: parse_int(env_db_port, config_get_in(file_config, [:database, "port"], 5432))
+              env_db_password || config_get_in(file_config, [:database, :password]) || "postgres",
+            name: env_db_name || config_get_in(file_config, [:database, :name]) || "elpaso_prod",
+            port: parse_int(env_db_port, config_get_in(file_config, [:database, :port], 5432))
           }
         }
 
@@ -199,7 +199,7 @@ defmodule ElPaso.Config do
           config = load_config_file()
 
           task_str = if is_atom(task_type), do: Atom.to_string(task_type), else: task_type
-          get_in(config, ["routing", "affinities", model_id, task_str]) || 0.5
+          get_in(config, [:routing, "affinities", model_id, task_str]) || 0.5
       end
     end
 
@@ -247,7 +247,7 @@ defmodule ElPaso.Config do
     end
 
     defp load_affinities_from_config(config) do
-      case get_in(config, ["routing", "affinities"]) do
+      case get_in(config, [:routing, "affinities"]) do
         nil ->
           :ok
 
@@ -319,10 +319,12 @@ defmodule ElPaso.Config do
 
       lines
       |> Enum.filter(&(&1 != "" and not String.starts_with?(&1, "#")))
-      |> Enum.reduce({sections, current_section}, fn line, {acc, _current_section} ->
+      |> Enum.reduce({sections, current_section}, fn line, {acc, current_section} ->
+        line = String.trim(line)
+
         cond do
           String.starts_with?(line, "[") and String.ends_with?(line, "]") ->
-            section = String.trim(line, "[]")
+            section = line |> String.slice(1..-2//1) |> String.trim() |> String.to_atom()
             new_acc = Map.put(acc, section, %{})
             {new_acc, section}
 
@@ -338,9 +340,12 @@ defmodule ElPaso.Config do
                 _ -> value
               end
 
+            # Normalize keys to atoms for consistent access
+            key_atom = String.to_atom(key)
+
             updated_acc =
-              Map.update(acc, current_section, %{key => parsed_value}, fn section_map ->
-                Map.put(section_map, key, parsed_value)
+              Map.update(acc, current_section, %{key_atom => parsed_value}, fn section_map ->
+                Map.put(section_map, key_atom, parsed_value)
               end)
 
             {updated_acc, current_section}
@@ -355,6 +360,8 @@ defmodule ElPaso.Config do
     defp parse_bool(nil, default), do: default
     defp parse_bool("true", _), do: true
     defp parse_bool("1", _), do: true
+    defp parse_bool("false", _), do: false
+    defp parse_bool("0", _), do: false
     defp parse_bool(_, default), do: default
 
     defp parse_float(nil, default), do: default

@@ -14,7 +14,7 @@ defmodule ElPaso.Context.Schemas.ConversationSummary do
     field(:window_start, :utc_datetime)
     field(:window_end, :utc_datetime)
 
-    timestamps()
+    timestamps(type: :utc_datetime_usec)
   end
 
   @doc """

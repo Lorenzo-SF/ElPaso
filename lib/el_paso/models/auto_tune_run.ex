@@ -9,7 +9,7 @@ defmodule ElPaso.Models.AutoTuneRun do
   @primary_key false
   schema "auto_tune_runs" do
     field(:applied, :integer)
-    field(:changes, :map)
+    field(:changes, {:array, :map})
 
     timestamps()
   end

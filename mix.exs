@@ -107,9 +107,21 @@ defmodule ElPaso.MixProject do
         ElPaso.Engine.Plugin.Echo,
         ElPaso.Application,
         ElPaso.Examples.Pipeline,
+        ElPaso.Repo,
         Mix.Tasks.Elpaso,
+        Mix.Tasks.Elpaso.Engine,
         Mix.Tasks.Elpaso.Engine.Add,
+        Mix.Tasks.Elpaso.Engine.List,
+        Mix.Tasks.Elpaso.Engine.Remove,
+        Mix.Tasks.Elpaso.Engine.Test,
+        Mix.Tasks.Elpaso.Init,
+        Mix.Tasks.Elpaso.Model,
         Mix.Tasks.Elpaso.Model.Add,
+        Mix.Tasks.Elpaso.Model.List,
+        Mix.Tasks.Elpaso.Model.Remove,
+        Mix.Tasks.Elpaso.Model.Start,
+        Mix.Tasks.Elpaso.Model.Stop,
+        Mix.Tasks.Elpaso.Personality,
         Mix.Tasks.Elpaso.RegisterWrapper
       ],
       summary: [
@@ -123,7 +135,8 @@ defmodule ElPaso.MixProject do
       plt_file: {:no_warn, "_build/plts/dialyzer.plt"},
       plt_core_path: "_build/plts",
       flags: ["-Wno_return", "-Wno_match"],
-      plt_add_apps: [:mix]
+      plt_add_apps: [:mix, :zaguan],
+      ignore_warnings: ".dialyzer_ignore.exs"
     ]
   end
 

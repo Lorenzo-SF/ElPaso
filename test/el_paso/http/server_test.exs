@@ -1,10 +1,15 @@
 defmodule ElPaso.HTTP.ServerTest do
-  use ExUnit.Case, async: false
+  use ElPaso.DataCase, async: false
   use Plug.Test
 
   alias ElPaso.HTTP.Server
 
   @opts Server.init([])
+
+  setup do
+    start_supervised!(ElPaso.Telemetry.Store)
+    :ok
+  end
 
   describe "GET /status" do
     test "devuelve status ok" do
@@ -42,13 +47,11 @@ defmodule ElPaso.HTTP.ServerTest do
 
   describe "POST /v1/messages" do
     test "rechaza body inválido" do
-      conn =
+      assert_raise Plug.Parsers.ParseError, fn ->
         conn(:post, "/v1/messages", "not json")
         |> put_req_header("content-type", "application/json")
         |> Server.call(@opts)
-
-      # Con Plug.Parsers, esto dará error de parseo
-      assert conn.status in [400, 500]
+      end
     end
   end
 

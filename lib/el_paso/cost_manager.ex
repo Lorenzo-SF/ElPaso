@@ -72,7 +72,7 @@ defmodule ElPaso.CostManager do
   """
   @spec check_budget(String.t()) :: :ok | :approaching_budget | :budget_exceeded
   def check_budget(user_id) do
-    config = Config.Loader.get()
+    {:ok, config} = Config.Loader.get()
     cost_config = Map.get(config, :cost_management, %{})
 
     # Si no está habilitado, retornar ok

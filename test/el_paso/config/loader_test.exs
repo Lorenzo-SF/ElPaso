@@ -14,7 +14,7 @@ defmodule ElPaso.Config.LoaderTest do
 
   describe "get/0" do
     test "devuelve un mapa con configuración" do
-      config = Loader.get()
+      assert {:ok, config} = Loader.get()
       assert is_map(config)
       assert Map.has_key?(config, :inference)
       assert Map.has_key?(config, :auth)

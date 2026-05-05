@@ -13,6 +13,10 @@ defmodule ElPaso.Repo.Migrations.SchemaHardening do
     end
 
     # FIX-25: Añadir FK de messages → sessions
+    # Primero necesitamos una constraint UNIQUE en sessions.session_id
+    drop index(:sessions, [:session_id])
+    create unique_index(:sessions, [:session_id])
+
     alter table(:messages) do
       modify :session_id, references(:sessions, column: :session_id, type: :string, on_delete: :delete_all), null: false
     end
