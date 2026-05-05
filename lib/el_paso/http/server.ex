@@ -395,28 +395,37 @@ defmodule ElPaso.HTTP.Server do
   # V2.0: Ejecuta el pipeline para requests Anthropic
   defp run_anthropic_pipeline(internal_req, _conn) do
     # Seleccionar modelo via router o usar model_hint
-    model_name =
+    {model_name, system_prompt, config_overrides} =
       case internal_req.model_hint do
         hint when hint in [nil, "", "auto"] ->
-          # Usar router para seleccionar el mejor modelo disponible
-          case ElPaso.Domain.Router.select_model(internal_req.messages, %{}) do
-            {:ok, %{model_name: name}} -> name
-            {:error, _} -> nil
+          case ElPaso.Domain.Router.select_personality(internal_req.messages) do
+            {:ok, result} ->
+              {result.model_name, result.system_prompt, result.config}
+
+            {:error, _} ->
+              {nil, nil, %{}}
           end
 
         name ->
-          name
+          {name, nil, %{}}
       end
 
     if is_nil(model_name) do
       {:error, %{type: :no_model, message: "No model available for inference"}}
     else
-      # Ejecutar inferencia via ModelManager
+      # Inyectar system_prompt de la personalidad como primer mensaje
+      messages =
+        if system_prompt do
+          [%{role: "system", content: system_prompt} | internal_req.messages]
+        else
+          internal_req.messages
+        end
+
       request = %{
-        messages: internal_req.messages,
+        messages: messages,
         model_hint: model_name,
-        temperature: internal_req.temperature,
-        max_tokens: internal_req.max_tokens
+        temperature: Map.get(config_overrides, "temperature", internal_req.temperature),
+        max_tokens: Map.get(config_overrides, "max_tokens", internal_req.max_tokens)
       }
 
       case ElPaso.Domain.ModelManager.infer(model_name, request) do
@@ -431,17 +440,16 @@ defmodule ElPaso.HTTP.Server do
 
   # V2.0: Ejecuta streaming para requests Anthropic
   defp run_anthropic_stream(internal_req, conn) do
-    # Seleccionar modelo
-    model_name =
+    {model_name, system_prompt, _config_overrides} =
       case internal_req.model_hint do
         hint when hint in [nil, "", "auto"] ->
-          case ElPaso.Domain.Router.select_model(internal_req.messages, %{}) do
-            {:ok, %{model_name: name}} -> name
-            {:error, _} -> nil
+          case ElPaso.Domain.Router.select_personality(internal_req.messages) do
+            {:ok, result} -> {result.model_name, result.system_prompt, result.config}
+            {:error, _} -> {nil, nil, %{}}
           end
 
         name ->
-          name
+          {name, nil, %{}}
       end
 
     if is_nil(model_name) do
@@ -454,12 +462,16 @@ defmodule ElPaso.HTTP.Server do
       send_chunk_data(conn, error_event)
       conn
     else
-      # Enviar evento de inicio
       start_event = ElPaso.HTTP.AnthropicProxy.stream_start_event(0)
       send_chunk_data(conn, start_event)
 
-      # Streaming real via adapter
-      messages = internal_req.messages
+      messages =
+        if system_prompt do
+          [%{role: "system", content: system_prompt} | internal_req.messages]
+        else
+          internal_req.messages
+        end
+
       model = ElPaso.Domain.ModelManager.get_model(model_name)
 
       if is_nil(model) do

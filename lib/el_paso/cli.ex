@@ -28,7 +28,6 @@ defmodule ElPaso.CLI do
       model        Gestión de modelos de inferencia
       engine       Gestión de motores de inferencia
       personality  Gestión de personalidades/roles
-      profile      Gestión de perfiles (modelo+engine+personalidad)
       config       Gestión de configuración
       db           Gestión de base de datos
       server       Gestionar servidor HTTP
@@ -43,7 +42,6 @@ defmodule ElPaso.CLI do
       model add/list/delete/update/show/start/stop
       engine add/list/delete/update/show/test
       personality add/list/delete/show/use
-      profile add/list/delete/show
       config show/set/reload
       db create/migrate/status
       server start/stop/restart/status/log
@@ -439,8 +437,6 @@ defmodule ElPaso.CLI do
       ["personality" | rest] ->
         handle_personality(rest)
 
-      ["profile" | rest] ->
-        handle_profile(rest)
 
       ["config" | rest] ->
         handle_config(rest)
@@ -735,30 +731,34 @@ defmodule ElPaso.CLI do
   end
 
   defp handle_model(["add" | rest]) do
-    # Parse options from command line arguments
     name = get_opt(rest, :name)
-    engine_id = get_opt(rest, :engine)
+    engine_name = get_opt(rest, :engine)
     url = get_opt(rest, :url)
 
-    if name && engine_id && url do
-      attrs = %{
-        name: name,
-        engine_id: engine_id,
-        url: url,
-        api_key: get_opt(rest, :api_key),
-        description: get_opt(rest, :description),
-        active: get_opt(rest, :active) || true,
-        max_tokens: get_opt(rest, :max_tokens) |> parse_int(),
-        temperature: (get_opt(rest, :temperature) || get_opt(rest, :temp)) |> parse_float(),
-        top_p: get_opt(rest, :top_p) |> parse_float()
-      }
+    if name && engine_name && url do
+      engine = ElPaso.Repo.get_by(ElPaso.Models.Engine, name: engine_name)
+      if is_nil(engine) do
+        Output.error("Engine '#{engine_name}' no encontrado")
+      else
+        attrs = %{
+          name: name,
+          engine_id: engine.id,
+          url: url,
+          api_key: get_opt(rest, :api_key),
+          description: get_opt(rest, :description),
+          active: get_opt(rest, :active) || true,
+          max_tokens: get_opt(rest, :max_tokens) |> parse_int(),
+          temperature: (get_opt(rest, :temperature) || get_opt(rest, :temp)) |> parse_float(),
+          top_p: get_opt(rest, :top_p) |> parse_float()
+        }
 
-      case ElPaso.Domain.ModelManager.create_model(attrs) do
-        {:ok, _model} ->
-          Output.success("Modelo '#{name}' creado exitosamente")
+        case ElPaso.Domain.ModelManager.create_model(attrs) do
+          {:ok, _model} ->
+            Output.success("Modelo '#{name}' creado exitosamente")
 
-        {:error, reason} ->
-          Output.error("Error al crear modelo: #{reason}")
+          {:error, reason} ->
+            Output.error("Error al crear modelo: #{inspect(reason)}")
+        end
       end
     else
       Output.error("Error: Faltan parámetros requeridos")
@@ -959,7 +959,11 @@ defmodule ElPaso.CLI do
           user: :string,
           discovery: :string,
           nodes: :string,
-          node: :string
+          node: :string,
+          keywords: :string,
+          task_types: :string,
+          priority: :integer,
+          default: :string
         ]
       )
 
@@ -967,9 +971,15 @@ defmodule ElPaso.CLI do
   end
 
   defp parse_int(value) when is_binary(value), do: String.to_integer(value)
+  defp parse_int(value) when is_integer(value), do: value
   defp parse_int(nil), do: nil
 
+  defp parse_csv(nil), do: []
+  defp parse_csv(str) when is_binary(str), do: String.split(str, ",", trim: true) |> Enum.map(&String.trim/1)
+
   defp parse_float(value) when is_binary(value), do: String.to_float(value)
+  defp parse_float(value) when is_float(value), do: value
+  defp parse_float(value) when is_integer(value), do: value * 1.0
   defp parse_float(nil), do: nil
 
   defp handle_config(["show" | _]) do
@@ -1478,24 +1488,44 @@ defmodule ElPaso.CLI do
     name = get_opt(rest, :name)
     description = get_opt(rest, :description)
     system_prompt = get_opt(rest, :system_prompt)
+    model_name = get_opt(rest, :model)
+    engine_name = get_opt(rest, :engine)
+    keywords_str = get_opt(rest, :keywords)
+    task_types_str = get_opt(rest, :task_types)
+    priority_str = get_opt(rest, :priority)
+    is_default = get_opt(rest, :default)
 
     if name && system_prompt do
+      model = model_name && ElPaso.Repo.get_by(ElPaso.Models.Model, name: model_name)
+      engine = engine_name && ElPaso.Repo.get_by(ElPaso.Models.Engine, name: engine_name)
+      keywords = parse_csv(keywords_str)
+      task_types = parse_csv(task_types_str)
+      priority = parse_int(priority_str)
+      default? = not is_nil(is_default) and is_default != "false"
+
       attrs = %{
         name: name,
         description: description,
-        system_prompt: system_prompt
+        system_prompt: system_prompt,
+        model: model,
+        engine: engine,
+        trigger_keywords: keywords,
+        trigger_task_types: task_types,
+        priority: priority || 0,
+        is_default: default?
       }
 
       case ElPaso.Domain.PersonalityManager.create_personality(attrs) do
         {:ok, _personality} ->
-          Output.success("Personalidad '#{name}' creada exitosamente")
+          default_tag = if default?, do: ", default", else: ""
+          Output.success("Personalidad '#{name}' creada (priority: #{priority || 0}#{default_tag})")
 
         {:error, reason} ->
-          Output.error("Error al crear personalidad: #{reason}")
+          Output.error("Error al crear personalidad: #{inspect(reason)}")
       end
     else
       Output.error("Error: Faltan parámetros requeridos")
-      Output.error("Uso: elpaso personality add --name <nombre> --system-prompt <prompt>")
+      Output.error("Uso: elpaso personality add --name <nombre> --system-prompt <prompt> [--model <m>] [--engine <e>] [--keywords k1,k2] [--task-types t1,t2] [--priority N] [--default]")
     end
   end
 
@@ -1582,118 +1612,6 @@ defmodule ElPaso.CLI do
 
   defp handle_personality(args) do
     handle_personality(["list" | args])
-  end
-
-  # ==================== PROFILE HANDLERS ====================
-
-  defp handle_profile(["add" | rest]) do
-    name = get_opt(rest, :name)
-    model_name = get_opt(rest, :model)
-    engine_name = get_opt(rest, :engine)
-    personality_name = get_opt(rest, :personality)
-
-    if name && model_name && engine_name && personality_name do
-      # Get the IDs from the database
-      model = ElPaso.Domain.ModelManager.get_model(model_name)
-      engine = ElPaso.Domain.EngineManager.get_engine(engine_name)
-      personality = ElPaso.Domain.PersonalityManager.get_personality(personality_name)
-
-      if model && engine && personality do
-        attrs = %{
-          name: name,
-          model_id: model.id,
-          engine_id: engine.id,
-          personality_id: personality.id
-        }
-
-        case ElPaso.Domain.ProfileManager.create_profile(attrs) do
-          {:ok, _profile} ->
-            Output.success("Profile '#{name}' creado exitosamente")
-
-          {:error, reason} ->
-            Output.error("Error al crear profile: #{reason}")
-        end
-      else
-        Output.error("Error: Uno o más elementos no encontrados (modelo, motor o personalidad)")
-      end
-    else
-      Output.error("Error: Faltan parámetros requeridos")
-
-      Output.error(
-        "Uso: elpaso profile add --name <nombre> --model <modelo> --engine <motor> --personality <personalidad>"
-      )
-    end
-  end
-
-  defp handle_profile(["list" | _]) do
-    profiles = ElPaso.Domain.ProfileManager.list_profiles()
-
-    if Enum.empty?(profiles) do
-      Output.warning("No hay profiles registrados")
-    else
-      rows =
-        Enum.map(profiles, fn p ->
-          [p.name, p.model.name, p.engine.name, p.personality.name]
-        end)
-
-      Output.data_table(
-        headers: ["Nombre", "Modelo", "Motor", "Personalidad"],
-        rows: rows,
-        table_border: :rounded,
-        headers_color: :cyan
-      )
-    end
-  end
-
-  defp handle_profile(["delete" | rest]) do
-    name = get_opt(rest, :name)
-
-    if name do
-      case ElPaso.Domain.ProfileManager.delete_profile(name) do
-        {:ok, _} ->
-          Output.success("Profile '#{name}' eliminado exitosamente")
-
-        {:error, reason} ->
-          Output.error("Error al eliminar profile: #{reason}")
-      end
-    else
-      Output.error("Error: Falta --name")
-    end
-  end
-
-  defp handle_profile(["show" | rest]) do
-    name = get_opt(rest, :name)
-
-    if name do
-      case ElPaso.Domain.ProfileManager.get_profile(name) do
-        nil ->
-          Output.error("Profile no encontrado")
-
-        profile ->
-          Output.section(profile.name, subtitle: "Profile")
-
-          Output.data_table(
-            headers: ["Campo", "Valor"],
-            rows: [
-              ["Modelo", profile.model.name],
-              ["Motor", profile.engine.name],
-              ["Personalidad", profile.personality.name]
-            ],
-            table_border: :rounded,
-            headers_color: :cyan
-          )
-      end
-    else
-      Output.error("Error: Falta --name")
-    end
-  end
-
-  defp handle_profile([]) do
-    Output.info("Usa 'elpaso profile --help' para ver ayuda.")
-  end
-
-  defp handle_profile(args) do
-    handle_profile(["list" | args])
   end
 
   # ==================== SERVER HANDLERS ====================

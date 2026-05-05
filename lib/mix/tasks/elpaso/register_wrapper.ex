@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
   Inserta en la base de datos:
     - 1 Engine con el puerto/api-key del wrapper
     - N Models (uno por cada case definido en el wrapper)
-    - N Profiles (uno por modelo)
+    - N Personalities (creadas via migración seed)
 
   Es idempotente: si ya existen, los salta.
   """
@@ -20,7 +20,7 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
 
   alias ElPaso.CLI.Output
   alias ElPaso.Repo
-  alias ElPaso.Models.{Engine, Model, Profile}
+  alias ElPaso.Models.{Engine, Model}
 
   @default_wrapper Path.expand("~/bin/llama-server")
 
@@ -52,8 +52,7 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
     engine = ensure_engine!(globals)
 
     Enum.each(models_cfg, fn cfg ->
-      model = ensure_model!(engine, cfg)
-      ensure_profile!(engine, model, cfg)
+      ensure_model!(engine, cfg)
     end)
 
     IO.puts("")
@@ -227,29 +226,6 @@ defmodule Mix.Tasks.Elpaso.RegisterWrapper do
 
       existing ->
         Output.info("Model    : #{existing.name} ya existe")
-        existing
-    end
-  end
-
-  defp ensure_profile!(engine, model, cfg) do
-    name = "#{cfg.alias}-default"
-
-    case Repo.get_by(Profile, name: name) do
-      nil ->
-        %Profile{}
-        |> Profile.changeset(%{
-          name: name,
-          model_id: model.id,
-          engine_id: engine.id,
-          config: %{},
-          active: true,
-          description: "Perfil por defecto para #{cfg.alias}"
-        })
-        |> Repo.insert!()
-        |> tap(fn p -> Output.success("Profile  : #{p.name}") end)
-
-      existing ->
-        Output.info("Profile  : #{existing.name} ya existe")
         existing
     end
   end

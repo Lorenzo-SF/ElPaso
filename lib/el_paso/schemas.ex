@@ -7,7 +7,7 @@ defmodule ElPaso.Schemas do
 
   ## Convención
 
-  - `ElPaso.Models.*` — schemas core (Engine, Model, Personality, Profile, User)
+  - `ElPaso.Models.*` — schemas core (Engine, Model, Personality, User)
   - `ElPaso.Context.Schemas.*` — schemas operacionales (Session, Message, RoutingDecision, etc.)
 
   Futuro: migrar todos los schemas bajo `ElPaso.Schemas.*`.
@@ -25,11 +25,6 @@ defmodule ElPaso.Schemas do
 
   defmodule Personality do
     alias ElPaso.Models.Personality, as: Mod
-    defdelegate __struct__, to: Mod
-  end
-
-  defmodule Profile do
-    alias ElPaso.Models.Profile, as: Mod
     defdelegate __struct__, to: Mod
   end
 
