@@ -607,7 +607,16 @@ defmodule ElPaso.CLI do
       models ->
         rows =
           Enum.map(models, fn m ->
-            [m.name, m.engine_id, m.url, to_string(m.active)]
+            engine_name =
+              if m.engine_id do
+                case ElPaso.Repo.get(ElPaso.Models.Engine, m.engine_id) do
+                  nil -> m.engine_id
+                  e -> e.name
+                end
+              else
+                "—"
+              end
+            [m.name, engine_name, m.url, to_string(m.active)]
           end)
 
         Output.data_table(
@@ -1509,8 +1518,8 @@ defmodule ElPaso.CLI do
         name: name,
         description: description,
         system_prompt: system_prompt,
-        model: model,
-        engine: engine,
+        model_id: (model && model.id),
+        engine_id: (engine && engine.id),
         trigger_keywords: keywords,
         trigger_task_types: task_types,
         priority: priority || 0,
@@ -1545,13 +1554,29 @@ defmodule ElPaso.CLI do
     else
       rows =
         Enum.map(personalities, fn p ->
-          desc = p.description || "N/A"
-          prompt = String.slice(p.system_prompt, 0, 30) <> "..."
-          [p.name, desc, prompt]
+          model_name = if p.model_id do
+            case ElPaso.Repo.get(ElPaso.Models.Model, p.model_id) do
+              nil -> "—"
+              m -> m.name
+            end
+          else
+            "—"
+          end
+          engine_name = if p.engine_id do
+            case ElPaso.Repo.get(ElPaso.Models.Engine, p.engine_id) do
+              nil -> "—"
+              e -> e.name
+            end
+          else
+            "—"
+          end
+          keywords = (p.trigger_keywords || []) |> Enum.take(3) |> Enum.join(",")
+          default = if p.is_default, do: "★", else: ""
+          [p.name, model_name, engine_name, to_string(p.priority), default, keywords]
         end)
 
       Output.data_table(
-        headers: ["Nombre", "Descripción", "System Prompt"],
+        headers: ["Nombre", "Modelo", "Engine", "Prio", "Default", "Keywords"],
         rows: rows,
         table_border: :rounded,
         headers_color: :cyan
@@ -1672,16 +1697,6 @@ defmodule ElPaso.CLI do
           {:error, {:already_started, _pid}} ->
             Output.success("(compartiendo servidor existente)")
         end
-          headers: ["Servicio", "URL"],
-          rows: [
-            ["HTTP", "http://0.0.0.0:#{port}"],
-            ["Dashboard", "http://0.0.0.0:#{port}/dashboard"],
-            ["Métricas", "http://0.0.0.0:#{port}/metrics"],
-            ["API", "POST http://0.0.0.0:#{port}/v1/messages"]
-          ],
-          table_border: :rounded,
-          headers_color: :cyan
-        )
 
         try do
           engines = ElPaso.Domain.EngineManager.list_engines()

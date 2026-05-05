@@ -86,6 +86,7 @@ done
 log "Personalidades"
 
 # ── coder (priority 10) — desarrollo de software ──────────────────────────
+$ELPASO personality delete --name=coder >/dev/null 2>&1 || true
 $ELPASO personality add \
     --name=coder \
     --model=coder-fim --engine=llama-local \
@@ -96,6 +97,7 @@ $ELPASO personality add \
     >/dev/null 2>&1 && success "coder (prio=10 → coder-fim)" || true
 
 # ── architect (priority 20) — arquitectura de sistemas ────────────────────
+$ELPASO personality delete --name=architect >/dev/null 2>&1 || true
 $ELPASO personality add \
     --name=architect \
     --model=thinker-opus --engine=llama-local \
@@ -106,6 +108,7 @@ $ELPASO personality add \
     >/dev/null 2>&1 && success "architect (prio=20 → thinker-opus)" || true
 
 # ── legal-es (priority 30) — consultas jurídicas españolas ─────────────────
+$ELPASO personality delete --name=legal-es >/dev/null 2>&1 || true
 $ELPASO personality add \
     --name=legal-es \
     --model=thinker --engine=llama-local \
@@ -116,6 +119,7 @@ $ELPASO personality add \
     >/dev/null 2>&1 && success "legal-es (prio=30 → thinker)" || true
 
 # ── tutor (priority 5) — explicaciones didácticas ─────────────────────────
+$ELPASO personality delete --name=tutor >/dev/null 2>&1 || true
 $ELPASO personality add \
     --name=tutor \
     --model=thinker --engine=llama-local \
@@ -126,6 +130,7 @@ $ELPASO personality add \
     >/dev/null 2>&1 && success "tutor (prio=5 → thinker)" || true
 
 # ── general (priority 1, DEFAULT) — fallback para cualquier consulta ───────
+$ELPASO personality delete --name=general >/dev/null 2>&1 || true
 $ELPASO personality add \
     --name=general \
     --model=gemma --engine=llama-local \

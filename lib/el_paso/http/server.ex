@@ -373,6 +373,11 @@ defmodule ElPaso.HTTP.Server do
     |> json(%{message: "Enrutamiento de solicitudes"})
   end
 
+  # Catch-all: ignora favicon.ico y otras peticiones no rutadas sin crashear
+  match _ do
+    conn |> send_resp(204, "")
+  end
+
   defp json(conn, data) do
     conn
     |> put_resp_content_type("application/json")

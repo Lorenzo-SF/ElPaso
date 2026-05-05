@@ -2,11 +2,6 @@ defmodule ElPaso.Application do
   alias ModelDownloaderRegistry
   alias ElPaso.Config
 
-  # Helper para obtener el puerto HTTP
-  defp http_port do
-    Config.http_port() || 8080
-  end
-
   @moduledoc """
   ElPaso Application - OTP supervision tree for the multi-model LLM proxy.
 
@@ -104,7 +99,7 @@ defmodule ElPaso.Application do
           base_children ++ [ElPaso.Cluster.NodeRegistry]
 
         true ->
-          children
+          base_children
       end
 
     # Arranca la aplicación con los hijos definidos
