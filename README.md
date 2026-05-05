@@ -2,6 +2,8 @@
 
 [![License](https://img.shields.io/github/license/Lorenzo-SF/ElPaso)](https://github.com/Lorenzo-SF/ElPaso/blob/main/LICENSE)
 [![CI](https://github.com/Lorenzo-SF/ElPaso/actions/workflows/ci.yml/badge.svg)](https://github.com/Lorenzo-SF/ElPaso/actions)
+[![Coverage](https://img.shields.io/badge/coverage-73.97%25-success)](https://github.com/Lorenzo-SF/ElPaso/actions)
+[![Dialyzer](https://img.shields.io/badge/dialyzer-passing-success)]()
 
 > **Multi-model LLM proxy for Elixir.** A unified gateway to local and remote inference engines with smart routing, session management, and OpenAI-compatible API.
 
@@ -87,25 +89,56 @@ mix elpaso model add \
 
 ---
 
+## Architecture
+
+ElPaso is built on a layered architecture:
+
+| Layer | Responsibility | Key Modules |
+|-------|---------------|-------------|
+| **HTTP** | OpenAI-compatible API, dashboard, metrics | `ElPaso.HTTP.Server`, `ElPaso.HTTP.Dashboard` |
+| **Router** | Task classification, model selection, fallback | `ElPaso.Domain.Router`, `ElPaso.Domain.RouterAnalyzer` |
+| **Engine** | Adapter abstraction for Ollama, OpenAI, Anthropic, llama.cpp | `ElPaso.Engine.Adapter`, `ElPaso.Engine.Dispatcher` |
+| **Context** | Session storage, messages, conversation summaries | `ElPaso.Context.Storage`, `ElPaso.Context.Schemas` |
+| **Config** | INI-based configuration with ETS affinity cache | `ElPaso.Config.Loader` |
+
+The project uses [Zaguan](https://github.com/Lorenzo-SF/zaguan) for TUI/CLI visual components and circuit breaker fault tolerance.
+
+---
+
 ## Key Features
 
 - **Single API** — OpenAI-compatible endpoint for all models
 - **Smart Routing** — Route by task type (code, reasoning, fast)
 - **Session Context** — Portable conversation history across models
 - **Engine Management** — Register and manage inference backends
+- **Auto-Tuning** — Periodic affinity adjustment based on routing analytics
+- **Cost Management** — Daily budget tracking and per-model pricing
 - **Telemetry** — Prometheus metrics built-in
 - **Cluster Mode** — Automatic node discovery with libcluster
+- **Security** — API key auth, JWT tokens, rate limiting, security headers
 
 ---
 
 ## CLI
 
 ```bash
-mix elpaso engine add --name <name> --adapter <adapter> --base-url <url>
-mix elpaso model add --name <name> --engine <engine> --url <url>
-mix elpaso router stats
-mix elpaso router tune
-mix elpaso bench run
+# Engine management
+mix elpaso.engine.add --name ollama-local --adapter ollama --base-url http://localhost:11434
+mix elpaso.engine.remove --name ollama-local
+
+# Model management
+mix elpaso.model.add --name llama3 --engine ollama-local --url http://localhost:11434/v1
+mix elpaso.model.list
+
+# Router analytics
+mix elpaso.router.stats
+mix elpaso.router.tune
+
+# Benchmarking
+mix elpaso.bench.run
+
+# Admin
+mix elpaso.admin.sessions
 ```
 
 ---
@@ -115,27 +148,38 @@ mix elpaso bench run
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/v1/chat/completions` | POST | Chat completion (OpenAI compatible) |
+| `/v1/messages` | POST | Anthropic-compatible messages endpoint |
 | `/v1/models` | GET | List available models |
+| `/auth/token` | POST | JWT token generation |
 | `/health` | GET | Health check |
 | `/metrics` | GET | Prometheus metrics |
+| `/dashboard` | GET | Web dashboard |
+| `/admin/sessions` | GET | Admin session listing |
 
 ---
 
 ## Documentation
 
 - [README_ES.md](README_ES.md) — Spanish version
+- [CHANGELOG.md](CHANGELOG.md) — Release notes
 
 ---
 
 ## Development
 
 ```bash
-# Tests
-export DATABASE_URL="postgresql://user:password@localhost/elpaso_test"
+# Database setup
+export DATABASE_URL="postgresql://postgres:postgres@localhost/elpaso_test"
+mix ecto.create
+mix ecto.migrate
+
+# Testing (threshold: 70%)
 mix test
+mix test --cover
 
 # Quality
-mix format
+mix compile --warnings-as-errors
+mix format --check-formatted
 mix credo --strict
 mix dialyzer
 ```

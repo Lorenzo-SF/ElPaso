@@ -1,4 +1,12 @@
 defmodule ElPaso.HTTP.Dashboard do
+  @moduledoc """
+  Dashboard web para monitoreo de ElPaso.
+
+  Sirve una página HTML con métricas en tiempo real (sesiones activas,
+  tokens, decisiones de routing, cache hit ratio) y un endpoint JSON
+  `/api/state` consumido por el frontend.
+  """
+
   use Plug.Router
 
   import Plug.Conn

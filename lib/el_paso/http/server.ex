@@ -1,4 +1,14 @@
 defmodule ElPaso.HTTP.Server do
+  @moduledoc """
+  Router HTTP principal de ElPaso.
+
+  Expone endpoints compatibles con OpenAI y Anthropic, además de
+  métricas Prometheus, dashboard web, health checks y administración.
+
+  Incluye headers de seguridad (CSP, HSTS, X-Frame-Options) y
+  parsers JSON con límite de 10MB.
+  """
+
   use Plug.Router
   require Logger
 
