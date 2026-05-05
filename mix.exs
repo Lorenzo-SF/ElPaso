@@ -71,7 +71,7 @@ defmodule ElPaso.MixProject do
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:telemetry_metrics_prometheus, "~> 1.1"},
-      {:batamanta, "~> 1.4", runtime: false},
+      {:batamanta, path: "../batamanta", runtime: false},
 
       # Dev/Test only
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
