@@ -65,6 +65,21 @@ defmodule ElPaso.Domain.PersonalityManager do
     |> Repo.preload([:model, :engine])
   end
 
+  @doc """
+  Busca una personalidad que use un modelo concreto (por nombre de modelo).
+  Útil cuando un cliente Anthropic/OpenAI solicita un modelo específico.
+  """
+  @spec find_by_model_name(String.t()) :: Personality.t() | nil
+  def find_by_model_name(model_name) do
+    Personality
+    |> join(:inner, [p], m in assoc(p, :model))
+    |> where([p, m], m.name == ^model_name and p.active == true)
+    |> order_by([p], desc: p.priority)
+    |> limit(1)
+    |> preload([:model, :engine])
+    |> Repo.one()
+  end
+
   @doc "Elimina una personalidad por nombre."
   @spec delete_personality(String.t()) :: {:ok, Personality.t()} | {:error, String.t()}
   def delete_personality(name) do

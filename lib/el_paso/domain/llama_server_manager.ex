@@ -13,6 +13,8 @@ defmodule ElPaso.Domain.LlamaServerManager do
   use GenServer
   require Logger
 
+  alias Apero.Runner
+
   @wrapper "localllama"
   @port 8081
   @health_check_timeout 30_000
@@ -97,11 +99,12 @@ defmodule ElPaso.Domain.LlamaServerManager do
 
   defp kill_current do
     Logger.info("[LlamaServerManager] Parando llama-server actual...")
-    case System.cmd(@wrapper, ["stop"], stderr_to_stdout: true) do
-      {output, 0} ->
+
+    case Runner.run(@wrapper, ["stop"], timeout: 15_000) do
+      {:ok, output} ->
         Logger.debug("[LlamaServerManager] Stop OK: #{String.trim(output)}")
 
-      {output, _} ->
+      {:error, output} ->
         Logger.warning("[LlamaServerManager] Stop warning: #{String.trim(output)}")
     end
 
@@ -112,13 +115,13 @@ defmodule ElPaso.Domain.LlamaServerManager do
   defp start_llama(model_name) do
     Logger.info("[LlamaServerManager] Arrancando llama-server con modelo '#{model_name}'...")
 
-    case System.cmd(@wrapper, [model_name, "quiet"], stderr_to_stdout: true) do
-      {output, 0} ->
+    case Runner.run(@wrapper, [model_name, "quiet"], timeout: 120_000) do
+      {:ok, output} ->
         Logger.debug("[LlamaServerManager] Start OK: #{String.trim(output)}")
         :ok
 
-      {output, status} ->
-        Logger.error("[LlamaServerManager] Start failed (#{status}): #{String.trim(output)}")
+      {:error, output} ->
+        Logger.error("[LlamaServerManager] Start failed: #{String.trim(output)}")
         {:error, output}
     end
   end

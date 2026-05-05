@@ -1673,6 +1673,15 @@ defmodule ElPaso.CLI do
 
     case Application.ensure_all_started(:elpaso) do
       {:ok, _} ->
+        # ── V4.0: Verificaciones pre-arranque (Ollama, nomic-embed-text, pgvector) ──
+        try do
+          ElPaso.Bootstrap.run!()
+        rescue
+          e in RuntimeError ->
+            Output.error(Exception.message(e))
+            System.halt(1)
+        end
+
         # Arrancar el HTTP server manualmente (no en el supervisor)
         http_port = ElPaso.Config.http_port()
         case Plug.Cowboy.http(ElPaso.HTTP.Server, [], port: http_port) do

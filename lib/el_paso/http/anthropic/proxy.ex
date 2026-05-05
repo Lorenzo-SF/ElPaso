@@ -27,10 +27,16 @@ defmodule ElPaso.HTTP.AnthropicProxy do
     messages = Map.get(anthropic_params, "messages", [])
     system = Map.get(anthropic_params, "system")
 
+    # V4.0: preservar modelo y personalidad solicitados
+    requested_model = Map.get(anthropic_params, "model")
+    personality = Map.get(anthropic_params, "personality")
+
     %InternalRequest{
       messages: messages,
       system_override: system,
-      model_hint: map_anthropic_model(Map.get(anthropic_params, "model")),
+      # Mapear modelo Anthropic a hint interno
+      model_hint: map_anthropic_model(requested_model),
+      personality_hint: personality,
       max_tokens: Map.get(anthropic_params, "max_tokens"),
       temperature: Map.get(anthropic_params, "temperature"),
       stream: Map.get(anthropic_params, "stream", false)
@@ -124,9 +130,16 @@ defmodule ElPaso.HTTP.AnthropicProxy do
     "event: message_stop\ndata: #{Jason.encode!(%{"type" => "message_stop"})}\n\n"
   end
 
-  defp map_anthropic_model(_model_name) do
-    # Default fallback - no mapping configured
-    "auto"
+  defp map_anthropic_model(nil), do: "auto"
+  defp map_anthropic_model(""), do: "auto"
+  defp map_anthropic_model("auto"), do: "auto"
+
+  defp map_anthropic_model(model_name) do
+    # V4.0: Buscar si hay una personalidad que use este modelo
+    case ElPaso.Domain.PersonalityManager.find_by_model_name(model_name) do
+      nil -> "auto"
+      personality -> personality.name
+    end
   end
 
   defp map_finish_reason(nil), do: "end_turn"

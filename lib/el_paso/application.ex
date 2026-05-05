@@ -43,8 +43,14 @@ defmodule ElPaso.Application do
     # Inicializar affinity table ETS
     ElPaso.Config.Loader.init_affinity_table()
 
+    # V4.0: Inicializar caché de decisiones de routing
+    ElPaso.Domain.DecisionEngine.DecisionCache.init()
+
     # Children base
     base_children = [
+      # V4.0: Registry para SessionContext
+      {Registry, keys: :unique, name: ElPaso.SessionRegistry},
+
       # Ecto Repo supervisor - conexión a PostgreSQL
       {ElPaso.Repo, []},
 
@@ -53,6 +59,12 @@ defmodule ElPaso.Application do
 
       # Task.Supervisor para inferencias asíncronas
       {Task.Supervisor, name: ElPaso.TaskSupervisor},
+
+      # V4.0: EmbeddingClient para generar embeddings via Ollama
+      ElPaso.Context.EmbeddingClient,
+
+      # V4.0: SessionSupervisor para gestionar sesiones compartidas
+      ElPaso.Context.SessionSupervisor,
 
       # Gestor del ciclo de vida de llama-server (arranca/apaga modelos)
       ElPaso.Domain.LlamaServerManager,
@@ -64,10 +76,12 @@ defmodule ElPaso.Application do
       ElPaso.Telemetry.Store,
 
       # AutoTuner para aprendizaje adaptativo
-      ElPaso.Domain.AutoTuner,
+      ElPaso.Domain.AutoTuner
 
-      # Motor de inferencia: Registry + Monitor + Leader + Workers (Zaguan)
-      Zaguan.Engine.Supervisor
+      # Zaguan.Engine.Supervisor YA NO se arranca aquí.
+      # Apero (dependencia de ElPaso) arranca Zaguan como aplicación OTP,
+      # lo que incluye el Engine.Supervisor. Arrancarlo dos veces causa
+      # "already started" y crashea la app.
     ]
 
     # Servidor HTTP: NO se arranca como child del supervisor.

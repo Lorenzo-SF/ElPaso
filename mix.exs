@@ -79,7 +79,8 @@ defmodule ElPaso.MixProject do
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
 
-    [{:zaguan, path: "../zaguan", runtime: false} | base]
+    [{:zaguan, path: "../zaguan", runtime: false},
+     {:apero, path: "../apero"}] ++ base
   end
 
   defp escript do

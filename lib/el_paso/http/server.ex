@@ -47,16 +47,27 @@ defmodule ElPaso.HTTP.Server do
     |> send_resp(200, ~s({"status":"websocket_endpoint_ready","path":"/v1/chat/ws"}))
   end
 
-  # V2.0: OpenAI-compatible endpoint → enruta a pipeline de personalidades
+  # V2.0/V4.0: OpenAI-compatible endpoint → enruta a pipeline de personalidades
   post "/v1/chat/completions" do
     params = conn.body_params
     t0 = System.monotonic_time(:millisecond)
+
+    # V4.0: Rate limiting por IP
+    client_ip = get_client_ip(conn)
+    case ElPaso.Security.RateLimiter.check_rate("chat:#{client_ip}", 60) do
+      :ok -> :ok
+      {:error, :rate_limited} ->
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(429, Jason.encode!(%{error: "rate_limited", retry_after: 60}))
+        |> halt()
+    end
 
     # El campo 'personality' es el que decide: "auto", nombre concreto, o nil
     personality_hint = params["personality"] || params["model"] || "auto"
     params = Map.put(params, "personality", personality_hint)
 
-    Logger.info("[HTTP] POST /v1/chat/completions personality=#{personality_hint}")
+    Logger.info("[HTTP] POST /v1/chat/completions personality=#{sanitize_for_log(personality_hint)}")
 
     internal_req = ElPaso.HTTP.AnthropicProxy.from_openai(params)
 
@@ -437,15 +448,19 @@ defmodule ElPaso.HTTP.Server do
     {:ok, self()}
   end
 
-  # V2.0: Ejecuta el pipeline para requests Anthropic
+  # V2.0/V4.0: Ejecuta el pipeline para requests (OpenAI y Anthropic)
   defp run_anthropic_pipeline(internal_req, _conn) do
     personality_hint = Map.get(internal_req, :personality_hint) ||
                        internal_req.model_hint || "auto"
 
+    # ── V4.0: Session context ──────────────────────────────────────────
+    session_id = Map.get(internal_req, :session_id) || generate_session_id()
+    ElPaso.Context.SessionSupervisor.ensure_session(session_id)
+
     # Resolver personalidad → modelo
-    {model_name, system_prompt, config_overrides, _personality_name} =
+    {model_name, system_prompt, config_overrides, personality_name} =
       if personality_hint in [nil, "", "auto"] do
-        # Auto-detección via router
+        # Auto-detección via router (que ahora delega en DecisionEngine V4)
         case ElPaso.Domain.Router.select_personality(internal_req.messages) do
           {:ok, result} ->
             Logger.info("[Router] Auto-detect → #{result.personality_name} (model: #{result.model_name})")
@@ -475,6 +490,30 @@ defmodule ElPaso.HTTP.Server do
         end
       end
 
+    # ── V4.0: Enriquecer con contexto de sesión compartido ─────────────
+    enriched_messages =
+      if personality_name do
+        ElPaso.Context.SessionContext.activate(session_id, personality_name)
+
+        case ElPaso.Context.SessionContext.get_context(session_id, personality_name) do
+          {:ok, session_context} ->
+            user_msg = extract_last_user_message(internal_req.messages)
+            max_tokens = Map.get(config_overrides, "max_tokens") || 4096
+
+            ElPaso.Context.ContextBuilder.build(
+              session_context,
+              user_msg,
+              max_tokens,
+              system_prompt
+            )
+
+          _ ->
+            build_messages(system_prompt, internal_req.messages)
+        end
+      else
+        build_messages(system_prompt, internal_req.messages)
+      end
+
     resolved = {model_name, system_prompt, config_overrides}
 
     resolved =
@@ -491,21 +530,14 @@ defmodule ElPaso.HTTP.Server do
         resolved
       end
 
-    {model_name, system_prompt, config_overrides} = resolved
+    {model_name, _system_prompt, config_overrides} = resolved
 
     if is_nil(model_name) do
       Logger.error("[Pipeline] No hay modelo disponible")
       {:error, %{type: :no_model, message: "No model available for inference"}}
     else
-      messages =
-        if system_prompt do
-          [%{role: "system", content: system_prompt} | internal_req.messages]
-        else
-          internal_req.messages
-        end
-
       request = %{
-        messages: messages,
+        messages: enriched_messages,
         model_hint: model_name,
         temperature: Map.get(config_overrides, "temperature", internal_req.temperature),
         max_tokens: Map.get(config_overrides, "max_tokens", internal_req.max_tokens)
@@ -513,7 +545,7 @@ defmodule ElPaso.HTTP.Server do
 
       Logger.info("[Pipeline] → infer(#{model_name}) temp=#{request.temperature}")
 
-      case ElPaso.Domain.ModelManager.infer(model_name, request) do
+      result = case ElPaso.Domain.ModelManager.infer(model_name, request) do
         {:ok, {:ok, response}} ->
           {:ok, Map.put(response, :model_name, model_name)}
 
@@ -524,8 +556,51 @@ defmodule ElPaso.HTTP.Server do
           Logger.error("[Pipeline] infer error: #{inspect(reason)}")
           {:error, reason}
       end
+
+      # V4.0: Registrar mensajes en la sesión (async, no bloquea)
+      if personality_name do
+        Task.start(fn ->
+          ElPaso.Context.SessionContext.record_message(session_id, "user",
+            extract_last_user_message(internal_req.messages), model_name)
+          ElPaso.Context.SessionContext.deactivate(session_id, personality_name, "processed request")
+        end)
+      end
+
+      result
     end
   end
+
+  defp build_messages(system_prompt, messages) do
+    if system_prompt do
+      [%{role: "system", content: system_prompt} | messages]
+    else
+      messages
+    end
+  end
+
+  defp extract_last_user_message(messages) do
+    messages
+    |> Enum.reverse()
+    |> Enum.find(fn
+      %{role: "user"} -> true
+      %{"role" => "user"} -> true
+      _ -> false
+    end)
+    |> case do
+      nil -> ""
+      msg -> Map.get(msg, :content) || Map.get(msg, "content") || ""
+    end
+  end
+
+  defp generate_session_id do
+    "sess_#{:crypto.strong_rand_bytes(12) |> Base.encode16(case: :lower)}"
+  end
+
+  # V4.0: Sanitiza strings para evitar log injection
+  defp sanitize_for_log(str) when is_binary(str) do
+    String.replace(str, ~r/[\n\r\t]/, " ") |> String.slice(0, 128)
+  end
+  defp sanitize_for_log(_), do: ""
 
   # V2.0: Ejecuta streaming para requests Anthropic
   defp run_anthropic_stream(internal_req, conn) do

@@ -36,10 +36,35 @@ ElPaso es un proxy de inferencia que se sitúa entre tu aplicación y múltiples
 
 ## Requisitos
 
+### Software
 - **Elixir**: 1.19.5+
 - **OTP**: 28+
-- **PostgreSQL**: 14+ (para persistencia de sesiones)
-- Linux / macOS / WSL2
+- **PostgreSQL**: 14+ con extensión **pgvector** (`CREATE EXTENSION vector;`)
+- **Ollama**: servidor de modelos local (https://ollama.com)
+  - ElPaso v4.0 usa Ollama para DOS propósitos:
+    1. **Modelo de embeddings** `nomic-embed-text` (274 MB) — obligatorio para el motor de decisiones semántico
+    2. **Modelos de inferencia** (gemma, llama, qwen, etc.) — según configuración del usuario
+
+### Hardware mínimo
+
+| Escenario | RAM | Disco | GPU |
+|---|---|---|---|
+| **Mínimo (APIs remotas + embeddings)** | 2 GB | 5 GB | No |
+| **Mínimo (1 modelo local pequeño)** | 6 GB | 10 GB | No (CPU) |
+| **Recomendado (2-3 modelos medianos)** | 16 GB | 30 GB | 6+ GB VRAM |
+| **Producción (modelos grandes + multi-usuario)** | 32 GB | 100 GB | 12+ GB VRAM |
+
+> ⚠️ ElPaso + PostgreSQL + Ollama + nomic-embed-text consumen ~800 MB de RAM base.
+> El resto del consumo depende de los modelos de inferencia que configures.
+>
+> ℹ️ Si solo usas APIs remotas (OpenAI, Anthropic), el requisito mínimo es 2 GB de RAM.
+
+### Modelo de embeddings
+
+ElPaso v4.0 utiliza **`nomic-embed-text`** (274 MB, 768 dimensiones, 100+ idiomas)
+para el motor de decisiones semántico. Al arrancar con `elpaso server start`,
+ElPaso verifica que el modelo esté descargado en Ollama y, si no lo está,
+lo descarga automáticamente (~2-5 minutos, solo la primera vez).
 
 ---
 
