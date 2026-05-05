@@ -26,5 +26,5 @@ if config_env() in [:dev, :prod] do
     database: System.get_env("DB_NAME", "elpaso_#{config_env()}"),
     port: String.to_integer(System.get_env("DB_PORT", "5432")),
     pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "10")),
-    log: config_env() == :dev
+    log: if(config_env() == :dev, do: :info, else: false)
 end
