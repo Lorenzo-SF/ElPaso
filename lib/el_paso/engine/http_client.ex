@@ -13,13 +13,16 @@ defmodule ElPaso.Engine.HTTPClient do
   end
 
   defp sanitize_for_log(term) when is_binary(term), do: term
+
   defp sanitize_for_log(%{api_key: _} = map) do
     Map.put(map, :api_key, "[REDACTED]")
   end
+
   defp sanitize_for_log(%{config: config} = map) when is_map(config) do
     sanitized_config = Map.drop(config || %{}, [:api_key])
     Map.put(map, :config, sanitized_config)
   end
+
   defp sanitize_for_log(term), do: inspect(term)
 
   @finch ElPaso.Finch
@@ -68,14 +71,13 @@ defmodule ElPaso.Engine.HTTPClient do
     case request(:post, url, headers, body, timeout) do
       {:ok, %{"choices" => [%{"message" => message, "finish_reason" => finish}]} = response} ->
         resp_usage = Map.get(response, "usage", %{})
+
         {:ok,
          %{
            content: message["content"],
            finish_reason: map_finish_reason(finish),
-           prompt_tokens:
-             Map.get(resp_usage, "prompt_tokens", 0) |> safe_int(),
-           completion_tokens:
-             Map.get(resp_usage, "completion_tokens", 0) |> safe_int()
+           prompt_tokens: Map.get(resp_usage, "prompt_tokens", 0) |> safe_int(),
+           completion_tokens: Map.get(resp_usage, "completion_tokens", 0) |> safe_int()
          }}
 
       {:ok, %{"error" => error}} ->
@@ -330,7 +332,9 @@ defmodule ElPaso.Engine.HTTPClient do
     encoded_body = Jason.encode!(body)
     request = Finch.build(method, url, headers, encoded_body)
 
-    case Finch.stream(request, @finch, chunk_callback, receive_timeout: timeout || @default_timeout) do
+    case Finch.stream(request, @finch, chunk_callback,
+           receive_timeout: timeout || @default_timeout
+         ) do
       :ok ->
         :ok
 
@@ -342,8 +346,12 @@ defmodule ElPaso.Engine.HTTPClient do
 
   # Extrae el mensaje con role: "system" y lo separa del resto
   defp extract_system_message(messages) do
-    system = Enum.find(messages, &(Map.get(&1, "role") == "system" or Map.get(&1, :role) == :system))
-    conversation = Enum.reject(messages, &(Map.get(&1, "role") == "system" or Map.get(&1, :role) == :system))
+    system =
+      Enum.find(messages, &(Map.get(&1, "role") == "system" or Map.get(&1, :role) == :system))
+
+    conversation =
+      Enum.reject(messages, &(Map.get(&1, "role") == "system" or Map.get(&1, :role) == :system))
+
     {system, conversation}
   end
 
@@ -355,8 +363,10 @@ defmodule ElPaso.Engine.HTTPClient do
     Enum.map(messages, fn
       %{"role" => role, "content" => content} when role in ["user", "assistant"] ->
         %{role: role, content: content}
+
       %{role: role, content: content} when role in [:user, :assistant] ->
         %{role: Atom.to_string(role), content: content}
+
       _ ->
         # No debería llegar aquí porque los system ya se extrajeron
         nil

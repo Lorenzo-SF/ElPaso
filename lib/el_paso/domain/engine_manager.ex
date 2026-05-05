@@ -41,7 +41,8 @@ defmodule ElPaso.Domain.EngineManager do
   @doc """
   Actualiza un motor existente.
   """
-  @spec update_engine(String.t(), map()) :: {:ok, Engine.t()} | {:error, Ecto.Changeset.t() | String.t()}
+  @spec update_engine(String.t(), map()) ::
+          {:ok, Engine.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def update_engine(name, attrs) do
     case Repo.get_by(Engine, name: name) do
       nil ->
@@ -73,12 +74,14 @@ defmodule ElPaso.Domain.EngineManager do
 
         # Usar Finch en lugar de :httpc (bloqueante)
         request = Finch.build(:get, health_url)
-        timeout = 10_000  # Timeout corto para health check
+        # Timeout corto para health check
+        timeout = 10_000
 
         case Finch.request(request, ElPaso.Finch, receive_timeout: timeout) do
           {:ok, %{status: status}} when status >= 200 and status < 400 ->
             latency_ms =
               System.convert_time_unit(System.monotonic_time() - start, :native, :millisecond)
+
             {:ok, latency_ms}
 
           {:ok, %{status: status}} ->
@@ -94,6 +97,7 @@ defmodule ElPaso.Domain.EngineManager do
   defp health_url("ollama", base_url), do: "#{String.trim_trailing(base_url, "/")}/api/tags"
   defp health_url("openai", base_url), do: "#{String.trim_trailing(base_url, "/")}/models"
   defp health_url("anthropic", base_url), do: "#{String.trim_trailing(base_url, "/")}/v1/messages"
+
   defp health_url(_adapter, base_url) do
     # Para llama.cpp y compatibles: intentar /v1/models o /health
     "#{String.trim_trailing(base_url, "/")}/health"

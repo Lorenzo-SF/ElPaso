@@ -42,7 +42,8 @@ defmodule ElPaso.Domain.AutoTuner do
     state = %{
       last_run: nil,
       last_suggestions_applied: [],
-      tuning?: false    # ← NUEVO: flag para prevenir solapamiento
+      # ← NUEVO: flag para prevenir solapamiento
+      tuning?: false
     }
 
     # Schedule next run

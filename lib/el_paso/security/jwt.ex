@@ -104,8 +104,9 @@ defmodule ElPaso.Security.JWT do
   # Obtener secret desde env o config.
   # En producción, EXIGE que ELPASO_JWT_SECRET esté configurado con un valor fuerte.
   defp get_secret do
-    secret = System.get_env("ELPASO_JWT_SECRET") ||
-             Application.get_env(:elpaso, :jwt_secret)
+    secret =
+      System.get_env("ELPASO_JWT_SECRET") ||
+        Application.get_env(:elpaso, :jwt_secret)
 
     # Lista negra de secrets inseguros (nunca permitir en producción)
     unsafe_defaults = [

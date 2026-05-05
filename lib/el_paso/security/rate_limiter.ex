@@ -10,7 +10,8 @@ defmodule ElPaso.Security.RateLimiter do
   """
 
   @table :rate_limiter
-  @cleanup_interval_ms 300_000  # 5 minutos
+  # 5 minutos
+  @cleanup_interval_ms 300_000
 
   @doc """
   Verifica si el usuario/clave tiene tokens disponibles.
@@ -18,7 +19,8 @@ defmodule ElPaso.Security.RateLimiter do
   Retorna `:ok` si se permite el request, `{:error, :rate_limited}` si no.
   """
   @spec check_rate(String.t(), pos_integer()) :: :ok | {:error, :rate_limited}
-  def check_rate(user_id, max_rpm) when is_binary(user_id) and is_integer(max_rpm) and max_rpm > 0 do
+  def check_rate(user_id, max_rpm)
+      when is_binary(user_id) and is_integer(max_rpm) and max_rpm > 0 do
     # Usar ETS con operación atómica para evitar race conditions
     # Formato: {key, tokens_available, last_refill_second}
     key = user_id
@@ -54,12 +56,14 @@ defmodule ElPaso.Security.RateLimiter do
   def init do
     case :ets.info(@table) do
       :undefined ->
-        table = :ets.new(@table, [
-          :named_table,
-          :public,       # Múltiples procesos necesitan escribir (workers HTTP)
-          :set,
-          read_concurrency: true
-        ])
+        table =
+          :ets.new(@table, [
+            :named_table,
+            # Múltiples procesos necesitan escribir (workers HTTP)
+            :public,
+            :set,
+            read_concurrency: true
+          ])
 
         # Programar limpieza periódica
         spawn(fn -> cleanup_loop() end)

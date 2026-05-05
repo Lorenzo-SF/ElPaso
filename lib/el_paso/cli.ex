@@ -520,7 +520,10 @@ defmodule ElPaso.CLI do
 
     # Validar db_name contra inyección: solo letras, números, guiones y underscore
     unless String.match?(db_name, ~r/^[a-zA-Z0-9_-]+$/) do
-      Output.error("Nombre de base de datos inválido: '#{db_name}'. Solo se permiten letras, números, guiones y underscores.")
+      Output.error(
+        "Nombre de base de datos inválido: '#{db_name}'. Solo se permiten letras, números, guiones y underscores."
+      )
+
       System.halt(1)
     end
 

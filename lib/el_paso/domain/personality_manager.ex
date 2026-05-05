@@ -49,7 +49,8 @@ defmodule ElPaso.Domain.PersonalityManager do
   @doc """
   Actualiza una personalidad existente.
   """
-  @spec update_personality(String.t(), map()) :: {:ok, Personality.t()} | {:error, Ecto.Changeset.t() | String.t()}
+  @spec update_personality(String.t(), map()) ::
+          {:ok, Personality.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def update_personality(name, attrs) do
     case Repo.get_by(Personality, name: name) do
       nil ->

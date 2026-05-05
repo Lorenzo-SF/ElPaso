@@ -14,10 +14,12 @@ defmodule ElPaso.Security.Auth do
   Autentica un request por su API key. Devuelve {:ok, user_id} si es válido.
   """
   def authenticate(api_key) do
-    config = ElPaso.Config.Loader.get() |> case do
-      {:ok, c} -> c
-      {:error, _} -> %{}
-    end
+    config =
+      ElPaso.Config.Loader.get()
+      |> case do
+        {:ok, c} -> c
+        {:error, _} -> %{}
+      end
 
     auth_enabled = get_in(config, [:auth, :enabled]) || false
     allow_anonymous = get_in(config, [:auth, :allow_anonymous]) || true
@@ -44,6 +46,7 @@ defmodule ElPaso.Security.Auth do
           nil ->
             # Fallback: API key global (para desarrollo)
             global_key = Application.get_env(:elpaso, :inference_api_key)
+
             if api_key == global_key do
               {:ok, "admin"}
             else
@@ -58,7 +61,9 @@ defmodule ElPaso.Security.Auth do
   """
   def valid_api_key?(api_key) do
     case find_user_in_db(api_key) do
-      %User{active: true} -> true
+      %User{active: true} ->
+        true
+
       _ ->
         # Fallback global key
         api_key == Application.get_env(:elpaso, :inference_api_key)
@@ -84,9 +89,10 @@ defmodule ElPaso.Security.Auth do
     api_key_hash = :crypto.hash(:sha256, api_key) |> Base.encode16(case: :lower)
 
     Repo.one(
-      from u in User,
+      from(u in User,
         where: u.api_key_hash == ^api_key_hash,
         or_where: u.api_key_hash == ^api_key
+      )
     )
   rescue
     _ -> nil

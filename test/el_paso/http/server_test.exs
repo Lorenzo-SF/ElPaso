@@ -31,18 +31,22 @@ defmodule ElPaso.HTTP.ServerTest do
 
   describe "POST /auth/token" do
     test "rechaza sin credenciales" do
-      conn = conn(:post, "/auth/token", Jason.encode!(%{}))
-             |> put_req_header("content-type", "application/json")
-             |> Server.call(@opts)
+      conn =
+        conn(:post, "/auth/token", Jason.encode!(%{}))
+        |> put_req_header("content-type", "application/json")
+        |> Server.call(@opts)
+
       assert conn.status == 401
     end
   end
 
   describe "POST /v1/messages" do
     test "rechaza body inválido" do
-      conn = conn(:post, "/v1/messages", "not json")
-             |> put_req_header("content-type", "application/json")
-             |> Server.call(@opts)
+      conn =
+        conn(:post, "/v1/messages", "not json")
+        |> put_req_header("content-type", "application/json")
+        |> Server.call(@opts)
+
       # Con Plug.Parsers, esto dará error de parseo
       assert conn.status in [400, 500]
     end

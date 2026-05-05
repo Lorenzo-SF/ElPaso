@@ -111,6 +111,4 @@ defmodule ElPaso.Domain.ModelManagerTest do
       assert {:error, :model_not_found} = ModelManager.infer("nonexistent", %{prompt: "hi"})
     end
   end
-
-
 end

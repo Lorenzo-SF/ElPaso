@@ -5,12 +5,15 @@ defmodule ElPaso.HTTP.Server do
   import Plug.Conn
 
   # ── Security Plugs ─────────────────────────────────────────
-  plug :add_security_headers
-  plug Plug.Parsers,
+  plug(:add_security_headers)
+
+  plug(Plug.Parsers,
     parsers: [:json],
     json_decoder: Jason,
     body_reader: {Plug.Parsers, :read_body, []},
-    length: 10_000_000  # 10MB max body size
+    # 10MB max body size
+    length: 10_000_000
+  )
 
   plug(:match)
   plug(:dispatch)
@@ -43,7 +46,9 @@ defmodule ElPaso.HTTP.Server do
 
     # Validar tamaño de mensajes
     messages = Map.get(params, "messages", [])
-    total_chars = messages |> Enum.map(&Map.get(&1, "content", "")) |> Enum.join() |> String.length()
+
+    total_chars =
+      messages |> Enum.map(&Map.get(&1, "content", "")) |> Enum.join() |> String.length()
 
     if total_chars > 100_000 do
       conn
@@ -178,6 +183,7 @@ defmodule ElPaso.HTTP.Server do
     else
       {:error, :rate_limited} ->
         send_rate_limited(conn)
+
       _ ->
         conn
         |> put_status(403)
@@ -196,6 +202,7 @@ defmodule ElPaso.HTTP.Server do
     else
       {:error, :rate_limited} ->
         send_rate_limited(conn)
+
       _ ->
         conn
         |> put_status(403)
@@ -219,6 +226,7 @@ defmodule ElPaso.HTTP.Server do
     else
       {:error, :rate_limited} ->
         send_rate_limited(conn)
+
       _ ->
         conn
         |> put_status(403)
@@ -237,6 +245,7 @@ defmodule ElPaso.HTTP.Server do
     else
       {:error, :rate_limited} ->
         send_rate_limited(conn)
+
       _ ->
         conn
         |> put_status(403)
@@ -250,11 +259,14 @@ defmodule ElPaso.HTTP.Server do
     conn
     |> put_resp_header("x-content-type-options", "nosniff")
     |> put_resp_header("x-frame-options", "DENY")
-    |> put_resp_header("x-xss-protection", "0")  # Obsoleto pero por compatibilidad
+    # Obsoleto pero por compatibilidad
+    |> put_resp_header("x-xss-protection", "0")
     |> put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
     |> put_resp_header("permissions-policy", "camera=(), microphone=(), geolocation=()")
-    |> put_resp_header("content-security-policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'")
+    |> put_resp_header(
+      "content-security-policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    )
     |> maybe_add_hsts()
   end
 

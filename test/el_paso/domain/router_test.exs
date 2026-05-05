@@ -5,37 +5,46 @@ defmodule ElPaso.Domain.RouterTest do
   alias ElPaso.Models.{Model, Engine}
 
   setup do
-    {:ok, engine} = Repo.insert(%Engine{
-      name: "test-engine",
-      adapter: "openai",
-      base_url: "http://localhost:9999/v1",
-      active: true
-    })
+    {:ok, engine} =
+      Repo.insert(%Engine{
+        name: "test-engine",
+        adapter: "openai",
+        base_url: "http://localhost:9999/v1",
+        active: true
+      })
 
-    {:ok, model1} = Repo.insert(%Model{
-      name: "coder-model",
-      engine_id: engine.id,
-      url: "http://localhost:9999/v1",
-      active: true,
-      task_affinity: %{code: 0.9, reasoning: 0.5, summarization: 0.3, unknown: 0.5},
-      complexity_ceiling: 1.0
-    })
+    {:ok, model1} =
+      Repo.insert(%Model{
+        name: "coder-model",
+        engine_id: engine.id,
+        url: "http://localhost:9999/v1",
+        active: true,
+        task_affinity: %{code: 0.9, reasoning: 0.5, summarization: 0.3, unknown: 0.5},
+        complexity_ceiling: 1.0
+      })
 
-    {:ok, model2} = Repo.insert(%Model{
-      name: "fast-model",
-      engine_id: engine.id,
-      url: "http://localhost:9999/v1",
-      active: true,
-      task_affinity: %{code: 0.3, reasoning: 0.4, summarization: 0.9, unknown: 0.5},
-      complexity_ceiling: 0.7
-    })
+    {:ok, model2} =
+      Repo.insert(%Model{
+        name: "fast-model",
+        engine_id: engine.id,
+        url: "http://localhost:9999/v1",
+        active: true,
+        task_affinity: %{code: 0.3, reasoning: 0.4, summarization: 0.9, unknown: 0.5},
+        complexity_ceiling: 0.7
+      })
 
     %{engine: engine, models: [model1, model2]}
   end
 
   describe "select_model/2" do
     test "selecciona el modelo con mayor affinity para tareas de código", %{} do
-      messages = [%{"role" => "user", "content" => "Write a Python function to implement quicksort algorithm"}]
+      messages = [
+        %{
+          "role" => "user",
+          "content" => "Write a Python function to implement quicksort algorithm"
+        }
+      ]
+
       assert {:ok, %{model_name: "coder-model"}} = Router.select_model(messages, %{})
     end
 

@@ -63,24 +63,25 @@ defmodule ElPaso.Config do
       is_prod = Application.get_env(:elpaso, :env) == :prod
 
       if is_prod and (!env_inference_url or !env_inference_api_key) do
-        {:error, """
-        ⚠️ CONFIGURACIÓN REQUERIDA
+        {:error,
+         """
+         ⚠️ CONFIGURACIÓN REQUERIDA
 
-        El sistema requiere las siguientes variables de entorno:
+         El sistema requiere las siguientes variables de entorno:
 
-          export ELPASO_INFERENCE_URL="https://tu-servidor-api.com/v1"
-          export ELPASO_INFERENCE_API_KEY="sk-tu-api-key"
+           export ELPASO_INFERENCE_URL="https://tu-servidor-api.com/v1"
+           export ELPASO_INFERENCE_API_KEY="sk-tu-api-key"
 
-        Ejemplo para OpenAI:
-          export ELPASO_INFERENCE_URL="https://api.openai.com/v1"
-          export ELPASO_INFERENCE_API_KEY="sk-tu-api-key"
+         Ejemplo para OpenAI:
+           export ELPASO_INFERENCE_URL="https://api.openai.com/v1"
+           export ELPASO_INFERENCE_API_KEY="sk-tu-api-key"
 
-        Ejemplo para Ollama local:
-          export ELPASO_INFERENCE_URL="http://localhost:11434/v1"
-          export ELPASO_INFERENCE_API_KEY="no-api-key-required"
+         Ejemplo para Ollama local:
+           export ELPASO_INFERENCE_URL="http://localhost:11434/v1"
+           export ELPASO_INFERENCE_API_KEY="no-api-key-required"
 
-        Para más opciones: elpaso config --wizard
-        """}
+         Para más opciones: elpaso config --wizard
+         """}
       else
         # En modo no producción, usar valores por defecto para permitir arranque
         inference_url =
@@ -247,14 +248,18 @@ defmodule ElPaso.Config do
 
     defp load_affinities_from_config(config) do
       case get_in(config, ["routing", "affinities"]) do
-        nil -> :ok
+        nil ->
+          :ok
+
         affinities when is_map(affinities) ->
           Enum.each(affinities, fn {model_id, task_affinities} ->
             Enum.each(task_affinities, fn {task_type, affinity} ->
               :ets.insert(:affinity_table, {{model_id, task_type}, affinity})
             end)
           end)
-        _ -> :ok
+
+        _ ->
+          :ok
       end
     end
 
@@ -333,9 +338,11 @@ defmodule ElPaso.Config do
                 _ -> value
               end
 
-            updated_acc = Map.update(acc, current_section, %{key => parsed_value}, fn section_map ->
-              Map.put(section_map, key, parsed_value)
-            end)
+            updated_acc =
+              Map.update(acc, current_section, %{key => parsed_value}, fn section_map ->
+                Map.put(section_map, key, parsed_value)
+              end)
+
             {updated_acc, current_section}
 
           true ->
