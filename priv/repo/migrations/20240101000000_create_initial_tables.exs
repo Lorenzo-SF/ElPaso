@@ -1,7 +1,14 @@
 defmodule ElPaso.Repo.Migrations.CreateInitialTables do
   use Ecto.Migration
 
-  def change do
+  def up do
+    # ═══════════════════════════════════════════════════════════
+    # V4.0: Activar pgvector al crear la BD desde cero
+    # Esto asegura que "mix ecto.drop && mix ecto.create && mix ecto.migrate"
+    # no pierda la extensión pgvector.
+    # ═══════════════════════════════════════════════════════════
+    execute "CREATE EXTENSION IF NOT EXISTS vector"
+
     # ============================================
     # ENGINES - Motores de inferencia
     # ============================================
@@ -101,8 +108,16 @@ defmodule ElPaso.Repo.Migrations.CreateInitialTables do
 
     create index(:users, [:username], unique: true)
     create index(:users, [:api_key_hash])
+  end
 
-    # Note: sessions table already exists from InitialSetup migration
-    # so we don't recreate it here
+  def down do
+    drop table(:users)
+    drop table(:profiles)
+    drop table(:personalities)
+    drop table(:models)
+    drop table(:engines)
+
+    # No hacemos DROP EXTENSION — otras apps podrían usarlo
+    # y además se elimina automáticamente al hacer DROP DATABASE
   end
 end

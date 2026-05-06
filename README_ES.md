@@ -39,11 +39,47 @@ ElPaso es un proxy de inferencia que se sitúa entre tu aplicación y múltiples
 ### Software
 - **Elixir**: 1.19.5+
 - **OTP**: 28+
-- **PostgreSQL**: 14+ con extensión **pgvector** (`CREATE EXTENSION vector;`)
+- **PostgreSQL**: 14+ con extensión **pgvector** (obligatorio — ver abajo)
 - **Ollama**: servidor de modelos local (https://ollama.com)
   - ElPaso v4.0 usa Ollama para DOS propósitos:
     1. **Modelo de embeddings** `nomic-embed-text` (274 MB) — obligatorio para el motor de decisiones semántico
     2. **Modelos de inferencia** (gemma, llama, qwen, etc.) — según configuración del usuario
+
+### PostgreSQL + pgvector (OBLIGATORIO)
+
+ElPaso requiere PostgreSQL con la extensión **pgvector** instalada. Tienes dos opciones:
+
+#### Opción A: Docker con localdocker (recomendado)
+
+```bash
+# El wrapper ya usa pgvector/pgvector:pg17 que incluye pgvector
+localdocker start
+
+# Si YA tienes un contenedor corriendo SIN pgvector, instálalo sin borrar datos:
+localdocker pgvector
+# Esto instala pgvector en TODAS las BD de ElPaso (elpaso_dev, elpaso_test, elpaso_prod)
+```
+
+#### Opción B: PostgreSQL instalado directamente
+
+```bash
+# Según tu gestor de paquetes:
+sudo apt install postgresql-14 postgresql-14-pgvector   # Debian/Ubuntu
+sudo pacman -S postgresql pgvector                       # Arch
+brew install postgresql@14 && brew install pgvector      # macOS
+
+# Activar la extensión en la BD que corresponda según MIX_ENV:
+#   MIX_ENV=dev  → elpaso_dev
+#   MIX_ENV=test → elpaso_test
+#   MIX_ENV=prod → elpaso_prod
+psql -U postgres -d elpaso_dev -c "CREATE EXTENSION IF NOT EXISTS vector;"
+psql -U postgres -d elpaso_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+psql -U postgres -d elpaso_prod -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+> ⚠️ **pgvector NO es opcional.** El motor de decisiones semántico de ElPaso v4.0
+> usa `vector(768)` y cosine similarity para seleccionar la personalidad adecuada.
+> Sin pgvector, el DecisionEngine solo puede usar la capa 1 (keywords).
 
 ### Hardware mínimo
 

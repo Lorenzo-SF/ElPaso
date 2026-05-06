@@ -45,6 +45,7 @@ defmodule ElPaso.CLI do
       config show/set/reload
       db create/migrate/status
       server start/stop/restart/status/log
+      doctor                         # Diagnóstico completo del entorno
       router stats/tune/rules
       bench run
       context list/show/clear
@@ -457,6 +458,19 @@ defmodule ElPaso.CLI do
 
       ["cluster" | rest] ->
         handle_cluster(rest)
+
+      ["doctor" | rest] ->
+        # Arrancar la app para tener acceso a la configuración
+        case Application.ensure_all_started(:elpaso) do
+          {:ok, _} -> :ok
+          _ -> Output.warning("App no pudo arrancar completamente. Diagnóstico parcial.")
+        end
+
+        if "--fix" in rest do
+          ElPaso.Doctor.fix()
+        else
+          ElPaso.Doctor.run()
+        end
 
       _ ->
         Output.error(
