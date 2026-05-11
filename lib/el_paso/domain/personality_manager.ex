@@ -10,9 +10,11 @@ defmodule ElPaso.Domain.PersonalityManager do
   """
 
   import Ecto.Query
+  require Logger
 
   alias ElPaso.Repo
   alias ElPaso.Models.Personality
+  alias ElPaso.Context.EmbeddingClient
 
   @doc "Crea una nueva personalidad."
   @spec create_personality(map()) :: {:ok, Personality.t()} | {:error, Ecto.Changeset.t()}
@@ -96,6 +98,89 @@ defmodule ElPaso.Domain.PersonalityManager do
     case Repo.get_by(Personality, name: name) do
       nil -> {:error, "Personalidad no encontrada"}
       personality -> personality |> Personality.changeset(attrs) |> Repo.update()
+    end
+  end
+
+  # ── v4.0: Embedding ──────────────────────────────────────────────────────
+
+  @doc """
+  Genera y almacena el embedding semántico de una personalidad concreta.
+
+  Usa `semantic_description` (si existe), `description`, o `name` como texto
+  fuente para generar el vector. El embedding se almacena en el campo
+  `embedding` (pgvector) para que el DecisionEngine (capa 2) pueda hacer
+  cosine similarity.
+
+  Devuelve `{:ok, personality}` o `{:error, reason}`.
+  """
+  @spec embed_personality(Personality.t() | String.t()) ::
+          {:ok, Personality.t()} | {:error, term()}
+  def embed_personality(%Personality{} = personality) do
+    text = embedding_text(personality)
+
+    case EmbeddingClient.embed(text) do
+      {:ok, vector} ->
+        pgv = Pgvector.new(vector)
+
+        personality
+        |> Personality.changeset(%{embedding: pgv})
+        |> Repo.update()
+
+      {:error, reason} ->
+        Logger.warning("[PersonalityManager] No se pudo generar embedding para #{personality.name}: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  def embed_personality(name) when is_binary(name) do
+    case Repo.get_by(Personality, name: name) do
+      nil -> {:error, :not_found}
+      personality -> embed_personality(personality)
+    end
+  end
+
+  @doc """
+  Genera y almacena embeddings para TODAS las personalidades existentes.
+
+  Útil tras crear varias personalidades nuevas o tras cambiar sus descripciones.
+  Devuelve `{:ok, %{succeeded: count, failed: errors}}`.
+  """
+  @spec embed_all() :: {:ok, map()}
+  def embed_all do
+    personalities = Repo.all(Personality)
+    results = Enum.reduce(personalities, %{succeeded: 0, failed: []}, fn p, acc ->
+      case embed_personality(p) do
+        {:ok, _} -> %{acc | succeeded: acc.succeeded + 1}
+        {:error, reason} -> %{acc | failed: [{p.name, reason} | acc.failed]}
+      end
+    end)
+    {:ok, %{results | failed: Enum.reverse(results.failed)}}
+  end
+
+  @doc """
+  Devuelve las personalidades que YA tienen embedding generado (listas para capa 2).
+  """
+  @spec list_embedded() :: [Personality.t()]
+  def list_embedded do
+    Personality
+    |> where([p], not is_nil(p.embedding))
+    |> order_by(desc: :priority)
+    |> Repo.all()
+  end
+
+  @doc "Número de personalidades con embedding generado."
+  @spec embedding_count() :: non_neg_integer()
+  def embedding_count do
+    Personality
+    |> where([p], not is_nil(p.embedding))
+    |> Repo.aggregate(:count)
+  end
+
+  defp embedding_text(%Personality{} = p) do
+    cond do
+      not is_nil(p.semantic_description) and p.semantic_description != "" -> p.semantic_description
+      not is_nil(p.description) and p.description != "" -> p.description
+      true -> p.name
     end
   end
 end

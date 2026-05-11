@@ -536,37 +536,55 @@ defmodule ElPaso.HTTP.Server do
       Logger.error("[Pipeline] No hay modelo disponible")
       {:error, %{type: :no_model, message: "No model available for inference"}}
     else
-      request = %{
-        messages: enriched_messages,
-        model_hint: model_name,
-        temperature: Map.get(config_overrides, "temperature", internal_req.temperature),
-        max_tokens: Map.get(config_overrides, "max_tokens", internal_req.max_tokens)
-      }
+      # ── V4.0: Solicitar permiso de carga al PersonalityLoadManager ──────
+      load_result =
+        if personality_name do
+          ElPaso.Domain.PersonalityLoadManager.request_load(personality_name)
+        else
+          {:ok, :loaded}
+        end
 
-      Logger.info("[Pipeline] → infer(#{model_name}) temp=#{request.temperature}")
+      case load_result do
+        {:ok, load_status} ->
+          log_load_status(load_status, personality_name)
 
-      result = case ElPaso.Domain.ModelManager.infer(model_name, request) do
-        {:ok, {:ok, response}} ->
-          {:ok, Map.put(response, :model_name, model_name)}
+          request = %{
+            messages: enriched_messages,
+            model_hint: model_name,
+            temperature: Map.get(config_overrides, "temperature", internal_req.temperature),
+            max_tokens: Map.get(config_overrides, "max_tokens", internal_req.max_tokens)
+          }
 
-        {:ok, response} when is_map(response) ->
-          {:ok, Map.put(response, :model_name, model_name)}
+          Logger.info("[Pipeline] → infer(#{model_name}) temp=#{request.temperature}")
+
+          result = case ElPaso.Domain.ModelManager.infer(model_name, request) do
+            {:ok, {:ok, response}} ->
+              {:ok, Map.put(response, :model_name, model_name)}
+
+            {:ok, response} when is_map(response) ->
+              {:ok, Map.put(response, :model_name, model_name)}
+
+            {:error, reason} ->
+              Logger.error("[Pipeline] infer error: #{inspect(reason)}")
+              {:error, reason}
+          end
+
+          # V4.0: Registrar mensajes en la sesión + liberar personalidad (async, no bloquea)
+          if personality_name do
+            Task.start(fn ->
+              ElPaso.Context.SessionContext.record_message(session_id, "user",
+                extract_last_user_message(internal_req.messages), model_name)
+              ElPaso.Context.SessionContext.deactivate(session_id, personality_name, "processed request")
+              ElPaso.Domain.PersonalityLoadManager.release(personality_name)
+            end)
+          end
+
+          result
 
         {:error, reason} ->
-          Logger.error("[Pipeline] infer error: #{inspect(reason)}")
-          {:error, reason}
+          Logger.warning("[Pipeline] PersonalityLoadManager rechazó '#{personality_name}': #{inspect(reason)}")
+          {:error, %{type: :personality_capacity, message: "Personality '#{personality_name}' cannot be loaded: #{reason}"}}
       end
-
-      # V4.0: Registrar mensajes en la sesión (async, no bloquea)
-      if personality_name do
-        Task.start(fn ->
-          ElPaso.Context.SessionContext.record_message(session_id, "user",
-            extract_last_user_message(internal_req.messages), model_name)
-          ElPaso.Context.SessionContext.deactivate(session_id, personality_name, "processed request")
-        end)
-      end
-
-      result
     end
   end
 
@@ -601,6 +619,18 @@ defmodule ElPaso.HTTP.Server do
     String.replace(str, ~r/[\n\r\t]/, " ") |> String.slice(0, 128)
   end
   defp sanitize_for_log(_), do: ""
+
+  # V4.0: Log del resultado de PersonalityLoadManager
+  defp log_load_status(:already_loaded, name) do
+    Logger.info("[Pipeline] PersonalityLoadManager: '#{name}' ya cargada")
+  end
+  defp log_load_status(:loaded, name) do
+    Logger.info("[Pipeline] PersonalityLoadManager: '#{name}' cargada (slot libre)")
+  end
+  defp log_load_status({:loaded, evicted: old}, name) do
+    Logger.info("[Pipeline] PersonalityLoadManager: '#{name}' cargada (desalojada '#{old}')")
+  end
+  defp log_load_status(_, _), do: :ok
 
   # V2.0: Ejecuta streaming para requests Anthropic
   defp run_anthropic_stream(internal_req, conn) do

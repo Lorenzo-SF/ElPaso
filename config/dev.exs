@@ -6,6 +6,14 @@ config :elpaso,
   inference_server_url: "http://localhost:8081/v1",
   inference_api_key: "sk-local"
 
+# ── V4.0: PersonalityLoadManager ──────────────────────────────────────
+# Controla cuántas personalidades pueden estar cargadas simultáneamente.
+# - max_parallel: máximo de modelos en paralelo (1 con llama-server local)
+# - protected_personalities: nunca serán desalojadas (classifier-router = motor de decisiones)
+config :elpaso, :personality_load,
+  max_parallel: 2,
+  protected_personalities: ["classifier-router"]
+
 # Logger en desarrollo: debug + metadata
 config :logger, :console,
   level: :debug,

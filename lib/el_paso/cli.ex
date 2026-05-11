@@ -41,7 +41,7 @@ defmodule ElPaso.CLI do
       init
       model add/list/delete/update/show/start/stop
       engine add/list/delete/update/show/test
-      personality add/list/delete/show/use
+      personality add/list/delete/show/use/embed
       config show/set/reload
       db create/migrate/status
       server start/stop/restart/status/log
@@ -1650,6 +1650,45 @@ defmodule ElPaso.CLI do
     else
       Output.error("Error: Faltan parámetros requeridos")
       Output.error("Uso: elpaso personality use --model <modelo> --personality <nombre>")
+    end
+  end
+
+  defp handle_personality(["embed" | rest]) do
+    name = get_opt(rest, :name)
+
+    if name do
+      # Embedding de una personalidad concreta
+      Output.info("Generando embedding para '#{name}'...")
+
+      case ElPaso.Domain.PersonalityManager.embed_personality(name) do
+        {:ok, _personality} ->
+          dims = Application.get_env(:elpaso, :embedding_dims, 768)
+          Output.success("Embedding (#{dims}-dim) generado para '#{name}'")
+
+        {:error, :not_found} ->
+          Output.error("Personalidad '#{name}' no encontrada")
+
+        {:error, reason} ->
+          Output.error("Error al generar embedding: #{inspect(reason)}")
+      end
+    else
+      # Embedding de TODAS las personalidades
+      Output.info("Generando embeddings para todas las personalidades...")
+      Output.info("(Esto puede tardar si hay muchas personalidades)")
+
+      case ElPaso.Domain.PersonalityManager.embed_all() do
+        {:ok, %{succeeded: 0, failed: []}} ->
+          Output.warning("No hay personalidades registradas. Crea una primero: elpaso personality add ...")
+
+        {:ok, %{succeeded: n, failed: []}} ->
+          Output.success("#{n} embedding(s) generado(s) correctamente")
+
+        {:ok, %{succeeded: n, failed: fails}} when fails != [] ->
+          Output.warning("#{n} OK, #{length(fails)} fallos")
+          Enum.each(fails, fn {name, reason} ->
+            Output.error("  #{name}: #{inspect(reason)}")
+          end)
+      end
     end
   end
 

@@ -27,6 +27,13 @@ defmodule ElPaso.Models.Personality do
     field(:priority, :integer, default: 0)
     field(:is_default, :boolean, default: false)
 
+    # v4.0 — DecisionEngine semántico
+    field(:semantic_description, :string)
+    field(:embedding, Pgvector.Ecto.Vector)
+    field(:regex_patterns, {:array, :string}, default: [])
+    field(:min_confidence, :float, default: 0.5)
+    field(:cooldown_ms, :integer, default: 0)
+
     # Config overrides para el modelo
     field(:config, :map, default: %{})
 
@@ -43,7 +50,9 @@ defmodule ElPaso.Models.Personality do
     |> cast(attrs, [
       :name, :description, :system_prompt, :active,
       :trigger_keywords, :trigger_task_types, :detection_rules,
-      :priority, :is_default, :config, :model_id, :engine_id
+      :priority, :is_default, :config, :model_id, :engine_id,
+      :semantic_description, :embedding, :regex_patterns,
+      :min_confidence, :cooldown_ms
     ])
     |> validate_required([:name, :system_prompt])
     |> unique_constraint(:name)

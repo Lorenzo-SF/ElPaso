@@ -66,6 +66,12 @@ defmodule ElPaso.Application do
       # V4.0: SessionSupervisor para gestionar sesiones compartidas
       ElPaso.Context.SessionSupervisor,
 
+      # V4.0: Gestor de carga de personalidades en paralelo con prioridades
+      ElPaso.Domain.PersonalityLoadManager,
+
+      # V4.0: Caché de system prompts (PrefixManager)
+      ElPaso.Context.PrefixManager,
+
       # Gestor del ciclo de vida de llama-server (arranca/apaga modelos)
       ElPaso.Domain.LlamaServerManager,
 
