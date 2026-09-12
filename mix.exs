@@ -79,8 +79,18 @@ defmodule ElPaso.MixProject do
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
 
-    [{:zaguan, path: "../zaguan", runtime: false},
-     {:apero, path: "../apero"}] ++ base
+    [{:zaguan, sibling_or_git("zaguan") ++ [runtime: false]},
+     {:apero, sibling_or_git("apero")}] ++ base
+  end
+
+  defp sibling_or_git(name) do
+    sibling = Path.expand("../#{name}", __DIR__)
+
+    if File.dir?(sibling) and File.dir?(Path.join(sibling, ".git")) do
+      [path: "../#{name}"]
+    else
+      [git: "https://github.com/Lorenzo-SF/#{name}.git"]
+    end
   end
 
   defp escript do
