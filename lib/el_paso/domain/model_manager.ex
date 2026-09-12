@@ -278,15 +278,42 @@ defmodule ElPaso.Domain.ModelManager do
 
   # ── Server Callbacks ────────────────────────────────────────
   # Lazy-starts it if not already running under Zaguan.Engine.CircuitBreaker.Registry.
+  # MM-02 fix (iter-043): use `start` (unlinked) instead of `start_link`
+  # and wrap in try/rescue.  If the breaker fails to start (DB issue,
+  # registry bug, etc), we log + continue without breaker protection
+  # rather than crashing the ModelManager.
   defp ensure_circuit_breaker(model_name) do
     case Registry.lookup(Zaguan.Engine.CircuitBreaker.Registry, model_name) do
       [{_pid, _}] ->
         :ok
 
       [] ->
-        {:ok, _pid} =
-          Zaguan.Engine.CircuitBreaker.start_link(name: model_name, threshold: 5, timeout: 60_000)
+        start_breaker_safe(model_name)
     end
+  end
+
+  defp start_breaker_safe(model_name) do
+    case Zaguan.Engine.CircuitBreaker.start(
+           name: model_name,
+           threshold: 5,
+           timeout: 60_000
+         ) do
+      {:ok, _pid} ->
+        :ok
+
+      {:error, {:already_started, _pid}} ->
+        :ok
+
+      {:error, reason} ->
+        require Logger
+        Logger.warning("ElPaso.ModelManager: failed to start circuit breaker for #{model_name}: #{inspect(reason)}")
+        :ok
+    end
+  rescue
+    e ->
+      require Logger
+      Logger.warning("ElPaso.ModelManager: circuit breaker start crashed for #{model_name}: #{Exception.message(e)}")
+      :ok
   end
 
   # Helper function to convert Model to ModelState for the router
