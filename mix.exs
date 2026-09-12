@@ -79,8 +79,8 @@ defmodule ElPaso.MixProject do
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
 
-    [{:zaguan, sibling_or_git("zaguan") ++ [runtime: false]},
-     {:apero, sibling_or_git("apero")}] ++ base
+    [{:zaguan, sibling_or_git("zaguan") ++ [runtime: false, optional: true]},
+     {:apero, sibling_or_git("apero") ++ [optional: true]}] ++ base
   end
 
   defp sibling_or_git(name) do
