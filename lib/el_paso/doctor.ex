@@ -9,18 +9,18 @@ defmodule ElPaso.Doctor do
 
   @doc "Ejecuta diagnóstico."
   @spec run() :: :ok
-  def run, do: Apero.Doctor.run(config())
+  def run, do: ElPaso.Ecosystem.doctor_run(config())
 
   @doc "Ejecuta diagnóstico y repara automáticamente."
   @spec fix() :: :ok
-  def fix, do: Apero.Doctor.fix(config())
+  def fix, do: ElPaso.Ecosystem.doctor_fix(config())
 
   # ═══════════════════════════════════════════
   # CONFIGURACIÓN DE CHECKS
   # ═══════════════════════════════════════════
 
   defp config do
-    pkg = Apero.Pkg.detect()
+    pkg = ElPaso.Ecosystem.pkg_detect()
 
     %{
       app_name: "ElPaso",

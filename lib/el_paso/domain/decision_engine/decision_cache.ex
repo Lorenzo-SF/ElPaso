@@ -8,7 +8,6 @@ defmodule ElPaso.Domain.DecisionEngine.DecisionCache do
   TTL: 5 minutos por defecto (configurable).
   """
 
-  alias Apero.Crypto
 
   @table :routing_decision_cache
   @default_ttl_ms 300_000
@@ -83,6 +82,6 @@ defmodule ElPaso.Domain.DecisionEngine.DecisionCache do
   end
 
   defp hash_content(content) do
-    Crypto.hash(String.downcase(content), :sha256)
+    ElPaso.Ecosystem.crypto_hash(:sha256, String.downcase(content)) || :erlang.phash2(content)
   end
 end

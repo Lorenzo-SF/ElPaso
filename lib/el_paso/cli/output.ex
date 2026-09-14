@@ -15,7 +15,7 @@ defmodule ElPaso.CLI.Output do
       Output.success("Modelo creado exitosamente")
   """
 
-  alias Zaguan.Drawer.Components.{Bar, Box, Breadcrumbs, Header, Json, Separator, Table}
+  alias ElPaso.Ecosystem
 
   # Colores corporativos ElPaso
   @color_primary {0, 180, 216}
@@ -103,7 +103,7 @@ defmodule ElPaso.CLI.Output do
   @spec section(String.t(), keyword()) :: :ok
   def section(title, opts \\ []) do
     color = Keyword.get(opts, :color, @color_primary)
-    Header.print(title, Keyword.merge(opts, color: color))
+    Ecosystem.render_component(:Header, [title, Keyword.merge(opts, color: color]))
   end
 
   # ==========================================================================
@@ -122,7 +122,7 @@ defmodule ElPaso.CLI.Output do
   @spec divider(String.t() | nil, keyword()) :: :ok
   def divider(text \\ nil, opts \\ []) do
     color = Keyword.get(opts, :color, @color_muted)
-    Separator.print(text, Keyword.merge(opts, color: color))
+    Ecosystem.render_component(:Separator, [text, Keyword.merge(opts, color: color]))
   end
 
   # ==========================================================================
@@ -149,7 +149,7 @@ defmodule ElPaso.CLI.Output do
   @spec data_table(keyword()) :: :ok
   def data_table(opts) when is_list(opts) and (length(opts) == 0 or is_tuple(hd(opts))) do
     defaults = [table_border: :rounded, headers_color: :cyan]
-    Table.print(Keyword.merge(defaults, opts))
+    Ecosystem.render_component(:Table, [Keyword.merge(defaults, opts]))
   end
 
   @spec data_table([String.t()], [[String.t()]]) :: :ok
@@ -160,7 +160,7 @@ defmodule ElPaso.CLI.Output do
   @spec data_table([String.t()], [[String.t()]], keyword()) :: :ok
   def data_table(headers, rows, opts) do
     defaults = [headers: headers, rows: rows, table_border: :rounded, headers_color: :cyan]
-    Table.print(Keyword.merge(defaults, opts))
+    Ecosystem.render_component(:Table, [Keyword.merge(defaults, opts]))
   end
 
   # ==========================================================================
@@ -182,7 +182,7 @@ defmodule ElPaso.CLI.Output do
     type = Keyword.get(opts, :type, :info)
     color = alert_color(type)
     border = Keyword.get(opts, :border, :rounded)
-    Box.print(content, border: border, border_color: color)
+    Ecosystem.render_component(:Box, [content, border: border, border_color: color])
   end
 
   # ==========================================================================
@@ -196,7 +196,7 @@ defmodule ElPaso.CLI.Output do
   """
   @spec json_data(term(), keyword()) :: :ok
   def json_data(data, opts \\ []) do
-    Json.print(data, opts)
+    Ecosystem.render_component(:Json, [data, opts])
   end
 
   # ==========================================================================
@@ -213,7 +213,7 @@ defmodule ElPaso.CLI.Output do
   """
   @spec breadcrumbs([String.t()], keyword()) :: :ok
   def breadcrumbs(items, opts \\ []) do
-    Breadcrumbs.print(items, opts)
+    Ecosystem.render_component(:Breadcrumbs, [items, opts])
   end
 
   # ==========================================================================
@@ -230,7 +230,7 @@ defmodule ElPaso.CLI.Output do
   """
   @spec progress_bar(number(), number(), keyword()) :: :ok
   def progress_bar(value, max \\ 100, opts \\ []) do
-    Bar.print(value, max, opts)
+    Ecosystem.render_component(:Bar, [value, max, opts])
   end
 
   # ==========================================================================

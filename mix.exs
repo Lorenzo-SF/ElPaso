@@ -154,7 +154,7 @@ defmodule ElPaso.MixProject do
       plt_file: {:no_warn, "_build/plts/dialyzer.plt"},
       plt_core_path: "_build/plts",
       flags: ["-Wno_return", "-Wno_match"],
-      plt_add_apps: [:mix, :zaguan],
+      plt_add_apps: [:mix],
       ignore_warnings: ".dialyzer_ignore.exs"
     ]
   end

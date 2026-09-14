@@ -17,7 +17,7 @@ defmodule ElPaso.Bootstrap do
 
   require Logger
 
-  alias Apero.{Runner, Net, Proc, Helpers}
+  alias ElPaso.Ecosystem
 
   @ollama_url "http://localhost:11434"
   @ollama_port 11_434
@@ -102,11 +102,11 @@ defmodule ElPaso.Bootstrap do
   defp verify_ollama! do
     Logger.info("[Bootstrap] Verificando Ollama...")
 
-    unless Proc.command_exists?("ollama") do
+    unless ElPaso.Ecosystem.command_exists?("ollama") do
       raise "❌ 'ollama' no encontrado en el PATH.\nInstálalo: curl -fsSL https://ollama.com/install.sh | sh"
     end
 
-    if Net.port_open?("localhost", @ollama_port) do
+    if ElPaso.Ecosystem.port_open?("localhost", @ollama_port) do
       Logger.info("[Bootstrap] ✅ Ollama detectado en localhost:#{@ollama_port}")
     else
       raise "❌ Ollama no responde en localhost:#{@ollama_port}.\nArranca el servicio: ollama serve"
@@ -164,7 +164,7 @@ defmodule ElPaso.Bootstrap do
 
     display_options = Enum.map(model_list, &Map.fetch!(display_map, &1))
 
-    choice = Helpers.question_with_options("Elige el modelo de embeddings a descargar:", display_options)
+    choice = ElPaso.Ecosystem.helpers_question_with_options("Elige el modelo de embeddings a descargar:", display_options)
 
     selected =
       if choice, do: Enum.find(model_list, fn n -> Map.fetch!(display_map, n) == choice end)
@@ -188,7 +188,7 @@ defmodule ElPaso.Bootstrap do
       IO.puts("   Ruta: #{@ollama_models_dir}")
       IO.puts("   Esto solo ocurre la primera vez.\n")
 
-      case Runner.run("ollama", ["pull", model]) do
+      case ElPaso.Ecosystem.run_with_runner2("ollama", ["pull", model]) do
         {:ok, _output} ->
           IO.puts("✅ #{model} descargado correctamente.\n")
           Logger.info("[Bootstrap] ✅ #{model} descargado")

@@ -13,7 +13,6 @@ defmodule ElPaso.Domain.LlamaServerManager do
   use GenServer
   require Logger
 
-  alias Apero.Runner
 
   @wrapper "localllama"
   @port 8081
@@ -100,7 +99,7 @@ defmodule ElPaso.Domain.LlamaServerManager do
   defp kill_current do
     Logger.info("[LlamaServerManager] Parando llama-server actual...")
 
-    case Runner.run(@wrapper, ["stop"], timeout: 15_000) do
+    case ElPaso.Ecosystem.run_with_runner(@wrapper, ["stop"], timeout: 15_000) do
       {:ok, output} ->
         Logger.debug("[LlamaServerManager] Stop OK: #{String.trim(output)}")
 
@@ -115,7 +114,7 @@ defmodule ElPaso.Domain.LlamaServerManager do
   defp start_llama(model_name) do
     Logger.info("[LlamaServerManager] Arrancando llama-server con modelo '#{model_name}'...")
 
-    case Runner.run(@wrapper, [model_name, "quiet"], timeout: 120_000) do
+    case ElPaso.Ecosystem.run_with_runner(@wrapper, [model_name, "quiet"], timeout: 120_000) do
       {:ok, output} ->
         Logger.debug("[LlamaServerManager] Start OK: #{String.trim(output)}")
         :ok

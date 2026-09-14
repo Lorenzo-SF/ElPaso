@@ -85,17 +85,17 @@ defmodule ElPaso.Domain.ModelManager do
       Task.Supervisor.async_nolink(ElPaso.TaskSupervisor, fn ->
         ensure_circuit_breaker(model_id)
 
-        case Zaguan.Engine.CircuitBreaker.call(
+        case ElPaso.Ecosystem.circuit_call(
                model_id,
                fn -> do_infer(model, request) end,
                @circuit_opts
              ) do
           {:ok, response} ->
-            Zaguan.Engine.CircuitBreaker.success(model_id)
+            ElPaso.Ecosystem.circuit_success(model_id)
             {:ok, response}
 
           {:error, reason} ->
-            Zaguan.Engine.CircuitBreaker.failure(model_id)
+            ElPaso.Ecosystem.circuit_failure(model_id)
             Logger.warning("[ModelManager] Inference failed for #{model_id}")
             {:error, reason}
         end
@@ -279,13 +279,17 @@ defmodule ElPaso.Domain.ModelManager do
   # ── Server Callbacks ────────────────────────────────────────
   # Lazy-starts it if not already running under Zaguan.Engine.CircuitBreaker.Registry.
   defp ensure_circuit_breaker(model_name) do
-    case Registry.lookup(Zaguan.Engine.CircuitBreaker.Registry, model_name) do
+    case ElPaso.Ecosystem.circuit_lookup(model_name) do
       [{_pid, _}] ->
         :ok
 
       [] ->
         {:ok, _pid} =
-          Zaguan.Engine.CircuitBreaker.start_link(name: model_name, threshold: 5, timeout: 60_000)
+          ElPaso.Ecosystem.circuit_start(
+            name: model_name,
+            threshold: 5,
+            timeout: 60_000
+          )
     end
   end
 

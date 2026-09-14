@@ -12,7 +12,6 @@ defmodule ElPaso.Context.EmbeddingClient do
   use GenServer
   require Logger
 
-  alias Apero.Crypto
 
   @cache_table :embedding_cache
   @default_model "nomic-embed-text"
@@ -38,7 +37,7 @@ defmodule ElPaso.Context.EmbeddingClient do
   @doc "Genera embedding para un texto. Usa caché ETS con TTL."
   @spec embed(String.t()) :: {:ok, [float()]} | {:error, term()}
   def embed(text) when is_binary(text) do
-    cache_key = Crypto.hash(text, :sha256)
+    cache_key = ElPaso.Ecosystem.crypto_hash(:sha256, text) || :erlang.phash2(text)
 
     case :ets.lookup(@cache_table, cache_key) do
       [{^cache_key, embedding, expires_at}] ->
