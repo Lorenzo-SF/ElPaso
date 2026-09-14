@@ -17,7 +17,6 @@ defmodule ElPaso.Bootstrap do
 
   require Logger
 
-  alias ElPaso.Ecosystem
 
   @ollama_url "http://localhost:11434"
   @ollama_port 11_434

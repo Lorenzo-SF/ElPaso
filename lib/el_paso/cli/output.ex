@@ -103,7 +103,7 @@ defmodule ElPaso.CLI.Output do
   @spec section(String.t(), keyword()) :: :ok
   def section(title, opts \\ []) do
     color = Keyword.get(opts, :color, @color_primary)
-    Ecosystem.render_component(:Header, [title, Keyword.merge(opts, color: color]))
+    Ecosystem.render_component(:Header, [title, Keyword.merge(opts, color: color)])
   end
 
   # ==========================================================================
