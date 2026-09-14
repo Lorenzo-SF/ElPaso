@@ -71,7 +71,11 @@ defmodule ElPaso.MixProject do
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:telemetry_metrics_prometheus, "~> 1.1"},
-      {:batamanta, path: "../batamanta", runtime: false},
+      # batamanta is private; CI for the public repos cannot access it.
+      # ElPaso uses batamanta at release time only (mix batamanta).
+      # Tests run without it; the runtime side that references it is
+      # defensive (Code.ensure_loaded? guards).
+      # {:batamanta, path: "../batamanta", runtime: false},
 
       # Dev/Test only
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
