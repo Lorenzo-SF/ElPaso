@@ -16,7 +16,6 @@ defmodule ElPaso.CLI.Output do
   """
 
   alias Zaguan.Drawer.Components.{Bar, Box, Breadcrumbs, Header, Json, Separator, Table}
-  alias Zaguan.Drawer.Printer
 
   # Colores corporativos ElPaso
   @color_primary {0, 180, 216}
@@ -26,6 +25,17 @@ defmodule ElPaso.CLI.Output do
   @color_info {52, 152, 219}
   @color_muted {149, 165, 166}
 
+  # Safe wrappers — Zaguan is an optional dep; when the module is not
+  # loaded (e.g. CI without private-repo access), fall back to plain IO.
+  defp safe_print(fn_name, message) do
+    if Code.ensure_loaded?(Zaguan.Drawer.Printer) and
+         function_exported?(Zaguan.Drawer.Printer, fn_name, 1) do
+      apply(Zaguan.Drawer.Printer, fn_name, [message])
+    else
+      IO.puts(message)
+    end
+  end
+
   # ==========================================================================
   # Mensajes flash semánticos (delegados en Zaguan.Drawer.Printer)
   # ==========================================================================
@@ -34,49 +44,49 @@ defmodule ElPaso.CLI.Output do
   Imprime un mensaje de éxito.
   """
   @spec success(String.t()) :: :ok
-  def success(message), do: Printer.print_success(message)
+  def success(message), do: safe_print(:print_success, message)
 
   @doc """
   Imprime un mensaje de error.
   """
   @spec error(String.t()) :: :ok
-  def error(message), do: Printer.print_error(message)
+  def error(message), do: safe_print(:print_error, message)
 
   @doc """
   Imprime un mensaje informativo.
   """
   @spec info(String.t()) :: :ok
-  def info(message), do: Printer.print_info(message)
+  def info(message), do: safe_print(:print_info, message)
 
   @doc """
   Imprime un mensaje de advertencia.
   """
   @spec warning(String.t()) :: :ok
-  def warning(message), do: Printer.print_warning(message)
+  def warning(message), do: safe_print(:print_warning, message)
 
   @doc """
   Imprime un mensaje de debug.
   """
   @spec debug(String.t()) :: :ok
-  def debug(message), do: Printer.print_debug(message)
+  def debug(message), do: safe_print(:print_debug, message)
 
   @doc """
   Imprime un mensaje crítico.
   """
   @spec critical(String.t()) :: :ok
-  def critical(message), do: Printer.print_critical(message)
+  def critical(message), do: safe_print(:print_critical, message)
 
   @doc """
   Imprime un mensaje de alerta.
   """
   @spec alert(String.t()) :: :ok
-  def alert(message), do: Printer.print_alert(message)
+  def alert(message), do: safe_print(:print_alert, message)
 
   @doc """
   Imprime un mensaje de emergencia.
   """
   @spec emergency(String.t()) :: :ok
-  def emergency(message), do: Printer.print_emergency(message)
+  def emergency(message), do: safe_print(:print_emergency, message)
 
   # ==========================================================================
   # Headers y secciones
