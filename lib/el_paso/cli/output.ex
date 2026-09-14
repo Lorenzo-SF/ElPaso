@@ -122,7 +122,7 @@ defmodule ElPaso.CLI.Output do
   @spec divider(String.t() | nil, keyword()) :: :ok
   def divider(text \\ nil, opts \\ []) do
     color = Keyword.get(opts, :color, @color_muted)
-    Ecosystem.render_component(:Separator, [text, Keyword.merge(opts, color: color]))
+    Ecosystem.render_component(:Separator, [text, Keyword.merge(opts, color: color)])
   end
 
   # ==========================================================================
