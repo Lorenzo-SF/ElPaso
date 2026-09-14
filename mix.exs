@@ -79,8 +79,12 @@ defmodule ElPaso.MixProject do
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
 
-    [{:zaguan, sibling_or_git("zaguan") ++ [runtime: false, optional: true]},
-     {:apero, sibling_or_git("apero") ++ [optional: true]}] ++ base
+    # Zaguan and apero are intentionally NOT included in deps here.
+    # ElPaso uses poke at runtime via the Code.ensure_loaded guards;
+    # the optional/sibling_or_git pattern tried earlier caused mix to
+    # fetch zaguan in test env and fail because private-repo deps can't
+    # be reached in CI. The runtime side that references these libs is
+    # defensive (already uses Code.ensure_loaded?).
   end
 
   defp sibling_or_git(name) do
