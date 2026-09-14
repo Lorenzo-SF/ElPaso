@@ -149,7 +149,7 @@ defmodule ElPaso.CLI.Output do
   @spec data_table(keyword()) :: :ok
   def data_table(opts) when is_list(opts) and (length(opts) == 0 or is_tuple(hd(opts))) do
     defaults = [table_border: :rounded, headers_color: :cyan]
-    Ecosystem.render_component(:Table, [Keyword.merge(defaults, opts]))
+    Ecosystem.render_component(:Table, [Keyword.merge(defaults, opts)])
   end
 
   @spec data_table([String.t()], [[String.t()]]) :: :ok
@@ -160,7 +160,7 @@ defmodule ElPaso.CLI.Output do
   @spec data_table([String.t()], [[String.t()]], keyword()) :: :ok
   def data_table(headers, rows, opts) do
     defaults = [headers: headers, rows: rows, table_border: :rounded, headers_color: :cyan]
-    Ecosystem.render_component(:Table, [Keyword.merge(defaults, opts]))
+    Ecosystem.render_component(:Table, [Keyword.merge(defaults, opts)])
   end
 
   # ==========================================================================
