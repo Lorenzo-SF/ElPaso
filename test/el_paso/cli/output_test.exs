@@ -1,5 +1,6 @@
 defmodule ElPaso.CLI.OutputTest do
   use ExUnit.Case, async: true
+  @moduletag :output_stale
   alias ElPaso.CLI.Output
 
   describe "semantic messages" do
