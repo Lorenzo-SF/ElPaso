@@ -56,7 +56,7 @@ defmodule ElPaso.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   defp deps do
-    base = [
+    [
       {:plug, "~> 1.19"},
       {:plug_cowboy, "~> 2.7"},
       {:finch, "~> 0.19"},
@@ -81,24 +81,14 @@ defmodule ElPaso.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+
+      # Zaguan and apero are intentionally NOT included in deps here.
+      # ElPaso uses poke at runtime via the Code.ensure_loaded guards;
+      # the optional/sibling_or_git pattern tried earlier caused mix to
+      # fetch zaguan in test env and fail because private-repo deps can't
+      # be reached in CI. The runtime side that references these libs is
+      # defensive (already uses Code.ensure_loaded?).
     ]
-
-    # Zaguan and apero are intentionally NOT included in deps here.
-    # ElPaso uses poke at runtime via the Code.ensure_loaded guards;
-    # the optional/sibling_or_git pattern tried earlier caused mix to
-    # fetch zaguan in test env and fail because private-repo deps can't
-    # be reached in CI. The runtime side that references these libs is
-    # defensive (already uses Code.ensure_loaded?).
-  end
-
-  defp sibling_or_git(name) do
-    sibling = Path.expand("../#{name}", __DIR__)
-
-    if File.dir?(sibling) and File.dir?(Path.join(sibling, ".git")) do
-      [path: "../#{name}"]
-    else
-      [git: "https://github.com/Lorenzo-SF/#{name}.git"]
-    end
   end
 
   defp escript do
