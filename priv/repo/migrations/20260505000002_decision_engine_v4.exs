@@ -7,7 +7,8 @@ defmodule ElPaso.Repo.Migrations.DecisionEngineV4 do
     # ═══════════════════════════════════════════════════════════════════════
     alter table(:personalities) do
       add :semantic_description, :text
-      add :embedding, :vector
+      # 1536 dims is the OpenAI text-embedding-3-small / ada-002 default.
+      add :embedding, :vector, size: 1536
       add :regex_patterns, {:array, :string}, default: []
       add :min_confidence, :float, default: 0.5
       add :cooldown_ms, :integer, default: 0
