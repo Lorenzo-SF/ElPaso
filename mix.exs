@@ -183,7 +183,7 @@ defmodule ElPaso.MixProject do
       lint: ["format --check-formatted", "credo --strict"],
       "lint.fix": ["format", "credo --strict"],
       deploy: fn _ ->
-        dest_dir = Path.expand("~/.elpaso")
+        dest_dir = Path.expand("~/.local/bin")
         File.mkdir_p!(dest_dir)
 
         case File.cp("elpaso", Path.join(dest_dir, "elpaso")) do
@@ -196,7 +196,7 @@ defmodule ElPaso.MixProject do
         end
       end,
       tools_version: fn _ ->
-        dest_dir = Path.expand("~/.elpaso")
+        dest_dir = Path.expand("~/.local/bin")
         path = Path.join(dest_dir, ".tool-versions")
         File.write!(path, "erlang #{@erlang_vsn}\nelixir #{@elixir_vsn}-otp-#{@otp_vsn}\n")
         Mix.shell().info("✅ .tool-versions updated")
